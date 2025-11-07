@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		17C580F22EBDE1440055A18E /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F12EBDE1440055A18E /* Alamofire */; };
+		17C580F52EBDE16D0055A18E /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F42EBDE16D0055A18E /* Kingfisher */; };
+		17C580F82EBDE1B60055A18E /* FSCalendar in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F72EBDE1B60055A18E /* FSCalendar */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		17C57DF12EBDCC0B0055A18E /* WeeMo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WeeMo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -36,6 +42,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				17C580F52EBDE16D0055A18E /* Kingfisher in Frameworks */,
+				17C580F82EBDE1B60055A18E /* FSCalendar in Frameworks */,
+				17C580F22EBDE1440055A18E /* Alamofire in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -78,6 +87,9 @@
 			);
 			name = WeeMo;
 			packageProductDependencies = (
+				17C580F12EBDE1440055A18E /* Alamofire */,
+				17C580F42EBDE16D0055A18E /* Kingfisher */,
+				17C580F72EBDE1B60055A18E /* FSCalendar */,
 			);
 			productName = WeeMo;
 			productReference = 17C57DF12EBDCC0B0055A18E /* WeeMo.app */;
@@ -107,6 +119,11 @@
 			);
 			mainGroup = 17C57DE82EBDCC0B0055A18E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				17C580F02EBDE1440055A18E /* XCRemoteSwiftPackageReference "Alamofire" */,
+				17C580F32EBDE16D0055A18E /* XCRemoteSwiftPackageReference "Kingfisher" */,
+				17C580F62EBDE1B60055A18E /* XCRemoteSwiftPackageReference "FSCalendar" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 17C57DF22EBDCC0B0055A18E /* Products */;
 			projectDirPath = "";
@@ -353,6 +370,51 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		17C580F02EBDE1440055A18E /* XCRemoteSwiftPackageReference "Alamofire" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Alamofire/Alamofire";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.10.2;
+			};
+		};
+		17C580F32EBDE16D0055A18E /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 8.6.1;
+			};
+		};
+		17C580F62EBDE1B60055A18E /* XCRemoteSwiftPackageReference "FSCalendar" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/WenchaoD/FSCalendar.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.8.4;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		17C580F12EBDE1440055A18E /* Alamofire */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 17C580F02EBDE1440055A18E /* XCRemoteSwiftPackageReference "Alamofire" */;
+			productName = Alamofire;
+		};
+		17C580F42EBDE16D0055A18E /* Kingfisher */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 17C580F32EBDE16D0055A18E /* XCRemoteSwiftPackageReference "Kingfisher" */;
+			productName = Kingfisher;
+		};
+		17C580F72EBDE1B60055A18E /* FSCalendar */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 17C580F62EBDE1B60055A18E /* XCRemoteSwiftPackageReference "FSCalendar" */;
+			productName = FSCalendar;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 17C57DE92EBDCC0B0055A18E /* Project object */;
 }
