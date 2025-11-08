@@ -11,7 +11,7 @@ import SwiftUI
 struct WeeMoApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            MeetingListView()
         }
     }
 }
