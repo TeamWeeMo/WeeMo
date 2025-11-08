@@ -114,7 +114,10 @@ struct MeetingListView: View {
 
                     LazyVStack(spacing: 16) {
                         ForEach(meetings) { meeting in
-                            MeetingCardView(meeting: meeting)
+                            NavigationLink(destination: MeetingDetailView(meeting: meeting)) {
+                                MeetingCardView(meeting: meeting)
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                     .padding(.horizontal, 16)
@@ -315,6 +318,7 @@ struct FloatingActionButton: View {
         }
     }
 }
+
 
 extension View {
     func cornerRadius(_ radius: CGFloat, corners: UIRectCorner) -> some View {
