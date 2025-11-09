@@ -73,8 +73,11 @@ struct AllSpaceListView: View {
 
             LazyVStack(spacing: Spacing.base) {
                 ForEach(spaces) { space in
-                    SpaceListCardView(space: space)
-                        .padding(.horizontal, Spacing.base)
+                    NavigationLink(value: space) {
+                        SpaceListCardView(space: space)
+                            .padding(.horizontal, Spacing.base)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
         }

@@ -26,7 +26,7 @@ enum SpaceAmenity: String {
     case printer = "프린터"
 }
 
-struct Space: Identifiable {
+struct Space: Identifiable, Hashable {
     let id: String
     let title: String
     let address: String
@@ -39,6 +39,15 @@ struct Space: Identifiable {
     let amenities: [SpaceAmenity]
     let hasParking: Bool
     let description: String
+
+    // Hashable 구현
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+
+    static func == (lhs: Space, rhs: Space) -> Bool {
+        lhs.id == rhs.id
+    }
 
     var imageURL: String {
         return imageURLs.first ?? ""

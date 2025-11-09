@@ -69,7 +69,10 @@ struct PopularSpaceSectionView: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Spacing.medium) {
                     ForEach(spaces.filter { $0.isPopular }) { space in
-                        PopularSpaceCardView(space: space)
+                        NavigationLink(value: space) {
+                            PopularSpaceCardView(space: space)
+                        }
+                        .buttonStyle(PlainButtonStyle())
                     }
                 }
                 .padding(.horizontal, Spacing.base)

@@ -63,6 +63,9 @@ struct SpaceListView: View {
             }
             .background(Color("wmBg"))
             .navigationBarHidden(true)
+            .navigationDestination(for: Space.self) { space in
+                SpaceDetailView(space: space)
+            }
         }
     }
 }
