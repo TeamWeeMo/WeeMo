@@ -29,6 +29,7 @@ struct MeetingDetailView: View {
                         HStack {
                             Text(meeting.title)
                                 .font(.app(.headline2))
+                                .foregroundColor(Color("textMain"))
 
                             Spacer()
 
@@ -56,10 +57,11 @@ struct MeetingDetailView: View {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("주최자")
                                     .font(.app(.subContent1))
-                                    .foregroundColor(.secondary)
+                                    .foregroundColor(Color("textSub"))
                                 Text("김독서")
                                     .font(.app(.content2))
                                     .fontWeight(.medium)
+                                    .foregroundColor(Color("textMain"))
                             }
 
                             Spacer()
@@ -92,20 +94,22 @@ struct MeetingDetailView: View {
                         Text("모임 소개")
                             .font(.app(.subHeadline2))
                             .fontWeight(.semibold)
+                            .foregroundColor(Color("textMain"))
 
                         Text("매주 토요일 오후에 모여 책을 읽고 이야기를 나누는 독서 모임입니다. 이번 주는 '여행 창작'을 함께 읽어요!")
                             .font(.app(.content2))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color("textSub"))
                             .lineSpacing(4)
 
                         Text("일시")
                             .font(.app(.content2))
                             .fontWeight(.medium)
+                            .foregroundColor(Color("textMain"))
                             .padding(.top, 8)
 
                         Text("2025.11.15 (토) 14:00")
                             .font(.app(.content2))
-                            .foregroundColor(.secondary)
+                            .foregroundColor(Color("textSub"))
                     }
                     .padding(.horizontal, 20)
                     .padding(.vertical, 20)
@@ -129,6 +133,7 @@ struct MeetingDetailView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("모임 상세")
+        .background(Color("wmBg"))
     }
 }
 
@@ -148,11 +153,11 @@ struct InfoRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.app(.content2))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color("textSub"))
 
                 Text(content)
                     .font(.app(.content2))
-                    .foregroundColor(isBlue ? .blue : .primary)
+                    .foregroundColor(isBlue ? .blue : Color("textMain"))
                     .fontWeight(isBlue ? .medium : .regular)
             }
 

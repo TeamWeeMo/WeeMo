@@ -100,6 +100,7 @@ struct MeetingListView: View {
                     HStack {
                         Text("모임")
                             .font(.app(.headline2))
+                            .foregroundColor(Color("textMain"))
                             .padding(.leading, 16)
                         Spacer()
                     }
@@ -125,6 +126,7 @@ struct MeetingListView: View {
                 }
             }
             .navigationBarHidden(true)
+            .background(Color("wmBg"))
             .overlay(
                 VStack {
                     Spacer()
@@ -246,29 +248,30 @@ struct MeetingCardView: View {
                 Text(meeting.title)
                     .font(.app(.subHeadline2))
                     .fontWeight(.semibold)
+                    .foregroundColor(Color("textMain"))
 
                 Text(meeting.date)
                     .font(.app(.content2))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color("textSub"))
 
                 Text(meeting.location)
                     .font(.app(.content2))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color("textSub"))
 
                 Text(meeting.address)
                     .font(.app(.subContent1))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(Color("textSub"))
 
                 HStack {
                     Text(meeting.price)
                         .font(.app(.content2))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color("textSub"))
 
                     Spacer()
 
                     Text(meeting.participants)
                         .font(.app(.content2))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(Color("textSub"))
                 }
             }
             .padding(16)
