@@ -48,9 +48,8 @@ struct FeedView: View {
                     }
                 }
             }
-            .sheet(item: $selectedFeed) { feed in
-                // TODO: FeedDetailView로 이동, sheet -> 네비게이션이동으로
-                Text("상세화면 - \(feed.content)")
+            .navigationDestination(item: $selectedFeed) { feed in
+                FeedDetailView(item: feed)
             }
         }
     }
