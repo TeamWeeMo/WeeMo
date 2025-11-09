@@ -14,6 +14,7 @@ struct FeedView: View {
 
     @State private var feeds: [FeedItem] = MockFeedData.sampleFeeds
     @State private var selectedFeed: FeedItem?
+    @State private var isShowingEditView: Bool = false
 
     // MARK: - Body
     var body: some View {
@@ -39,17 +40,19 @@ struct FeedView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        // TODO: 피드 작성 화면으로 이동, 작성버튼 위치 고민
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.app(.subHeadline2))
-                            .foregroundStyle(.textMain)
-                    }
+                    Image(systemName: "plus")
+                        .font(.app(.subHeadline2))
+                        .foregroundStyle(.textMain)
+                        .buttonWrapper {
+                            isShowingEditView = true
+                        }
                 }
             }
             .navigationDestination(item: $selectedFeed) { feed in
                 FeedDetailView(item: feed)
+            }
+            .navigationDestination(isPresented: $isShowingEditView) {
+                FeedEditView(mode: .create)
             }
         }
     }
