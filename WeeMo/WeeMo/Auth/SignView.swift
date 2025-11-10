@@ -9,19 +9,22 @@ import SwiftUI
 
 struct SignView: View {
     @State private var id: String = ""
+
     var body: some View {
         ZStack {
             Color.wmBg
                 .ignoresSafeArea()
 
-            VStack(spacing: 6) {
-                VStack {
-                    Text("회원가입")
-                        .font(.app(.headline3))
-                    
-                    Rectangle()
-                        .frame(width: 20, height: 2)
-                        .foregroundStyle(.wmMain)
+            VStack {
+                VStack(spacing: 6) {
+                    VStack {
+                        Text("회원가입")
+                            .font(.app(.headline3))
+
+                        Rectangle()
+                            .frame(width: 20, height: 2)
+                            .foregroundStyle(.wmMain)
+                    }
                 }
 
                 VStack(spacing: 10) {
@@ -29,7 +32,6 @@ struct SignView: View {
                         Text("아이디")
                             .font(.app(.content1))
                         TextField("아이디를 입력하세요", text: $id)
-                            .frame(height: 12)
                             .asMintCornerView()
                         Text("이메일 형식이 잘못되었어요")
                             .font(.app(.subContent3))
@@ -42,9 +44,8 @@ struct SignView: View {
                         Text("비밀번호")
                             .font(.app(.content1))
                         TextField("비밀번호를 입력하세요", text: $id)
-                            .frame(height: 12)
                             .asMintCornerView()
-                        Text("이메일 형식이 잘못되었어요")
+                        Text("비밀번호 형식이 잘못되었어요")
                             .font(.app(.subContent3))
                             .foregroundStyle(.red)
                     }
@@ -54,7 +55,6 @@ struct SignView: View {
                         Text("닉네임")
                             .font(.app(.content1))
                         TextField("닉네임을 입력하세요", text: $id)
-                            .frame(height: 12)
                             .asMintCornerView()
                         Text("닉네임 형식이 잘못되었어요")
                             .font(.app(.subContent3))
@@ -67,7 +67,7 @@ struct SignView: View {
                     } label: {
                         Text("가입하기")
                             .font(.app(.subHeadline2))
-                            .frame(maxWidth: .infinity, maxHeight: 46)
+                            .frame(maxWidth: .infinity, minHeight: 46)
                             .foregroundStyle(.white)
                             .background(.wmMain)
                     }
@@ -79,9 +79,7 @@ struct SignView: View {
                 .padding(20)
                 .shadow(radius: 3)
             }
-            }
-
-
+        }
     }
 }
 
