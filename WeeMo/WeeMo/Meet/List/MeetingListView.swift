@@ -305,8 +305,7 @@ struct MapViewButton: View {
 
 struct FloatingActionButton: View {
     var body: some View {
-        Button(action: {
-        }) {
+        NavigationLink(destination: MeetingEditView()) {
             HStack {
                 Image(systemName: "plus")
                     .font(.system(size: 16, weight: .semibold))
