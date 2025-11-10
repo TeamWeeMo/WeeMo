@@ -55,7 +55,7 @@ struct MeetingMapCard: View {
             ZStack {
                 Rectangle()
                     .fill(Color.gray.opacity(0.3))
-                    .frame(width: 160, height: 80)
+                    .frame(width: 160, height: 70)
                     .cornerRadius(8, corners: [.topLeft, .topRight])
 
                 VStack {
@@ -76,38 +76,38 @@ struct MeetingMapCard: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(meeting.title)
-                    .font(.app(.subContent1))
-                    .fontWeight(.semibold)
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(Color("textMain"))
                     .lineLimit(1)
 
                 Text(meeting.date)
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                     .foregroundColor(Color("textSub"))
                     .lineLimit(1)
 
                 Text(meeting.location)
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                     .foregroundColor(Color("textSub"))
                     .lineLimit(1)
 
                 HStack {
                     Text(meeting.price)
-                        .font(.system(size: 10))
+                        .font(.system(size: 9))
                         .foregroundColor(Color("textSub"))
 
                     Spacer()
 
                     Text(meeting.participants)
-                        .font(.system(size: 10))
+                        .font(.system(size: 9))
                         .foregroundColor(Color("textSub"))
                 }
             }
-            .padding(8)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 8)
         }
-        .frame(width: 160)
+        .frame(width: 160, height: 120)
         .background(Color.white)
         .cornerRadius(8)
         .cardShadow()

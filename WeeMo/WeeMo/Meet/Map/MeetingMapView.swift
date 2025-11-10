@@ -53,33 +53,82 @@ struct MeetingMapView: View {
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
-            // 상단 영역
-            HStack {
-                Button(action: {
-                    presentationMode.wrappedValue.dismiss()
-                }) {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 20, weight: .medium))
-                        .foregroundColor(.black)
-                        .frame(width: 40, height: 40)
-                        .background(Color.white)
-                        .clipShape(Circle())
-                        .cardShadow()
+        ZStack {
+            // 지도 영역
+            Map(coordinateRegion: $region, annotationItems: meetings) { meeting in
+                MapAnnotation(coordinate: CLLocationCoordinate2D(
+                    latitude: 37.5665 + Double.random(in: -0.02...0.02),
+                    longitude: 126.9780 + Double.random(in: -0.02...0.02)
+                )) {
+                    MapPinView(count: Int.random(in: 1...5))
                 }
+            }
+            .ignoresSafeArea()
 
+            VStack {
                 Spacer()
 
+                // 하단 리스트 영역
+                VStack(spacing: 0) {
+                    Button(action: {
+                        withAnimation(.spring(response: 0.6)) {
+                            showingList.toggle()
+                        }
+                    }) {
+                        HStack {
+                            Text("모임 리스트")
+                                .font(.app(.content1))
+                                .fontWeight(.medium)
+                                .foregroundColor(.black)
+
+                            Spacer()
+
+                            Image(systemName: showingList ? "chevron.down" : "chevron.up")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundColor(.black)
+                        }
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 16)
+                        .background(Color.white)
+                        .cornerRadius(12, corners: showingList ? [.topLeft, .topRight] : .allCorners)
+                        .cardShadow()
+                    }
+
+                    if showingList {
+                        VStack(spacing: 0) {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(meetings) { meeting in
+                                        NavigationLink(destination: MeetingDetailView(meeting: meeting)) {
+                                            MeetingMapCard(meeting: meeting)
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                    }
+                                }
+                                .padding(.horizontal, 20)
+                                .padding(.vertical, 8)
+                            }
+                            .frame(height: 140)
+                        }
+                        .background(Color.white)
+                        .cornerRadius(12, corners: [.bottomLeft, .bottomRight])
+                        .cardShadow()
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 30)
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarItems(
+            trailing: HStack(spacing: 12) {
                 Button(action: {
                     showingSearch.toggle()
                 }) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.black)
-                        .frame(width: 40, height: 40)
-                        .background(Color.white)
-                        .clipShape(Circle())
-                        .cardShadow()
                 }
 
                 Button(action: {
@@ -88,84 +137,9 @@ struct MeetingMapView: View {
                     Image(systemName: "location")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundColor(.black)
-                        .frame(width: 40, height: 40)
-                        .background(Color.white)
-                        .clipShape(Circle())
-                        .cardShadow()
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 50)
-            .padding(.bottom, 12)
-            .background(Color("wmBg"))
-
-            // 지도 영역
-            ZStack {
-                Map(coordinateRegion: $region, annotationItems: meetings) { meeting in
-                    MapAnnotation(coordinate: CLLocationCoordinate2D(
-                        latitude: 37.5665 + Double.random(in: -0.02...0.02),
-                        longitude: 126.9780 + Double.random(in: -0.02...0.02)
-                    )) {
-                        MapPinView(count: Int.random(in: 1...5))
-                    }
-                }
-
-                VStack {
-                    Spacer()
-
-                    // 하단 리스트 영역
-                    VStack(spacing: 0) {
-                        Button(action: {
-                            withAnimation(.spring(response: 0.6)) {
-                                showingList.toggle()
-                            }
-                        }) {
-                            HStack {
-                                Text("모임 리스트")
-                                    .font(.app(.content1))
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.black)
-
-                                Spacer()
-
-                                Image(systemName: showingList ? "chevron.down" : "chevron.up")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundColor(.black)
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 16)
-                            .background(Color.white)
-                            .cornerRadius(12, corners: showingList ? [.topLeft, .topRight] : .allCorners)
-                            .cardShadow()
-                        }
-
-                        if showingList {
-                            VStack(spacing: 0) {
-                                ScrollView(.horizontal, showsIndicators: false) {
-                                    HStack(spacing: 12) {
-                                        ForEach(meetings) { meeting in
-                                            NavigationLink(destination: MeetingDetailView(meeting: meeting)) {
-                                                MeetingMapCard(meeting: meeting)
-                                            }
-                                            .buttonStyle(PlainButtonStyle())
-                                        }
-                                    }
-                                    .padding(.horizontal, 20)
-                                    .padding(.vertical, 16)
-                                }
-                            }
-                            .background(Color.white)
-                            .cornerRadius(12, corners: [.bottomLeft, .bottomRight])
-                            .cardShadow()
-                            .transition(.opacity.combined(with: .move(edge: .bottom)))
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 30)
-                }
-            }
-        }
-        .navigationBarHidden(true)
+        )
         .sheet(isPresented: $showingSearch) {
             SearchModalView(searchText: $searchText, meetings: meetings)
         }
