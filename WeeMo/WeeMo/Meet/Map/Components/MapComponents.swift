@@ -53,9 +53,11 @@ struct MeetingMapCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
+                Image("테스트 이미지")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
                     .frame(width: 160, height: 70)
+                    .clipped()
                     .cornerRadius(8, corners: [.topLeft, .topRight])
 
                 VStack {

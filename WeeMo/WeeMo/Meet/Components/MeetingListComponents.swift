@@ -80,9 +80,11 @@ struct MeetingCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.3))
+                Image("테스트 이미지")
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
                     .frame(height: 200)
+                    .clipped()
                     .cornerRadius(12, corners: [.topLeft, .topRight])
 
                 VStack {
