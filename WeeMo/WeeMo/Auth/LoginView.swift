@@ -32,7 +32,6 @@ struct LoginView: View {
                                 Text("아이디")
                                     .font(.app(.content2))
                                 TextField("아이디를 입력하세요", text: $id)
-                                    .frame(height: 12)
                                     .asMintCornerView()
                                 Text("이메일 형식이 잘못되었어요")
                                     .font(.app(.subContent2))
@@ -43,7 +42,6 @@ struct LoginView: View {
                                 Text("비밀번호")
                                     .font(.app(.content2))
                                 TextField("비밀번호를 입력하세요", text: $id)
-                                    .frame(height: 12)
                                     .asMintCornerView()
                                 Text("비밀번호 형식이 잘못되었어요")
                                     .font(.app(.subContent2))
@@ -57,7 +55,7 @@ struct LoginView: View {
                                     .font(.app(.subHeadline2))
                                     .foregroundStyle(.white)
                                     .frame(maxWidth: .infinity,
-                                           maxHeight: 46,
+                                           minHeight: 46,
                                            alignment: .center)
                                     .background(.wmMain)
                                     .cornerRadius(8)
@@ -79,7 +77,7 @@ struct LoginView: View {
                             } label: {
                                 Image("kakao_login_large_wide")
                                     .resizable()
-                                    .frame(width: .infinity, height: 46)
+                                    .frame(maxWidth: .infinity, maxHeight: 46)
                             }
                             
                             Button {
@@ -97,6 +95,7 @@ struct LoginView: View {
                             .frame(maxWidth: .infinity, alignment: .center)
                         }
                         .navigationTitle("")
+                        .tint(.blue)
                         .padding(30)
                         
                     }
@@ -107,6 +106,7 @@ struct LoginView: View {
                 }
             }
         }
+        .tint(.wmMain)
     }
 }
 
