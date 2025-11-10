@@ -113,6 +113,7 @@ struct DatePickerView: View {
             )
             .datePickerStyle(WheelDatePickerStyle())
             .labelsHidden()
+            .environment(\.locale, Locale(identifier: "ko_KR"))
             .padding(.horizontal, 20)
             .frame(maxHeight: 200)
 

@@ -122,7 +122,7 @@ struct MeetingDetailView: View {
                             .font(.app(.content1))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity, minHeight: 50)
-                            .background(Color.black)
+                            .background(Color.wmMain)
                             .cornerRadius(8)
                     }
                     .padding(.horizontal, 20)
