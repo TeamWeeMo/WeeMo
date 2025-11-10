@@ -23,7 +23,7 @@ struct DatePickerCalendarView: View {
     @State private var selectedDate: Date?
 
     private let calendar = Calendar.current
-    private let daysOfWeek = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]
+    private let daysOfWeek = ["일", "월", "화", "수", "목", "금", "토"]
 
     // 월의 첫 번째 날
     private var monthStartDate: Date {
@@ -43,7 +43,8 @@ struct DatePickerCalendarView: View {
     // 현재 월/년 표시
     private var monthYearString: String {
         let formatter = DateFormatter()
-        formatter.dateFormat = "MMMM yyyy"
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.dateFormat = "yyyy년 MMMM"
         return formatter.string(from: currentMonth)
     }
 
@@ -130,6 +131,14 @@ struct DatePickerCalendarView: View {
                         }
                     }
                 }
+            }
+
+            // 시간 선택 타임라인 (날짜가 선택되었을 때만 표시)
+            if selectedDate != nil {
+                Divider()
+                    .padding(.vertical, Spacing.small)
+
+                TimelineBarView(pricePerHour: 15000)
             }
         }
         .padding(Spacing.base)
