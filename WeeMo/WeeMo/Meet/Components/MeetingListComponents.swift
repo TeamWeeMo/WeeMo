@@ -144,9 +144,7 @@ struct MeetingCardView: View {
 // MARK: - 지도 보기 버튼
 struct MapViewButton: View {
     var body: some View {
-        Button(action: {
-            // 지도 보기 액션
-        }) {
+        NavigationLink(destination: MeetingMapView()) {
             HStack {
                 Image(systemName: "map")
                     .font(.system(size: 16, weight: .medium))
