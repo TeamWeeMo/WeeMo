@@ -10,14 +10,15 @@ import SwiftUI
 private struct MintCornerView: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .padding()
-            .background(.white, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .frame(maxWidth: .infinity, minHeight: 44, alignment: .center)
+            .padding(.horizontal, 12)
+            .background(.white, in: RoundedRectangle(cornerRadius: Spacing.radiusMedium, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Spacing.radiusMedium, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium, style: .continuous)
                     .stroke(.wmMain, lineWidth: 1)
+                    .allowsHitTesting(false)
             )
-            .font(.app(.content2))
-
     }
 }
 

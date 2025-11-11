@@ -7,14 +7,19 @@
 
 import SwiftUI
 
+enum AuthRoute: Hashable {
+    case signup
+    case profileEdit
+}
+
 struct LoginView: View {
     @State private var id = ""
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ZStack {
                 Color.wmBg
                     .ignoresSafeArea()
-                
+
                 VStack(spacing: 10) {
                     VStack(spacing: 6) {
                         /// 폰트, 컬러 사용 예시
@@ -25,7 +30,7 @@ struct LoginView: View {
                             .font(.app(.content2))
                             .foregroundStyle(.textSub)
                     }
-                    
+
                     VStack(alignment: .leading) {
                         VStack(alignment: .leading, spacing: 12) {
                             VStack(alignment: .leading, spacing: 4) {
@@ -37,7 +42,7 @@ struct LoginView: View {
                                     .font(.app(.subContent2))
                                     .foregroundStyle(.red)
                             }
-                            
+
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("비밀번호")
                                     .font(.app(.content2))
@@ -47,7 +52,7 @@ struct LoginView: View {
                                     .font(.app(.subContent2))
                                     .foregroundStyle(.red)
                             }
-                            
+
                             Button {
                                 print("버튼 클릭")
                             } label: {
@@ -60,18 +65,18 @@ struct LoginView: View {
                                     .background(.wmMain)
                                     .cornerRadius(8)
                             }
-                            
+
                             ZStack {
                                 Rectangle()
                                     .frame(height: 1)
                                     .background(.textSub)
-                                
+
                                 Text("또는")
                                     .padding(10)
                                     .foregroundStyle(.textSub)
                                     .background(.white)
                             }
-                            
+
                             Button {
                                 print("버튼 클릭")
                             } label: {
@@ -79,16 +84,14 @@ struct LoginView: View {
                                     .resizable()
                                     .frame(maxWidth: .infinity, maxHeight: 46)
                             }
-                            
+
                             Button {
                                 print("버튼 클릭")
                             } label: {
                                 AppleLoginButtonUI()
                             }
-                            
-                            NavigationLink {
-                                SignView()
-                            } label: {
+
+                            NavigationLink(value: AuthRoute.signup) {
                                 Text("이메일로 회원가입")
                                     .font(.app(.content2))
                             }
@@ -97,12 +100,18 @@ struct LoginView: View {
                         .navigationTitle("")
                         .tint(.blue)
                         .padding(30)
-                        
+
                     }
                     .background(.white)
                     .cornerRadius(16)
                     .padding(20)
                     .shadow(radius: 3)
+                }
+            }
+            .navigationDestination(for: AuthRoute.self) { route in
+                switch route {
+                case .signup: SignView()
+                case .profileEdit: ProfileEditView(isNewProfile: true)
                 }
             }
         }
