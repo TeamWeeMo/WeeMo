@@ -62,16 +62,14 @@ struct SignView: View {
                     }
                     .padding(.horizontal, 20)
 
-                    Button {
-                        print("버튼 클릭")
-                    } label: {
+                    NavigationLink(value: AuthRoute.profileEdit) {
                         Text("가입하기")
                             .font(.app(.subHeadline2))
                             .frame(maxWidth: .infinity, minHeight: 46)
                             .foregroundStyle(.white)
                             .background(.wmMain)
+                            .cornerRadius(12)
                     }
-                    .cornerRadius(12)
                     .padding(20)
                 }
                 .background(.white)
@@ -80,8 +78,10 @@ struct SignView: View {
                 .shadow(radius: 3)
             }
         }
+        .navigationTitle("")
     }
 }
+
 
 #Preview {
     SignView()
