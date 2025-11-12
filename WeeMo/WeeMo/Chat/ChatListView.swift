@@ -25,7 +25,7 @@ struct ChatListView: View {
                 LazyVStack(spacing: 0) {
                     ForEach(chatRooms) { room in
                         ChatRoomRow(room: room)
-                            .chatButtonWrapper {
+                            .buttonWrapper {
                                 selectedRoom = room
                             }
 

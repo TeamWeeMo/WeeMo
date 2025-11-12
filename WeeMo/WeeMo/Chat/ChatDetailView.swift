@@ -58,7 +58,7 @@ struct ChatDetailView: View {
             Image(systemName: "photo")
                 .font(.system(size: 24))
                 .foregroundStyle(.textSub)
-                .chatButtonWrapper {
+                .buttonWrapper {
                     // TODO: 이미지 선택
                     print("이미지 추가")
                 }
@@ -77,7 +77,7 @@ struct ChatDetailView: View {
             Image(systemName: "paperplane.fill")
                 .font(.system(size: 20))
                 .foregroundStyle(inputText.isEmpty ? .textSub : .wmMain)
-                .chatButtonWrapper {
+                .buttonWrapper {
                     sendMessage()
                 }
             .disabled(inputText.isEmpty)
