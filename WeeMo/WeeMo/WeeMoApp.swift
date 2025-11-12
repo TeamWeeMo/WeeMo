@@ -2,7 +2,7 @@
 //  WeeMoApp.swift
 //  WeeMo
 //
-//  Created by YoungJin on 11/7/25.
+//  Created by Watson22_YJ on 11/7/25.
 //
 
 import SwiftUI
@@ -11,7 +11,7 @@ import SwiftUI
 struct WeeMoApp: App {
     var body: some Scene {
         WindowGroup {
-            MeetingListView()
+            TapView()
         }
     }
 }
