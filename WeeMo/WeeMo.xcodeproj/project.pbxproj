@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		178DEDE12EC5E0CA0014C227 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 178DEDE02EC5E0CA0014C227 /* KeychainAccess */; };
 		17C580F22EBDE1440055A18E /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F12EBDE1440055A18E /* Alamofire */; };
 		17C580F52EBDE16D0055A18E /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F42EBDE16D0055A18E /* Kingfisher */; };
 		17C580F82EBDE1B60055A18E /* FSCalendar in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F72EBDE1B60055A18E /* FSCalendar */; };
@@ -42,6 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				178DEDE12EC5E0CA0014C227 /* KeychainAccess in Frameworks */,
 				17C580F52EBDE16D0055A18E /* Kingfisher in Frameworks */,
 				17C580F82EBDE1B60055A18E /* FSCalendar in Frameworks */,
 				17C580F22EBDE1440055A18E /* Alamofire in Frameworks */,
@@ -90,6 +92,7 @@
 				17C580F12EBDE1440055A18E /* Alamofire */,
 				17C580F42EBDE16D0055A18E /* Kingfisher */,
 				17C580F72EBDE1B60055A18E /* FSCalendar */,
+				178DEDE02EC5E0CA0014C227 /* KeychainAccess */,
 			);
 			productName = WeeMo;
 			productReference = 17C57DF12EBDCC0B0055A18E /* WeeMo.app */;
@@ -123,6 +126,7 @@
 				17C580F02EBDE1440055A18E /* XCRemoteSwiftPackageReference "Alamofire" */,
 				17C580F32EBDE16D0055A18E /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				17C580F62EBDE1B60055A18E /* XCRemoteSwiftPackageReference "FSCalendar" */,
+				178DEDDF2EC5E0CA0014C227 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 17C57DF22EBDCC0B0055A18E /* Products */;
@@ -374,6 +378,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		178DEDDF2EC5E0CA0014C227 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess.git";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
 		17C580F02EBDE1440055A18E /* XCRemoteSwiftPackageReference "Alamofire" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Alamofire/Alamofire";
@@ -401,6 +413,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		178DEDE02EC5E0CA0014C227 /* KeychainAccess */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 178DEDDF2EC5E0CA0014C227 /* XCRemoteSwiftPackageReference "KeychainAccess" */;
+			productName = KeychainAccess;
+		};
 		17C580F12EBDE1440055A18E /* Alamofire */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 17C580F02EBDE1440055A18E /* XCRemoteSwiftPackageReference "Alamofire" */;
