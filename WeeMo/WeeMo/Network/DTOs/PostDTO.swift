@@ -14,18 +14,18 @@ struct PostDTO: Decodable {
     let postId: String
     let category: String
     let title: String
-    let price: Int
+    let price: Int?
     let content: String
-    let value1: String
-    let value2: String
-    let value3: String
-    let value4: String
-    let value5: String
-    let value6: String
-    let value7: String
-    let value8: String
-    let value9: String
-    let value10: String
+    let value1: String?
+    let value2: String?
+    let value3: String?
+    let value4: String?
+    let value5: String?
+    let value6: String?
+    let value7: String?
+    let value8: String?
+    let value9: String?
+    let value10: String?
     let createdAt: String
     let creator: UserDTO
     let files: [String]
@@ -35,7 +35,7 @@ struct PostDTO: Decodable {
     let hashTags: [String]
     let commentCount: Int
     let geolocation: GeolocationDTO
-    let distance: Double
+    let distance: Double?
 
     enum CodingKeys: String, CodingKey {
         case postId = "post_id"
