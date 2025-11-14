@@ -13,7 +13,23 @@ enum AuthRoute: Hashable {
 }
 
 struct LoginView: View {
-    @State private var id = ""
+
+    @StateObject var loginStore = LoginStore()
+
+    private var idBinding: Binding<String> {
+        Binding(
+            get: { loginStore.state.id },
+            set: { loginStore.send(.idChanged($0))}
+        )
+    }
+
+    private var pwBinding: Binding<String> {
+        Binding(
+            get: { loginStore.state.pw },
+            set: { loginStore.send(.pwChanged($0)) }
+        )
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -36,9 +52,9 @@ struct LoginView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("아이디")
                                     .font(.app(.content2))
-                                TextField("아이디를 입력하세요", text: $id)
+                                TextField("아이디를 입력하세요", text: idBinding)
                                     .asMintCornerView()
-                                Text("이메일 형식이 잘못되었어요")
+                                Text(loginStore.state.idError)
                                     .font(.app(.subContent2))
                                     .foregroundStyle(.red)
                             }
@@ -46,15 +62,15 @@ struct LoginView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text("비밀번호")
                                     .font(.app(.content2))
-                                TextField("비밀번호를 입력하세요", text: $id)
+                                SecureField("비밀번호를 입력하세요", text: pwBinding)
                                     .asMintCornerView()
-                                Text("비밀번호 형식이 잘못되었어요")
+                                Text(loginStore.state.pwError)
                                     .font(.app(.subContent2))
                                     .foregroundStyle(.red)
                             }
 
                             Button {
-                                print("버튼 클릭")
+                                loginStore.send(.loginTapped)
                             } label: {
                                 Text("로그인")
                                     .font(.app(.subHeadline2))
@@ -65,6 +81,7 @@ struct LoginView: View {
                                     .background(.wmMain)
                                     .cornerRadius(8)
                             }
+                            
 
                             ZStack {
                                 Rectangle()
