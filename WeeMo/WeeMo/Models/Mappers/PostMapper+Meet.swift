@@ -17,13 +17,13 @@ extension PostDTO {
         // 서버 스펙에 맞춰 매핑 필요 (임시 매핑)
         return Meet(
             title: title,
-            date: value1,
-            location: value2,
-            address: value3,
-            price: "\(price)원",
-            participants: value4,
+            date: value1 ?? "",
+            location: value2 ?? "",
+            address: value3 ?? "",
+            price: "\(price ?? 0)원",
+            participants: value4 ?? "0명",
             imageName: files.first ?? "",
-            daysLeft: value5
+            daysLeft: value5 ?? ""
         )
     }
 
