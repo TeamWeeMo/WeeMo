@@ -15,16 +15,16 @@ extension PostDTO {
     func toSpace() -> Space {
         // value1~value10을 Space 필드에 매핑
         // 서버 스펙에 맞춰 매핑 필요 (임시 매핑)
-        let amenitiesString = value1
+        let amenitiesString = value1 ?? ""
         let amenities = parseAmenities(from: amenitiesString)
 
         return Space(
             id: postId,
             title: title,
-            address: value2,
+            address: value2 ?? "주소 없음",
             imageURLs: files,
-            rating: Double(value3) ?? 0.0,
-            pricePerHour: price,
+            rating: Double(value3 ?? "0.0") ?? 0.0,
+            pricePerHour: price ?? 0,
             category: parseSpaceCategory(from: category),
             isPopular: value4 == "true",
             amenities: amenities,
