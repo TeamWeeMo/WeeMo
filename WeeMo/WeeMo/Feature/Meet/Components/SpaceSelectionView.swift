@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Combine
+import Kingfisher
 
 struct SpaceSelectionView: View {
     @Binding var selectedSpace: Space?
@@ -91,12 +92,63 @@ struct SpaceRowView: View {
     var body: some View {
         Button(action: onTap) {
             HStack {
-                Image(space.imageURL)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 60, height: 60)
-                    .clipped()
-                    .cornerRadius(8)
+                if let imageURL = space.imageURLs.first {
+                    // FileRouter를 사용하여 올바른 URL 생성
+                    let fullImageURL = imageURL.hasPrefix("http") ? imageURL : FileRouter.fileURL(from: imageURL)
+                    let _ = print("🖼️ Original image URL: \(imageURL)")
+                    let _ = print("🖼️ Full image URL with FileRouter: \(fullImageURL)")
+
+                    // URL 인코딩 처리
+                    if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                       let url = URL(string: encodedURL) {
+                        KFImage(url)
+                        .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 120, height: 120)))
+                        .requestModifier(AnyModifier { request in
+                            var newRequest = request
+                            // 이미지 요청에도 필요한 헤더 추가
+                            if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
+                                newRequest.setValue(sesacKey, forHTTPHeaderField: "SeSACKey")
+                            }
+                            newRequest.setValue(NetworkConstants.productId, forHTTPHeaderField: "ProductId")
+                            if let token = UserDefaults.standard.string(forKey: "accessToken") {
+                                newRequest.setValue(token, forHTTPHeaderField: "Authorization")
+                            }
+                            return newRequest
+                        })
+                        .placeholder {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: 60, height: 60)
+                                .overlay(
+                                    Text("로딩중")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                )
+                        }
+                        .onFailure { error in
+                            print("🖼️ 이미지 로딩 실패: \(error)")
+                        }
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 60, height: 60)
+                        .clipped()
+                        .cornerRadius(8)
+                    } else {
+                        let _ = print("🖼️ URL 생성 실패: \(fullImageURL)")
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.red.opacity(0.3))
+                            .frame(width: 60, height: 60)
+                            .overlay(
+                                Text("URL 오류")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            )
+                    }
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color("imagePlaceholder"))
+                        .frame(width: 60, height: 60)
+                }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(space.title)

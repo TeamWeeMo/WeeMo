@@ -6,9 +6,10 @@
 //
 
 import SwiftUI
+import Kingfisher
 
 struct ReservedSpaceSection: View {
-    @State private var selectedSpace: Space? = nil
+    @Binding var selectedSpace: Space?
     @State private var showingSpaceSelection = false
 
     var body: some View {
@@ -21,12 +22,40 @@ struct ReservedSpaceSection: View {
                 HStack {
                     if let space = selectedSpace {
                         // 선택된 공간이 있을 때
-                        Image(space.imageURL)
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 60, height: 60)
-                            .clipped()
-                            .cornerRadius(8)
+                        if let imageURL = space.imageURLs.first {
+                            // FileRouter를 사용하여 올바른 URL 생성
+                            let fullImageURL = imageURL.hasPrefix("http") ? imageURL : FileRouter.fileURL(from: imageURL)
+                            if let url = URL(string: fullImageURL) {
+                            KFImage(url)
+                                .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 120, height: 120)))
+                                .requestModifier(AnyModifier { request in
+                                    var newRequest = request
+                                    // 이미지 요청에도 필요한 헤더 추가
+                                    if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
+                                        newRequest.setValue(sesacKey, forHTTPHeaderField: "SeSACKey")
+                                    }
+                                    newRequest.setValue(NetworkConstants.productId, forHTTPHeaderField: "ProductId")
+                                    if let token = UserDefaults.standard.string(forKey: "accessToken") {
+                                        newRequest.setValue(token, forHTTPHeaderField: "Authorization")
+                                    }
+                                    return newRequest
+                                })
+                                .placeholder {
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color("imagePlaceholder"))
+                                        .frame(width: 60, height: 60)
+                                }
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 60, height: 60)
+                                .clipped()
+                                .cornerRadius(8)
+                            }
+                        } else {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color("imagePlaceholder"))
+                                .frame(width: 60, height: 60)
+                        }
 
                         VStack(alignment: .leading, spacing: 4) {
                             Text(space.title)

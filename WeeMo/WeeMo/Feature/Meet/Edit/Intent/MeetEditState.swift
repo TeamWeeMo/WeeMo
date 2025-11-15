@@ -16,4 +16,9 @@ struct MeetEditState {
     var selectedSpace: Space? = nil
     var isLoadingSpaces: Bool = false
     var spacesErrorMessage: String? = nil
+
+    // Meet Creation State
+    var isCreatingMeet: Bool = false
+    var createMeetErrorMessage: String? = nil
+    var isMeetCreated: Bool = false
 }

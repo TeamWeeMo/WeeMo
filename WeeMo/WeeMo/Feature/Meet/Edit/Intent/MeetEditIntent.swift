@@ -12,4 +12,8 @@ enum MeetEditIntent {
     case loadSpaces
     case selectSpace(Space)
     case retryLoadSpaces
+
+    // Meet Creation
+    case createMeet(title: String, description: String, capacity: Int, price: String, gender: String, selectedSpace: Space?)
+    case retryCreateMeet
 }

@@ -22,6 +22,11 @@ final class MeetEditViewModel: ObservableObject {
             state.selectedSpace = space
         case .retryLoadSpaces:
             loadSpaces()
+        case .createMeet(let title, let description, let capacity, let price, let gender, let selectedSpace):
+            createMeet(title: title, description: description, capacity: capacity, price: price, gender: gender, selectedSpace: selectedSpace)
+        case .retryCreateMeet:
+            // TODO: 이전 매개변수로 다시 시도
+            break
         }
     }
 
@@ -41,7 +46,7 @@ final class MeetEditViewModel: ObservableObject {
                 }
 
                 // 요청 정보 로깅
-                let router = PostRouter.fetchPosts(next: nil, limit: nil, category: nil)
+                let router = PostRouter.fetchPosts(next: nil, limit: nil, category: .space)
                 do {
                     let urlRequest = try router.asURLRequest()
                     print("📡 Request URL: \(urlRequest.url?.absoluteString ?? "nil")")
@@ -54,10 +59,19 @@ final class MeetEditViewModel: ObservableObject {
                     print("❌ Failed to create URL request: \(error)")
                 }
 
-                let response = try await networkService.request(
-                    router,
-                    responseType: PostListDTO.self
-                ) as PostListDTO
+                // 임시로 Data로 먼저 받아서 응답 확인
+                let urlRequest = try router.asURLRequest()
+                let (data, urlResponse) = try await URLSession.shared.data(for: urlRequest)
+
+                print("📋 Raw response data:")
+                if let responseString = String(data: data, encoding: .utf8) {
+                    print(responseString)
+                } else {
+                    print("Unable to convert response to string")
+                }
+
+                // JSON 디코딩 시도
+                let response = try JSONDecoder().decode(PostListDTO.self, from: data)
 
                 print("✅ API Response received: \(response.data.count) posts")
                 print("📋 Categories in response: \(response.data.map { $0.category })")
@@ -78,8 +92,8 @@ final class MeetEditViewModel: ObservableObject {
                         title: postDTO.title,
                         address: postDTO.content,
                         imageURLs: postDTO.files,
-                        rating: Double(postDTO.value1) ?? 4.5, // value1을 rating으로 사용
-                        pricePerHour: postDTO.price,
+                        rating: Double(postDTO.value1 ?? "4") ?? 4.5, // value1을 rating으로 사용
+                        pricePerHour: postDTO.price ?? 1234,
                         category: .cafe, // 기본값, 필요시 postDTO의 다른 필드로 매핑
                         isPopular: false,
                         amenities: [], // 필요시 postDTO의 다른 필드로 매핑
@@ -97,8 +111,67 @@ final class MeetEditViewModel: ObservableObject {
             } catch {
                 print("❌ Error loading spaces: \(error)")
                 await MainActor.run {
-                    state.spacesErrorMessage = error.localizedDescription
+                    if error.localizedDescription.contains("sesac_memolease only") {
+                        state.spacesErrorMessage = "서버 설정 문제가 있습니다. 관리자에게 문의하세요."
+                    } else {
+                        state.spacesErrorMessage = error.localizedDescription
+                    }
                     state.isLoadingSpaces = false
+                }
+            }
+        }
+    }
+
+    private func createMeet(title: String, description: String, capacity: Int, price: String, gender: String, selectedSpace: Space?) {
+        guard !title.isEmpty else {
+            state.createMeetErrorMessage = "모임 제목을 입력해주세요"
+            return
+        }
+
+        guard !description.isEmpty else {
+            state.createMeetErrorMessage = "모임 소개를 입력해주세요"
+            return
+        }
+
+        state.isCreatingMeet = true
+        state.createMeetErrorMessage = nil
+
+        Task {
+            do {
+                // 추가 필드들 (value1~10)
+                var additionalFields: [String: String] = [:]
+                additionalFields["value1"] = String(capacity) // 모집 인원
+                additionalFields["value2"] = gender // 성별 제한
+                additionalFields["value3"] = price // 참가 비용
+                if let spaceId = selectedSpace?.id {
+                    additionalFields["value4"] = spaceId // 선택된 공간 ID
+                }
+
+                // 선택된 공간의 이미지를 사용
+                let files = selectedSpace?.imageURLs ?? []
+
+                let response = try await networkService.request(
+                    PostRouter.createPost(
+                        title: title,
+                        content: description,
+                        category: .meet,
+                        files: files,
+                        additionalFields: additionalFields
+                    ),
+                    responseType: PostDTO.self
+                )
+
+                await MainActor.run {
+                    print("✅ 모임이 성공적으로 생성되었습니다: \(response.title)")
+                    state.isCreatingMeet = false
+                    state.isMeetCreated = true
+                }
+
+            } catch {
+                await MainActor.run {
+                    print("❌ 모임 생성 실패: \(error)")
+                    state.createMeetErrorMessage = error.localizedDescription
+                    state.isCreatingMeet = false
                 }
             }
         }

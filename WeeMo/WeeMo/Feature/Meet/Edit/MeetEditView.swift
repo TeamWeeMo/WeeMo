@@ -10,20 +10,32 @@ import SwiftUI
 struct MeetEditView: View {
     @State private var meetTitle = ""
     @State private var meetDescription = ""
+    @State private var selectedSpace: Space? = nil
+    @State private var meetCapacity = 1
+    @State private var meetPrice = "0"
+    @State private var selectedGender = "누구나"
+    @StateObject private var viewModel = MeetEditViewModel()
     @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
         VStack(spacing: 0) {
             CustomNavigationBar(
                 onCancel: { presentationMode.wrappedValue.dismiss() },
-                onComplete: { presentationMode.wrappedValue.dismiss() }
+                onComplete: {
+                    viewModel.handle(.createMeet(
+                        title: meetTitle,
+                        description: meetDescription,
+                        capacity: meetCapacity,
+                        price: meetPrice,
+                        gender: selectedGender,
+                        selectedSpace: selectedSpace
+                    ))
+                }
             )
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    ReservedSpaceSection()
-
-                    MeetPhotoSection()
+                    ReservedSpaceSection(selectedSpace: $selectedSpace)
 
                     MeetTitleSection(title: $meetTitle)
 
@@ -31,9 +43,11 @@ struct MeetEditView: View {
 
                     MeetSchedule()
 
-                    MeetCapacitySection()
+                    MeetCapacitySection(capacity: $meetCapacity)
 
-                    MeetGenderSection()
+                    MeetPriceSection(price: $meetPrice)
+
+                    MeetGenderSection(selectedGender: $selectedGender)
 
                     Spacer(minLength: 50)
                 }
@@ -43,7 +57,13 @@ struct MeetEditView: View {
         }
         .background(Color("wmBg"))
         .navigationBarHidden(true)
+        .onChange(of: viewModel.state.isMeetCreated) { isMeetCreated in
+            if isMeetCreated {
+                presentationMode.wrappedValue.dismiss()
+            }
+        }
     }
+
 }
 
 #Preview {
