@@ -6,63 +6,92 @@
 //
 
 import SwiftUI
-
-struct SpaceInfo: Identifiable {
-    let id = UUID()
-    let name: String
-    let address: String
-    let imageName: String
-}
+import Combine
 
 struct SpaceSelectionView: View {
-    @Binding var selectedSpace: SpaceInfo?
+    @Binding var selectedSpace: Space?
     @Environment(\.presentationMode) var presentationMode
-
-    private let mockSpaces = [
-        SpaceInfo(name: "모던 카페 라운지", address: "서울시 강남구 테헤란로 123", imageName: "테스트 이미지"),
-        SpaceInfo(name: "코워킹 스페이스 허브", address: "서울시 마포구 홍대입구로 456", imageName: "테스트 이미지"),
-        SpaceInfo(name: "북카페 리딩룸", address: "서울시 종로구 인사동길 789", imageName: "테스트 이미지"),
-        SpaceInfo(name: "스터디룸 플레이스", address: "서울시 서초구 강남대로 321", imageName: "테스트 이미지")
-    ]
+    @StateObject private var viewModel = MeetEditViewModel()
 
     var body: some View {
         NavigationView {
             VStack {
                 CustomNavigationBar(
-                    onCancel: { presentationMode.wrappedValue.dismiss() },
-                    onComplete: { presentationMode.wrappedValue.dismiss() }
+                    onCancel: {
+                        presentationMode.wrappedValue.dismiss()
+                    },
+                    onComplete: {
+                        // 선택된 공간이 있으면 바인딩 업데이트
+                        if let selected = viewModel.state.selectedSpace {
+                            selectedSpace = selected
+                        }
+                        presentationMode.wrappedValue.dismiss()
+                    }
                 )
 
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(mockSpaces) { space in
-                            SpaceRowView(
-                                space: space,
-                                isSelected: selectedSpace?.id == space.id,
-                                onTap: {
-                                    selectedSpace = space
-                                }
-                            )
-                        }
-                    }
-                    .commonPadding()
-                }
+                content
             }
             .background(Color("wmBg"))
             .navigationBarHidden(true)
+            .onAppear {
+                viewModel.handle(.loadSpaces)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if viewModel.state.isLoadingSpaces {
+            VStack {
+                Spacer()
+                ProgressView("공간을 불러오는 중...")
+                    .frame(maxWidth: .infinity)
+                Spacer()
+            }
+        } else if let errorMessage = viewModel.state.spacesErrorMessage {
+            VStack(spacing: 16) {
+                Spacer()
+                Text("오류가 발생했습니다")
+                    .font(.headline)
+                Text(errorMessage)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("다시 시도") {
+                    viewModel.handle(.retryLoadSpaces)
+                }
+                .buttonStyle(.bordered)
+                Spacer()
+            }
+            .padding()
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    ForEach(viewModel.state.spaces) { space in
+                        SpaceRowView(
+                            space: space,
+                            isSelected: viewModel.state.selectedSpace?.id == space.id,
+                            onTap: {
+                                viewModel.handle(.selectSpace(space))
+                            }
+                        )
+                    }
+                }
+                .commonPadding()
+            }
         }
     }
 }
 
 struct SpaceRowView: View {
-    let space: SpaceInfo
+    let space: Space
     let isSelected: Bool
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
             HStack {
-                Image(space.imageName)
+                Image(space.imageURL)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 60, height: 60)
@@ -70,7 +99,7 @@ struct SpaceRowView: View {
                     .cornerRadius(8)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(space.name)
+                    Text(space.title)
                         .font(.app(.content1))
                         .foregroundColor(Color("textMain"))
 

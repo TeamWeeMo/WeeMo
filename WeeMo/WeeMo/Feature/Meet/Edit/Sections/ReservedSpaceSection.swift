@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ReservedSpaceSection: View {
-    @State private var selectedSpace: SpaceInfo? = nil
+    @State private var selectedSpace: Space? = nil
     @State private var showingSpaceSelection = false
 
     var body: some View {
@@ -21,7 +21,7 @@ struct ReservedSpaceSection: View {
                 HStack {
                     if let space = selectedSpace {
                         // 선택된 공간이 있을 때
-                        Image("테스트 이미지")
+                        Image(space.imageURL)
                             .resizable()
                             .aspectRatio(contentMode: .fill)
                             .frame(width: 60, height: 60)
@@ -29,7 +29,7 @@ struct ReservedSpaceSection: View {
                             .cornerRadius(8)
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(space.name)
+                            Text(space.title)
                                 .font(.app(.content1))
                                 .foregroundColor(Color("textMain"))
 
