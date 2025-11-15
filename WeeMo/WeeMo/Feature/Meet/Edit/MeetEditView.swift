@@ -14,6 +14,7 @@ struct MeetEditView: View {
     @State private var meetCapacity = 1
     @State private var meetPrice = "0"
     @State private var selectedGender = "누구나"
+    @State private var startDate = Date()
     @StateObject private var viewModel = MeetEditViewModel()
     @Environment(\.presentationMode) var presentationMode
 
@@ -28,7 +29,8 @@ struct MeetEditView: View {
                         capacity: meetCapacity,
                         price: meetPrice,
                         gender: selectedGender,
-                        selectedSpace: selectedSpace
+                        selectedSpace: selectedSpace,
+                        startDate: startDate
                     ))
                 }
             )
@@ -41,7 +43,7 @@ struct MeetEditView: View {
 
                     MeetDescriptionSection(description: $meetDescription)
 
-                    MeetSchedule()
+                    MeetSchedule(startDate: $startDate)
 
                     MeetCapacitySection(capacity: $meetCapacity)
 

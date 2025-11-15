@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct MeetSchedule: View {
-    @State private var startDate = Date()
+    @Binding var startDate: Date
     @State private var endDate = Date().addingTimeInterval(3600) // 1시간 후
     @State private var showingStartDatePicker = false
     @State private var showingEndDatePicker = false

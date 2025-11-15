@@ -22,8 +22,8 @@ final class MeetEditViewModel: ObservableObject {
             state.selectedSpace = space
         case .retryLoadSpaces:
             loadSpaces()
-        case .createMeet(let title, let description, let capacity, let price, let gender, let selectedSpace):
-            createMeet(title: title, description: description, capacity: capacity, price: price, gender: gender, selectedSpace: selectedSpace)
+        case .createMeet(let title, let description, let capacity, let price, let gender, let selectedSpace, let startDate):
+            createMeet(title: title, description: description, capacity: capacity, price: price, gender: gender, selectedSpace: selectedSpace, startDate: startDate)
         case .retryCreateMeet:
             // TODO: 이전 매개변수로 다시 시도
             break
@@ -122,7 +122,7 @@ final class MeetEditViewModel: ObservableObject {
         }
     }
 
-    private func createMeet(title: String, description: String, capacity: Int, price: String, gender: String, selectedSpace: Space?) {
+    private func createMeet(title: String, description: String, capacity: Int, price: String, gender: String, selectedSpace: Space?, startDate: Date) {
         guard !title.isEmpty else {
             state.createMeetErrorMessage = "모임 제목을 입력해주세요"
             return
@@ -138,6 +138,18 @@ final class MeetEditViewModel: ObservableObject {
 
         Task {
             do {
+                // ISO8601 날짜 형식으로 변환
+                let formatter = ISO8601DateFormatter()
+                let startDateString = formatter.string(from: startDate)
+
+                // 모임 내용에 장소와 날짜 정보 포함
+                var fullDescription = description
+                if let space = selectedSpace {
+                    fullDescription += "\n\n📍 모임 장소: \(space.title)"
+                    fullDescription += "\n📍 장소 주소: \(space.address)"
+                }
+                fullDescription += "\n⏰ 모임 시작일: \(DateFormatter.displayFormatter.string(from: startDate))"
+
                 // 추가 필드들 (value1~10)
                 var additionalFields: [String: String] = [:]
                 additionalFields["value1"] = String(capacity) // 모집 인원
@@ -146,6 +158,7 @@ final class MeetEditViewModel: ObservableObject {
                 if let spaceId = selectedSpace?.id {
                     additionalFields["value4"] = spaceId // 선택된 공간 ID
                 }
+                additionalFields["value5"] = startDateString // 모임 시작일
 
                 // 선택된 공간의 이미지를 사용
                 let files = selectedSpace?.imageURLs ?? []
@@ -153,7 +166,7 @@ final class MeetEditViewModel: ObservableObject {
                 let response = try await networkService.request(
                     PostRouter.createPost(
                         title: title,
-                        content: description,
+                        content: fullDescription,
                         category: .meet,
                         files: files,
                         additionalFields: additionalFields
