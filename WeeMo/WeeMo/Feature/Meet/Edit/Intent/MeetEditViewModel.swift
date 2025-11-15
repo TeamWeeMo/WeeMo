@@ -146,7 +146,6 @@ final class MeetEditViewModel: ObservableObject {
                 var fullDescription = description
                 if let space = selectedSpace {
                     fullDescription += "\n\n📍 모임 장소: \(space.title)"
-                    fullDescription += "\n📍 장소 주소: \(space.address)"
                 }
                 fullDescription += "\n⏰ 모임 시작일: \(DateFormatter.displayFormatter.string(from: startDate))"
 

@@ -166,10 +166,6 @@ struct MeetCardView: View {
                     .font(.app(.content2))
                     .foregroundColor(Color("textSub"))
 
-                Text(meet.address)
-                    .font(.app(.subContent1))
-                    .foregroundColor(Color("textSub"))
-
                 HStack {
                     Text(meet.price)
                         .font(.app(.content2))

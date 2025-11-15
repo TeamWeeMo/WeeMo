@@ -59,16 +59,23 @@ final class MeetListViewModel: ObservableObject {
 
                 let meets = response.data.compactMap { (postDTO: PostDTO) -> Meet? in
                     // PostDTO를 Meet으로 변환
-                    // value1: 모집 인원, value2: 성별 제한, value3: 참가 비용, value4: 공간 ID
+                    // value1: 모집 인원, value2: 성별 제한, value3: 참가 비용, value4: 공간 ID, value5: 모임 시작일
+
+                    // 모임 날짜 - value5(모임 시작일)가 있으면 사용, 없으면 생성일 사용
+                    let meetDate = postDTO.value5 != nil ? formatDate(postDTO.value5!) : formatDate(postDTO.createdAt)
+
+                    // 모임 장소 - content에서 📍 모임 장소: 부분 추출
+                    let location = extractLocationFromContent(postDTO.content)
+
                     return Meet(
                         title: postDTO.title,
-                        date: formatDate(postDTO.createdAt),
-                        location: "모임 장소", // TODO: 공간 정보에서 가져오기
+                        date: meetDate,
+                        location: location,
                         address: postDTO.content,
                         price: formatPrice(postDTO.value3),
                         participants: formatParticipants(postDTO.value1, postDTO.buyers.count),
                         imageName: postDTO.files.first ?? "",
-                        daysLeft: calculateDaysLeft(postDTO.createdAt)
+                        daysLeft: calculateDaysLeft(postDTO.value5 ?? postDTO.createdAt)
                     )
                 }
 
@@ -88,9 +95,20 @@ final class MeetListViewModel: ObservableObject {
 
     // MARK: - Helper Functions
 
+    private func extractLocationFromContent(_ content: String) -> String {
+        // content에서 📍 모임 장소: 부분 찾기
+        let pattern = "📍 모임 장소: (.*?)(?=\\n|$)"
+        if let regex = try? NSRegularExpression(pattern: pattern),
+           let match = regex.firstMatch(in: content, range: NSRange(content.startIndex..., in: content)),
+           let range = Range(match.range(at: 1), in: content) {
+            return String(content[range])
+        }
+        return ""
+    }
+
     private func formatDate(_ dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return "날짜 미정" }
+        guard let date = formatter.date(from: dateString) else { return "" }
 
         let displayFormatter = DateFormatter()
         displayFormatter.dateFormat = "M월 d일 (E)"
