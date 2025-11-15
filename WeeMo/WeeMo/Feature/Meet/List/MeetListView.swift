@@ -11,8 +11,7 @@ struct MeetListView: View {
     @State private var searchText = ""
     @State private var selectedSortOption: SortOption = .registrationDate
     @State private var showingSortOptions = false
-
-    @State private var meets: [Meet] = []
+    @StateObject private var viewModel = MeetListViewModel()
 
     var body: some View {
         NavigationView {
@@ -34,20 +33,46 @@ struct MeetListView: View {
                         showingOptions: $showingSortOptions
                     )
 
-                    LazyVStack(spacing: 16) {
-                        ForEach(meets) { meet in
-                            NavigationLink(destination: MeetDetailView(meet: meet)) {
-                                MeetCardView(meet: meet)
-                            }
-                            .buttonStyle(PlainButtonStyle())
+                    if viewModel.state.isLoading {
+                        VStack {
+                            ProgressView("모임을 불러오는 중...")
+                                .padding()
+                            Spacer()
                         }
+                    } else if let errorMessage = viewModel.state.errorMessage {
+                        VStack(spacing: 16) {
+                            Text("오류가 발생했습니다")
+                                .font(.headline)
+                            Text(errorMessage)
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            Button("다시 시도") {
+                                viewModel.handle(.retryLoadMeets)
+                            }
+                            .buttonStyle(.bordered)
+                            Spacer()
+                        }
+                        .padding()
+                    } else {
+                        LazyVStack(spacing: 16) {
+                            ForEach(viewModel.state.meets) { meet in
+                                NavigationLink(destination: MeetDetailView(meet: meet)) {
+                                    MeetCardView(meet: meet)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
                 }
             }
             .navigationBarHidden(true)
             .background(Color("wmBg"))
+            .onAppear {
+                viewModel.handle(.loadMeets)
+            }
             .overlay(
                 VStack {
                     Spacer()

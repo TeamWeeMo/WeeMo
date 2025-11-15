@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Kingfisher
 
 // MARK: - 검색바
 struct SearchBar: View {
@@ -80,13 +81,57 @@ struct MeetCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack {
-                Image("테스트 이미지")
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(height: 200)
-                    .clipped()
-                    .cornerRadius(12, corners: [.topLeft, .topRight])
-
+                if !meet.imageName.isEmpty {
+                    let fullImageURL = meet.imageName.hasPrefix("http") ? meet.imageName : FileRouter.fileURL(from: meet.imageName)
+                    if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                       let url = URL(string: encodedURL) {
+                        KFImage(url)
+                            .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 400, height: 400)))
+                            .requestModifier(AnyModifier { request in
+                                var newRequest = request
+                                // 이미지 요청에도 필요한 헤더 추가
+                                if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
+                                    newRequest.setValue(sesacKey, forHTTPHeaderField: "SeSACKey")
+                                }
+                                newRequest.setValue(NetworkConstants.productId, forHTTPHeaderField: "ProductId")
+                                if let token = UserDefaults.standard.string(forKey: "accessToken") {
+                                    newRequest.setValue(token, forHTTPHeaderField: "Authorization")
+                                }
+                                return newRequest
+                            })
+                            .placeholder {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.gray.opacity(0.3))
+                                    .frame(height: 200)
+                                    .overlay(
+                                        Text("이미지 로딩중")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    )
+                            }
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 200)
+                    } else {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(height: 200)
+                            .overlay(
+                                Text("이미지 없음")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            )
+                    }
+                } else {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(height: 200)
+                        .overlay(
+                            Text("이미지 없음")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        )
+                }
                 VStack {
                     HStack {
                         Spacer()
@@ -104,6 +149,8 @@ struct MeetCardView: View {
                     Spacer()
                 }
             }
+            .frame(height: 200)
+            .cornerRadius(12)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(meet.title)
