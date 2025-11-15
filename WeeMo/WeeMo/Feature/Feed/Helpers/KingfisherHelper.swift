@@ -63,4 +63,42 @@ extension KFImage {
             }
             .resizable()
     }
+
+    /// 프로필 이미지 설정 (인증 + 원형)
+    /// - Returns: 설정이 완료된 KFImage
+    func profileImageSetup() -> KFImage {
+        self
+            .withAuthHeaders()
+            .placeholder {
+                Circle()
+                    .fill(Color.gray.opacity(0.2))
+                    .overlay {
+                        Image(systemName: "person.fill")
+                            .foregroundStyle(.gray)
+                            .font(.system(size: 16))
+                    }
+            }
+            .retry(maxCount: 3, interval: .seconds(2))
+            .onFailure { error in
+                print("프로필 이미지 로드 실패: \(error.localizedDescription)")
+            }
+            .resizable()
+    }
+
+    /// 피드 상세 이미지 설정 (인증 + 재시도)
+    /// - Returns: 설정이 완료된 KFImage
+    func feedDetailImageSetup() -> KFImage {
+        self
+            .withAuthHeaders()
+            .placeholder {
+                Rectangle()
+                    .imagePlaceholder()
+                    .aspectRatio(1.0, contentMode: .fit)
+            }
+            .retry(maxCount: 3, interval: .seconds(2))
+            .onFailure { error in
+                print("피드 상세 이미지 로드 실패: \(error.localizedDescription)")
+            }
+            .resizable()
+    }
 }
