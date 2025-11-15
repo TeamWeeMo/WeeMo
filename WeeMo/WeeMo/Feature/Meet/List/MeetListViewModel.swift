@@ -15,15 +15,18 @@ enum MeetListIntent {
     case retryLoadMeets
     case searchMeets(query: String)
     case refreshMeets
+    case sortMeets(option: SortOption)
 }
 
 // MARK: - Meet List State
 
 struct MeetListState {
     var meets: [Meet] = []
+    var allMeets: [Meet] = [] // 원본 데이터 보관
     var isLoading: Bool = false
     var errorMessage: String? = nil
     var searchQuery: String = ""
+    var currentSortOption: SortOption = .registrationDate
 }
 
 // MARK: - Meet List ViewModel
@@ -43,6 +46,8 @@ final class MeetListViewModel: ObservableObject {
             // TODO: 검색 기능 구현
         case .refreshMeets:
             loadMeets()
+        case .sortMeets(let option):
+            sortMeets(by: option)
         }
     }
 
@@ -80,8 +85,10 @@ final class MeetListViewModel: ObservableObject {
                 }
 
                 await MainActor.run {
-                    state.meets = meets
+                    state.allMeets = meets
                     state.isLoading = false
+                    // 현재 정렬 옵션에 따라 정렬 적용
+                    sortMeets(by: state.currentSortOption)
                 }
 
             } catch {
@@ -152,5 +159,60 @@ final class MeetListViewModel: ObservableObject {
             }
         }
         return ""
+    }
+
+    private func sortMeets(by option: SortOption) {
+        print("🔄 Sorting meets by: \(option.rawValue)")
+        print("📊 Total meets to sort: \(state.allMeets.count)")
+
+        state.currentSortOption = option
+
+        switch option {
+        case .registrationDate:
+            // 등록일순 - 제목 역순으로 테스트
+            state.meets = state.allMeets.sorted { $0.title > $1.title }
+            print("📋 Sorted by registration date: \(state.meets.map { $0.title })")
+        case .deadline:
+            // 마감일순 - daysLeft 기준 (D-day가 적은 순)
+            state.meets = state.allMeets.sorted { meet1, meet2 in
+                let days1 = parseDaysLeft(meet1.daysLeft)
+                let days2 = parseDaysLeft(meet2.daysLeft)
+                print("🔍 Comparing: \(meet1.title) (D-\(days1)) vs \(meet2.title) (D-\(days2))")
+                return days1 < days2
+            }
+            print("📋 Sorted by deadline: \(state.meets.map { "\($0.title) (\($0.daysLeft))" })")
+        case .distance:
+            // 거리순 - 가격순으로 테스트
+            state.meets = state.allMeets.sorted { $0.price < $1.price }
+            print("📋 Sorted by distance: \(state.meets.map { $0.title })")
+        }
+
+        print("✅ Sort completed. New order: \(state.meets.map { $0.title })")
+    }
+
+    // Helper function to parse date from string
+    private func parseDate(_ dateString: String) -> Date {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "M월 d일 (E)"
+        formatter.locale = Locale(identifier: "ko_KR")
+        return formatter.date(from: dateString) ?? Date.distantPast
+    }
+
+    // Helper function to parse days left from string
+    private func parseDaysLeft(_ daysLeftString: String) -> Int {
+        print("🔍 Parsing daysLeft: '\(daysLeftString)'")
+
+        if daysLeftString == "오늘" {
+            return 0
+        } else if daysLeftString == "진행 완료" {
+            return Int.max // 완료된 것은 맨 뒤로
+        } else if daysLeftString.hasPrefix("D-") {
+            let numberString = daysLeftString.replacingOccurrences(of: "D-", with: "")
+            let result = Int(numberString) ?? Int.max
+            print("✅ Parsed D-\(numberString) -> \(result)")
+            return result
+        }
+        print("❌ Could not parse: '\(daysLeftString)' -> Int.max")
+        return Int.max
     }
 }

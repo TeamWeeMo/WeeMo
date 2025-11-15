@@ -58,18 +58,13 @@ struct FilterButton: View {
         }
         .commonButtonStyle(isSelected: false)
         .commonPadding()
-        .actionSheet(isPresented: $showingOptions) {
-            ActionSheet(
-                title: Text("정렬 기준")
-                    .font(.app(.subHeadline2)),
-                buttons: SortOption.allCases.map { option in
-                    .default(Text(option.rawValue)
-                        .font(.app(.content1))) {
-                        selectedOption = option
-                    }
-                } + [.cancel(Text("취소")
-                    .font(.app(.content1)))]
-            )
+        .confirmationDialog("정렬 기준", isPresented: $showingOptions, titleVisibility: .visible) {
+            ForEach(SortOption.allCases, id: \.self) { option in
+                Button(option.rawValue) {
+                    selectedOption = option
+                }
+            }
+            Button("취소", role: .cancel) { }
         }
     }
 }

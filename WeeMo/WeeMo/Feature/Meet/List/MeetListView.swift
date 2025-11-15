@@ -73,6 +73,10 @@ struct MeetListView: View {
             .onAppear {
                 viewModel.handle(.loadMeets)
             }
+            .onChange(of: selectedSortOption) { sortOption in
+                print("🔄 Sort option changed to: \(sortOption.rawValue)")
+                viewModel.handle(.sortMeets(option: sortOption))
+            }
             .overlay(
                 VStack {
                     Spacer()
