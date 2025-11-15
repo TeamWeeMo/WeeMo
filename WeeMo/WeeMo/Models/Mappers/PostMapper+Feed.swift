@@ -17,9 +17,12 @@ extension PostDTO {
         dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         let date = dateFormatter.date(from: createdAt) ?? Date()
 
+        // 모든 파일 경로를 풀 URL로 변환
+        let imageURLs = files.map { FileRouter.fileURL(from: $0) }
+
         return Feed(
             id: postId,
-            imageURL: files.first ?? "",
+            imageURLs: imageURLs,
             content: content,
             creator: creator.toDomain(),
             createdAt: date,

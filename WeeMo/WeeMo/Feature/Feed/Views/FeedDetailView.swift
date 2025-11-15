@@ -93,7 +93,7 @@ struct FeedDetailView: View {
 
     /// 게시글 이미지 (높이 제한 적용)
     private var imageView: some View {
-        KFImage(URL(string: item.imageURL))
+        KFImage(URL(string: item.thumbnailURL))
             .placeholder {
                 // 플레이스홀더는 정사각형으로 표시
                 Rectangle()
@@ -211,14 +211,14 @@ struct FeedDetailView: View {
 
 // MARK: - Preview
 
-#Preview {
-    NavigationStack {
-        FeedDetailView(item: MockFeedData.sampleFeeds[0])
-    }
-}
+//#Preview {
+//    NavigationStack {
+//        FeedDetailView(item: MockFeedData.sampleFeeds[0])
+//    }
+//}
 
-#Preview("좋아요 많은 게시글") {
-    NavigationStack {
-        FeedDetailView(item: MockFeedData.sampleFeeds[2])
-    }
-}
+//#Preview("좋아요 많은 게시글") {
+//    NavigationStack {
+//        FeedDetailView(item: MockFeedData.sampleFeeds[2])
+//    }
+//}
