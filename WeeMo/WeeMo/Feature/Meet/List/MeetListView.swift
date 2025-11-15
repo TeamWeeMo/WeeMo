@@ -77,6 +77,10 @@ struct MeetListView: View {
                 print("🔄 Sort option changed to: \(sortOption.rawValue)")
                 viewModel.handle(.sortMeets(option: sortOption))
             }
+            .onChange(of: searchText) { searchQuery in
+                print("🔍 Search text changed to: '\(searchQuery)'")
+                viewModel.handle(.searchMeets(query: searchQuery))
+            }
             .overlay(
                 VStack {
                     Spacer()
