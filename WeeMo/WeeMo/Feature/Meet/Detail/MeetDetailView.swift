@@ -63,7 +63,7 @@ struct MeetDetailView: View {
 
                             ZStack {
                                 RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.red)
+                                    .fill(Color.wmMain)
                                     .frame(width: 40, height: 24)
                                 Text(meetDetail.daysLeft)
                                     .font(.app(.subContent1))
