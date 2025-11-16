@@ -22,8 +22,8 @@ enum PostRouter: APIRouter {
     case deletePost(postId: String)
 
     // 좋아요
-    case likePost(postId: String)
-    case likePost2(postId: String)
+    case likePost(postId: String, likeStatus: Bool)
+    case likePost2(postId: String, likeStatus: Bool)
     case fetchMyLikedPosts(next: String?, limit: Int?, category: PostCategory?)
     case fetchMyLikedPosts2(next: String?, limit: Int?, category: PostCategory?)
 
@@ -64,9 +64,9 @@ enum PostRouter: APIRouter {
             return "\(version)/posts/\(postId)"
         case .deletePost(let postId):
             return "\(version)/posts/\(postId)"
-        case .likePost(let postId):
+        case .likePost(let postId, _):
             return "\(version)/posts/\(postId)/like"
-        case .likePost2(let postId):
+        case .likePost2(let postId, _):
             return "\(version)/posts/\(postId)/like-2"
         case .fetchMyLikedPosts:
             return "\(version)/posts/likes/me"
@@ -120,8 +120,11 @@ enum PostRouter: APIRouter {
             if let files = files { params["files"] = files }
             return params.isEmpty ? nil : params
 
-        case .deletePost, .likePost, .likePost2:
+        case .deletePost:
             return nil
+
+        case .likePost(_, let likeStatus), .likePost2(_, let likeStatus):
+            return ["like_status": likeStatus]
 
         case .fetchMyLikedPosts(let next, let limit, let category),
              .fetchMyLikedPosts2(let next, let limit, let category):

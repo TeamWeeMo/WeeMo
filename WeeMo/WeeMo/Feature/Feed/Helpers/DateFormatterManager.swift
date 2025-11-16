@@ -35,6 +35,16 @@ enum DateFormatterManager {
     }()
 }
 
+// MARK: - String Extension
+
+extension String {
+    /// ISO8601 문자열을 Date로 변환
+    /// - Returns: 변환된 Date 객체 (실패 시 nil)
+    func toDate() -> Date? {
+        return DateFormatterManager.iso8601.date(from: self)
+    }
+}
+
 // MARK: - Date Extension
 
 extension Date {
