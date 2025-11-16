@@ -19,6 +19,9 @@ final class FeedDetailStore {
     private let networkService: NetworkServiceProtocol
     private var cancellables = Set<AnyCancellable>()
 
+    // Combine Subjects
+    private let likeSubject = PassthroughSubject<Void, Never>()
+
     // MARK: - Initializer
 
     init(
@@ -27,6 +30,8 @@ final class FeedDetailStore {
     ) {
         self.state = FeedDetailState(feed: feed)
         self.networkService = networkService
+
+        setupLikeDebounce()
     }
 
     // MARK: - Intent Handler
@@ -37,17 +42,17 @@ final class FeedDetailStore {
             handleOnAppear()
 
         case .toggleLike:
-            toggleLike()
-
-        case .sharePost:
-            handleSharePost()
+            likeSubject.send()  // Debounced
 
         case .openComments:
             handleOpenComments()
 
-        case .toggleBookmark:
-            toggleBookmark()
+        case .closeComments:
+            state.showCommentSheet = false
 
+        case .sharePost:
+            handleSharePost()
+            
         case .showMoreMenu:
             handleShowMoreMenu()
 
@@ -59,56 +64,70 @@ final class FeedDetailStore {
         }
     }
 
+    // MARK: - Setup
+
+    private func setupLikeDebounce() {
+        likeSubject
+            .debounce(for: .milliseconds(300), scheduler: DispatchQueue.main)
+            .sink { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    await self?.toggleLike()
+                }
+            }
+            .store(in: &cancellables)
+    }
+
     // MARK: - Private Methods
 
     private func handleOnAppear() {
         // 초기 로드 (필요 시)
-        // TODO: 서버에서 최신 좋아요/북마크 상태 가져오기
+        // TODO: 서버에서 최신 좋아요 상태 가져오기
     }
 
-    private func toggleLike() {
+    @MainActor
+    private func toggleLike() async {
         // 낙관적 업데이트 (Optimistic Update)
+        let previousLikeState = state.isLiked
+        let previousLikeCount = state.likeCount
+
         state.isLiked.toggle()
         state.likeCount += state.isLiked ? 1 : -1
 
-        // TODO: 서버에 좋아요 API 호출
-        // Task {
-        //     do {
-        //         try await networkService.request(
-        //             PostRouter.likePost(postId: state.feed.id),
-        //             responseType: LikeDTO.self
-        //         )
-        //     } catch {
-        //         // 실패 시 롤백
-        //         state.isLiked.toggle()
-        //         state.likeCount += state.isLiked ? 1 : -1
-        //         state.errorMessage = "좋아요 처리에 실패했습니다."
-        //     }
-        // }
+        // 토글된 상태를 서버에 전송
+        let newLikeStatus = state.isLiked
 
-        print("좋아요 토글: \(state.isLiked)")
-    }
+        do {
+            let response = try await networkService.request(
+                PostRouter.likePost(postId: state.feed.id, likeStatus: newLikeStatus),
+                responseType: LikeStatusDTO.self
+            )
 
-    private func toggleBookmark() {
-        // 낙관적 업데이트
-        state.isBookmarked.toggle()
+            // 서버 응답과 로컬 상태 동기화
+            state.isLiked = response.likeStatus
 
-        // TODO: 서버에 북마크 API 호출
-        print("북마크 토글: \(state.isBookmarked)")
-    }
+            print("좋아요 성공: \(state.isLiked)")
+        } catch {
+            // 실패 시 롤백
+            state.isLiked = previousLikeState
+            state.likeCount = previousLikeCount
+            state.errorMessage = "좋아요 처리에 실패했습니다."
 
-    private func handleSharePost() {
-        // TODO: 공유 기능 구현
-        print("공유하기: \(state.feed.id)")
+            print("좋아요 실패: \(error.localizedDescription)")
+        }
     }
 
     private func handleOpenComments() {
-        // TODO: 댓글 화면으로 이동
-        print("댓글 열기")
+        state.showCommentSheet = true
+        print("댓글 바텀 시트 열기")
     }
 
+    private func handleSharePost() {
+        // TODO: 공유하기
+        print("공유하기")
+    }
+    
     private func handleShowMoreMenu() {
-        // TODO: 더보기 메뉴 (수정/삭제/신고)
+        // TODO: 더보기
         print("더보기 메뉴")
     }
 

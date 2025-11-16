@@ -15,9 +15,9 @@ enum FeedDetailIntent {
 
     // 사용자 액션
     case toggleLike
-    case sharePost
     case openComments
-    case toggleBookmark
+    case closeComments
+    case sharePost
     case showMoreMenu
     case navigateToProfile
 

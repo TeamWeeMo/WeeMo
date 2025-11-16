@@ -60,6 +60,16 @@ struct FeedDetailView: View {
                     }
             }
         }
+        .sheet(isPresented: Binding(
+            get: { store.state.showCommentSheet },
+            set: { newValue in
+                if !newValue {
+                    store.send(.closeComments)
+                }
+            }
+        )) {
+            CommentBottomSheet(postId: store.state.feed.id)
+        }
         .onAppear {
             store.send(.onAppear)
         }
@@ -186,19 +196,7 @@ struct FeedDetailView: View {
                 store.send(.openComments)
             }
 
-            // 공유 버튼
-            InteractionButton(systemImage: "paperplane") {
-                store.send(.sharePost)
-            }
-
             Spacer()
-
-            // 북마크 버튼
-            InteractionButton(
-                systemImage: store.state.isBookmarked ? "bookmark.fill" : "bookmark"
-            ) {
-                store.send(.toggleBookmark)
-            }
         }
     }
 }

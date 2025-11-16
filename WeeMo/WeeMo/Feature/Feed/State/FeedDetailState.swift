@@ -16,10 +16,13 @@ struct FeedDetailState {
     // 인터랙션 상태
     var isLiked: Bool = false
     var likeCount: Int
-    var isBookmarked: Bool = false
+    var commentCount: Int
 
     // 이미지 페이징
     var currentImageIndex: Int = 0
+
+    // UI 상태
+    var showCommentSheet: Bool = false
 
     // 로딩/에러
     var isLoading: Bool = false
@@ -29,6 +32,10 @@ struct FeedDetailState {
     init(feed: Feed) {
         self.feed = feed
         self.likeCount = feed.likes.count
+        self.commentCount = feed.commentCount
+        // 현재 유저가 좋아요했는지 확인
+        // TODO: 현재 유저 ID와 비교 필요
+        self.isLiked = false
     }
 
     /// 현재 표시할 이미지 URL
