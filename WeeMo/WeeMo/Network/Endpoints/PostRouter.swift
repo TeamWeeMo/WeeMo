@@ -15,7 +15,7 @@ enum PostRouter: APIRouter {
     case uploadFiles(images: [Data])
 
     // 게시글 CRUD
-    case createPost(title: String, content: String, category: PostCategory, files: [String], additionalFields: [String: String]?)
+    case createPost(title: String, content: String, category: PostCategory, files: [String], additionalFields: [String: String]?, latitude: Double?, longitude: Double?)
     case fetchPosts(next: String?, limit: Int?, category: PostCategory?)
     case fetchPost(postId: String)
     case updatePost(postId: String, title: String?, content: String?, files: [String]?)
@@ -95,7 +95,7 @@ enum PostRouter: APIRouter {
         case .uploadFiles:
             return nil
 
-        case .createPost(let title, let content, let category, let files, let additionalFields):
+        case .createPost(let title, let content, let category, let files, let additionalFields, let latitude, let longitude):
             var params: Parameters = [
                 "title": title,
                 "content": content,
@@ -105,6 +105,11 @@ enum PostRouter: APIRouter {
             // 추가 필드 병합 (value1~10)
             if let additional = additionalFields {
                 params.merge(additional) { _, new in new }
+            }
+            // 위도/경도 정보 추가
+            if let latitude = latitude, let longitude = longitude {
+                params["latitude"] = latitude
+                params["longitude"] = longitude
             }
             return params
 

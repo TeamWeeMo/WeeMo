@@ -12,9 +12,10 @@ struct MeetListView: View {
     @State private var selectedSortOption: SortOption = .registrationDate
     @State private var showingSortOptions = false
     @StateObject private var viewModel = MeetListViewModel()
+    @State private var navigationPath = NavigationPath()
 
     var body: some View {
-        NavigationView {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack {
                     HStack {
@@ -57,7 +58,9 @@ struct MeetListView: View {
                     } else {
                         LazyVStack(spacing: 16) {
                             ForEach(viewModel.state.meets) { meet in
-                                NavigationLink(destination: MeetDetailView(postId: meet.postId)) {
+                                Button(action: {
+                                    navigationPath.append(meet.postId)
+                                }) {
                                     MeetCardView(meet: meet)
                                 }
                                 .buttonStyle(PlainButtonStyle())
@@ -87,15 +90,53 @@ struct MeetListView: View {
                     HStack {
                         Spacer()
                         VStack(spacing: 12) {
-                            MapViewButton()
-                            FloatingActionButton()
+                            Button(action: {
+                                navigationPath.append("map")
+                            }) {
+                                HStack {
+                                    Image(systemName: "map")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.black)
+                                    Text("지도보기")
+                                        .font(.app(.content2))
+                                        .foregroundColor(.black)
+                                }
+                                .frame(width: 130, height: 40)
+                                .background(Color.white)
+                                .cornerRadius(25)
+                                .cardShadow()
+                            }
+
+                            Button(action: {
+                                navigationPath.append("edit")
+                            }) {
+                                HStack {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.white)
+                                    Text("모임 만들기")
+                                        .font(.app(.content2))
+                                        .foregroundColor(.white)
+                                }
+                                .frame(width: 130, height: 40)
+                                .background(Color.black)
+                                .cornerRadius(25)
+                            }
                         }
                     }
                     .padding(.trailing, 20)
                     .padding(.bottom, 20)
                 }
             )
-
+            .navigationDestination(for: String.self) { value in
+                if value == "map" {
+                    MeetMapView()
+                } else if value == "edit" {
+                    MeetEditView()
+                } else {
+                    MeetDetailView(postId: value)
+                }
+            }
         }
     }
 }

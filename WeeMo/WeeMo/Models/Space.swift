@@ -20,6 +20,8 @@ struct Space: Identifiable, Hashable {
     let amenities: [SpaceAmenity]
     let hasParking: Bool
     let description: String
+    let latitude: Double?
+    let longitude: Double?
 
     // Hashable 구현
     func hash(into hasher: inout Hasher) {

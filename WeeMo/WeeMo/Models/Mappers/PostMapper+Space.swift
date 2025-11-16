@@ -29,7 +29,9 @@ extension PostDTO {
             isPopular: value4 == "true",
             amenities: amenities,
             hasParking: value5 == "true",
-            description: content
+            description: content,
+            latitude: geolocation.latitude,
+            longitude: geolocation.longitude
         )
     }
 

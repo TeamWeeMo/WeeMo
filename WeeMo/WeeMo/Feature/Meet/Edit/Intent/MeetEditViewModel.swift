@@ -98,7 +98,9 @@ final class MeetEditViewModel: ObservableObject {
                         isPopular: false,
                         amenities: [], // 필요시 postDTO의 다른 필드로 매핑
                         hasParking: false, // 필요시 postDTO의 다른 필드로 매핑
-                        description: postDTO.content
+                        description: postDTO.content,
+                        latitude: postDTO.geolocation.latitude,
+                        longitude: postDTO.geolocation.longitude
                     )
                 }
 
@@ -168,7 +170,9 @@ final class MeetEditViewModel: ObservableObject {
                         content: fullDescription,
                         category: .meet,
                         files: files,
-                        additionalFields: additionalFields
+                        additionalFields: additionalFields,
+                        latitude: selectedSpace?.latitude,
+                        longitude: selectedSpace?.longitude
                     ),
                     responseType: PostDTO.self
                 )
