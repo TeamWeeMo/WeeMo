@@ -18,8 +18,8 @@ struct SpaceDetailView: View {
                 ImageCarouselView(imageURLs: space.imageURLs)
 
                 VStack(alignment: .leading, spacing: Spacing.base) {
-                    // 편의시설 태그
-                    AmenityTagsView(tags: space.amenityTags)
+                    // 해시태그
+                    AmenityTagsView(tags: space.hashTags)
                         .padding(.horizontal, Spacing.base)
                         .padding(.top, Spacing.base)
 

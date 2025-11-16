@@ -33,7 +33,8 @@ extension PostDTO {
             isPopular: value3 == "true",
             amenities: amenities,
             hasParking: value3 == "true",
-            description: content
+            description: content,
+            hashTags: hashTags  // 서버에서 받은 해시태그
         )
     }
 

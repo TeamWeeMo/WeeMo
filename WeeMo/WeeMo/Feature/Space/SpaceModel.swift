@@ -40,7 +40,8 @@ extension Space {
             isPopular: true,
             amenities: [.quiet, .wifi, .power],
             hasParking: true,
-            description: "조용하고 아늑한 분위기의 카페입니다. 스터디나 작업하기 좋은 공간으로, 고속 WiFi와 충분한 콘센트를 제공합니다."
+            description: "조용하고 아늑한 분위기의 카페입니다. 스터디나 작업하기 좋은 공간으로, 고속 WiFi와 충분한 콘센트를 제공합니다.",
+            hashTags: ["카페"]
         ),
         Space(
             id: "2",
@@ -53,7 +54,8 @@ extension Space {
             isPopular: true,
             amenities: [.wifi, .power, .printer, .whiteboard],
             hasParking: true,
-            description: "프리미엄 코워킹 스페이스입니다. 개인 작업부터 팀 프로젝트까지 가능하며, 프린터와 화이트보드를 무료로 이용하실 수 있습니다."
+            description: "프리미엄 코워킹 스페이스입니다. 개인 작업부터 팀 프로젝트까지 가능하며, 프린터와 화이트보드를 무료로 이용하실 수 있습니다.",
+            hashTags: ["카페"]
         ),
         Space(
             id: "3",
@@ -66,7 +68,8 @@ extension Space {
             isPopular: false,
             amenities: [.projector, .whiteboard, .wifi],
             hasParking: false,
-            description: "소규모 회의에 최적화된 프라이빗 룸입니다. 빔프로젝터와 화이트보드가 구비되어 있어 프레젠테이션이 가능합니다."
+            description: "소규모 회의에 최적화된 프라이빗 룸입니다. 빔프로젝터와 화이트보드가 구비되어 있어 프레젠테이션이 가능합니다.",
+            hashTags: ["카페"]
         ),
         Space(
             id: "4",
@@ -79,7 +82,8 @@ extension Space {
             isPopular: false,
             amenities: [.kitchen, .wifi, .projector],
             hasParking: true,
-            description: "생일파티, 모임 등 다양한 이벤트를 위한 공간입니다. 주방시설이 완비되어 있어 간단한 요리도 가능합니다."
+            description: "생일파티, 모임 등 다양한 이벤트를 위한 공간입니다. 주방시설이 완비되어 있어 간단한 요리도 가능합니다.",
+            hashTags: ["카페"]
         ),
         Space(
             id: "5",
@@ -92,7 +96,8 @@ extension Space {
             isPopular: false,
             amenities: [.quiet, .wifi, .power],
             hasParking: false,
-            description: "집중력이 필요한 학습과 업무를 위한 조용한 공간입니다. 쾌적한 환경에서 편안하게 공부하실 수 있습니다."
+            description: "집중력이 필요한 학습과 업무를 위한 조용한 공간입니다. 쾌적한 환경에서 편안하게 공부하실 수 있습니다.",
+            hashTags: ["카페"]
         )
     ]
 }
