@@ -8,29 +8,6 @@
 import Foundation
 import Combine
 
-// MARK: - Meet List Intent
-
-enum MeetListIntent {
-    case loadMeets
-    case retryLoadMeets
-    case searchMeets(query: String)
-    case refreshMeets
-    case sortMeets(option: SortOption)
-}
-
-// MARK: - Meet List State
-
-struct MeetListState {
-    var meets: [Meet] = []
-    var allMeets: [Meet] = [] // 원본 데이터 보관
-    var filteredMeets: [Meet] = [] // 검색 결과 보관
-    var isLoading: Bool = false
-    var errorMessage: String? = nil
-    var searchQuery: String = ""
-    var currentSortOption: SortOption = .registrationDate
-}
-
-// MARK: - Meet List ViewModel
 
 final class MeetListViewModel: ObservableObject {
     @Published var state = MeetListState()
@@ -73,6 +50,7 @@ final class MeetListViewModel: ObservableObject {
                     let location = extractLocationFromContent(postDTO.content)
 
                     return Meet(
+                        postId: postDTO.postId,
                         title: postDTO.title,
                         date: meetDate,
                         location: location,

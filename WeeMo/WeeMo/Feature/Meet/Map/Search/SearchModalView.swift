@@ -69,7 +69,7 @@ struct SearchModalView: View {
                     ScrollView {
                         LazyVStack(spacing: 16) {
                             ForEach(filteredMeets) { meet in
-                                NavigationLink(destination: MeetDetailView(meet: meet)) {
+                                NavigationLink(destination: MeetDetailView(postId: meet.postId)) {
                                     MeetCardView(meet: meet)
                                 }
                                 .buttonStyle(PlainButtonStyle())

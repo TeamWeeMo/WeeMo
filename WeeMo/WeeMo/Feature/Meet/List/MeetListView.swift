@@ -57,7 +57,7 @@ struct MeetListView: View {
                     } else {
                         LazyVStack(spacing: 16) {
                             ForEach(viewModel.state.meets) { meet in
-                                NavigationLink(destination: MeetDetailView(meet: meet)) {
+                                NavigationLink(destination: MeetDetailView(postId: meet.postId)) {
                                     MeetCardView(meet: meet)
                                 }
                                 .buttonStyle(PlainButtonStyle())

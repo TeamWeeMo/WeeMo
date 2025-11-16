@@ -27,6 +27,9 @@ enum PostRouter: APIRouter {
     case fetchMyLikedPosts(next: String?, limit: Int?, category: PostCategory?)
     case fetchMyLikedPosts2(next: String?, limit: Int?, category: PostCategory?)
 
+    // 구매/참가
+    case buyPost(postId: String)
+
     // 조회
     case fetchUserPosts(userId: String, next: String?, limit: Int?, category: PostCategory?)
     case searchByHashtag(hashtag: String, next: String?, limit: Int?, category: PostCategory?)
@@ -38,7 +41,7 @@ enum PostRouter: APIRouter {
 
     var method: HTTPMethod {
         switch self {
-        case .uploadFiles, .createPost, .likePost, .likePost2:
+        case .uploadFiles, .createPost, .likePost, .likePost2, .buyPost:
             return .post
         case .fetchPosts, .fetchPost, .fetchMyLikedPosts, .fetchMyLikedPosts2, .fetchUserPosts, .searchByHashtag, .fetchFollowingFeed, .searchByLocation, .searchByTitle:
             return .get
@@ -68,6 +71,8 @@ enum PostRouter: APIRouter {
             return "\(version)/posts/\(postId)/like"
         case .likePost2(let postId):
             return "\(version)/posts/\(postId)/like-2"
+        case .buyPost(let postId):
+            return "\(version)/payments/validation"
         case .fetchMyLikedPosts:
             return "\(version)/posts/likes/me"
         case .fetchMyLikedPosts2:
@@ -122,6 +127,12 @@ enum PostRouter: APIRouter {
 
         case .deletePost, .likePost, .likePost2:
             return nil
+
+        case .buyPost(let postId):
+            return [
+                "imp_uid": "test_imp_uid_\(Int.random(in: 1000...9999))", // 임시 결제 고유 ID
+                "post_id": postId
+            ]
 
         case .fetchMyLikedPosts(let next, let limit, let category),
              .fetchMyLikedPosts2(let next, let limit, let category):
