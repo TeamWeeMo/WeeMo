@@ -12,6 +12,10 @@ struct SpaceListView: View {
 
     @StateObject private var store = SpaceListStore()
 
+    // MARK: - Navigation State
+
+    @State private var isShowingCreateView = false
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -66,6 +70,19 @@ struct SpaceListView: View {
                         .background(Color("wmBg").opacity(0.9))
                         .cornerRadius(Spacing.radiusMedium)
                 }
+
+                // 공간 등록 Floating 버튼
+                VStack {
+                    Spacer()
+                    HStack {
+                        Spacer()
+                        CreateSpaceButton {
+                            isShowingCreateView = true
+                        }
+                        .padding(.trailing, Spacing.base)
+                        .padding(.bottom, Spacing.base)
+                    }
+                }
             }
             .background(Color("wmBg"))
             .navigationBarHidden(true)
@@ -88,6 +105,17 @@ struct SpaceListView: View {
 
                 // 화면 진입 시 데이터 로드
                 store.send(.viewAppeared)
+            }
+            .fullScreenCover(isPresented: $isShowingCreateView) {
+                NavigationStack {
+                    SpaceCreateView()
+                }
+            }
+            .onChange(of: isShowingCreateView) { oldValue, newValue in
+                // 공간 등록 화면에서 돌아왔을 때 목록 새로고침
+                if !newValue {
+                    store.send(.refresh)
+                }
             }
         }
     }
