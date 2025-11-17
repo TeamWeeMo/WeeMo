@@ -16,6 +16,8 @@ protocol AuthServicing {
     func join(email: String, password: String, nickname: String) async throws -> AuthDTO
 
     func refreshAccessToken() async throws -> RefreshTokenDTO
+
+    func kakaoLogin(accessToken: String) async throws -> AuthDTO
 }
 
 struct AuthService: AuthServicing {
@@ -56,6 +58,13 @@ struct AuthService: AuthServicing {
         return try await networkService.request(
             AuthRouter.refreshToken(refreshToken: refreshToken),
             responseType: RefreshTokenDTO.self
+        )
+    }
+
+    func kakaoLogin(accessToken: String) async throws -> AuthDTO {
+        try await networkService.request(
+            AuthRouter.loginKakao(oauthToken: accessToken),
+            responseType: AuthDTO.self
         )
     }
 }

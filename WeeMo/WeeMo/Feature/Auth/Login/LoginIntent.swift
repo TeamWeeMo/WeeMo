@@ -11,4 +11,5 @@ enum LoginIntent {
     case idChanged(String)
     case pwChanged(String)
     case loginTapped
+    case kakaoLoginTapped
 }
