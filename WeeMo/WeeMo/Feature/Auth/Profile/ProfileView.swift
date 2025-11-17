@@ -85,11 +85,32 @@ struct ProfileView: View {
 
                     switch selection {
                     case .posts:
-                        ProfileGridSection(items: (1...20).map { "게시물 \($0)" })
+                        VStack(alignment: .leading, spacing: 8) {
+                            // 작성한 모임 섹션
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("작성한 모임 (10)")
+                                    .font(.app(.content2))
+                                    .foregroundStyle(.textMain)
+                                    .padding(.horizontal, 16)
+
+                                HorizontalScrollSection(items: (1...10).map { "작성한 모임 \($0)" })
+                            }
+
+                            // 작성한 피드 섹션
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("작성한 피드 (14)")
+                                    .font(.app(.content2))
+                                    .foregroundStyle(.textMain)
+                                    .padding(.horizontal, 16)
+
+                                TwoRowHorizontalSection(items: (1...14).map { "작성한 피드 \($0)" })
+                            }
+                        }
+                        .padding(.top, 12)
                     case .groups:
-                        ProfileGridSection(items: (1...20).map { "모임 \($0)" })
+                        ProfileGridSection(columnCount: 3, items: (1...20).map { "찜한 모임 \($0)" })
                     case .likes:
-                        ProfileGridSection(items: (1...20).map { "찜 \($0)" })
+                        ProfileGridSection(columnCount: 3, items: (1...20).map { "결제한 모임 \($0)" })
                     }
 
                     Rectangle()
