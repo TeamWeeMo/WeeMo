@@ -9,9 +9,18 @@ import SwiftUI
 
 @main
 struct WeeMoApp: App {
+
+    @StateObject private var appState = AppState()
+
     var body: some Scene {
         WindowGroup {
-            TapView()
+            if appState.isLoggedIn {
+                TapView()
+                    .environmentObject(appState)
+            } else {
+                LoginView()
+                    .environmentObject(appState)
+            }
         }
     }
 }
