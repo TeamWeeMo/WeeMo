@@ -19,8 +19,13 @@ final class NetworkService: NetworkServiceProtocol {
 
     // MARK: - Initializer
 
-    init(session: Session = .default) {
-        self.session = session
+    init(session: Session? = nil) {
+        if let session = session {
+            self.session = session
+        } else {
+            let interceptor = AuthInterceptor()
+            self.session = Session(interceptor: interceptor)
+        }
     }
 
     // MARK: - Request Methods

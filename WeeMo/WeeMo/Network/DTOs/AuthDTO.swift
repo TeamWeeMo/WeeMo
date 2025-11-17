@@ -14,7 +14,7 @@ struct AuthDTO: Decodable {
     let userId: String
     let email: String
     let nick: String
-    let profileImage: String
+    let profileImage: String?  // 회원가입 시 프로필 이미지가 없을 수 있음
     let accessToken: String
     let refreshToken: String
 
@@ -26,4 +26,10 @@ struct AuthDTO: Decodable {
         case accessToken
         case refreshToken
     }
+}
+
+/// 토큰 갱신 응답 (accessToken, refreshToken만 포함)
+struct RefreshTokenDTO: Decodable {
+    let accessToken: String
+    let refreshToken: String
 }
