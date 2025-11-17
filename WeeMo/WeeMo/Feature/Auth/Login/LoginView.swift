@@ -96,7 +96,7 @@ struct LoginView: View {
                             }
 
                             Button {
-                                print("버튼 클릭")
+                                loginStore.send(.kakaoLoginTapped)
                             } label: {
                                 Image("kakao_login_large_wide")
                                     .resizable()
