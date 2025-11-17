@@ -9,13 +9,10 @@ import Foundation
 import Alamofire
 import Combine
 
-/// MVI MVVM
-/// aysnc await
+// MARK: - Network Service Implementation
 
-// MARK: - Network Service
-
-/// 네트워크 요청을 처리하는 서비스
-final class NetworkService {
+/// 네트워크 요청을 처리하는 서비스 (기본 구현)
+final class NetworkService: NetworkServiceProtocol {
     // MARK: - Properties
 
     private let session: Session
@@ -128,32 +125,16 @@ final class NetworkService {
             return .unknown(error)
         }
 
-        // 서버 에러 메시지 파싱 시도
-        var serverMessage: String?
-        if let data = data {
-            serverMessage = try? JSONDecoder().decode(ServerErrorResponse.self, from: data).message
-        }
-
-        switch statusCode {
-        case 401:
-            return .unauthorized
-        case 403:
-            return .forbidden
-        case 419:
-            return .tokenExpired
-        case 400..<500:
-            return .httpError(statusCode: statusCode, message: serverMessage)
-        case 500..<600:
-            return .httpError(statusCode: statusCode, message: serverMessage ?? "서버 에러가 발생했습니다.")
-        default:
-            return .unknown(error)
-        }
+        // NetworkErrorMapper를 통해 상태 코드와 서버 메시지를 NetworkError로 변환
+        return NetworkErrorMapper.map(
+            statusCode: statusCode,
+            data: data,
+            afError: error
+        )
     }
-}
 
-// MARK: - Combine Support (Optional)
+    // MARK: - Combine Support
 
-extension NetworkService {
     /// Combine Publisher 방식 요청
     func requestPublisher<T: Decodable>(
         _ router: APIRouter,
