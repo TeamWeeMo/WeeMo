@@ -15,6 +15,7 @@ enum AuthRoute: Hashable {
 struct LoginView: View {
 
     @StateObject var loginStore = LoginStore()
+    @EnvironmentObject var appState: AppState
 
     private var idBinding: Binding<String> {
         Binding(
@@ -133,6 +134,12 @@ struct LoginView: View {
             }
         }
         .tint(.wmMain)
+        .onChange(of: loginStore.state.isLoginSucceeded) { oldValue, newValue in
+            if newValue {
+                print("[LoginView] 로그인 성공 - AppState 업데이트")
+                appState.login()
+            }
+        }
     }
 }
 
