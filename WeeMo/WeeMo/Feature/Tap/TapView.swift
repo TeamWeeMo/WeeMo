@@ -21,8 +21,7 @@ struct TapView: View {
         case feed = 2
         case chat = 3
         case profile = 4
-        case login = 5 // 임시
-        
+
         var title: String {
             switch self {
             case .space: return "공간"
@@ -30,10 +29,9 @@ struct TapView: View {
             case .feed: return "피드"
             case .chat: return "채팅"
             case .profile: return "프로필"
-            case .login: return "로그인"
             }
         }
-        
+
         var icon: String {
             switch self {
             case .space: return "building.2"
@@ -41,10 +39,9 @@ struct TapView: View {
             case .feed: return "photo.on.rectangle.angled"
             case .chat: return "bubble.left.and.bubble.right"
             case .profile: return "person.circle"
-            case .login: return "pencil"
             }
         }
-        
+
         var iconFilled: String {
             switch self {
             case .space: return "building.2.fill"
@@ -52,7 +49,6 @@ struct TapView: View {
             case .feed: return "photo.on.rectangle.angled"
             case .chat: return "bubble.left.and.bubble.right.fill"
             case .profile: return "person.circle.fill"
-            case .login: return "pencil.fill"
             }
         }
     }
@@ -62,15 +58,9 @@ struct TapView: View {
     @State private var selectedTab: Tab = .space
     
     // MARK: - Body
-    //TODO: - 머지 이후 수정
+
     var body: some View {
         TabView(selection: $selectedTab) {
-            //TODO: - 로그인  추후 삭제 필요
-            LoginView()
-                .tabItem {
-                    Label(Tab.login.title, systemImage: selectedTab == .space ? Tab.login.iconFilled : Tab.login.icon)
-                }
-                .tag(Tab.login)
             // 공간 탭
             SpaceListView()
                 .tabItem {

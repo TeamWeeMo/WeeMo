@@ -61,9 +61,8 @@ extension APIRouter {
     var authorizationHeader: HTTPHeaders? {
         guard needsAuthorization else { return nil }
 
-        // TODO: Keychain에서 AccessToken 가져오기
-        // 현재는 임시로 UserDefaults 사용 (추후 Keychain으로 변경)
-        guard let token = UserDefaults.standard.string(forKey: "accessToken") else {
+        // TokenManager(Keychain)에서 AccessToken 가져오기
+        guard let token = TokenManager.shared.accessToken else {
             return nil
         }
 

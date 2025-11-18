@@ -17,7 +17,7 @@ struct PopularSpaceCardView: View {
             if let imageURLString = space.imageURLs.first,
                let imageURL = URL(string: FileRouter.fileURL(from: imageURLString)) {
                 KFImage(imageURL)
-                    .requestModifier(AnyModifier.weeMoRequestModifier)
+                    .withAuthHeaders()
                     .placeholder {
                         Rectangle()
                             .fill(Color.gray.opacity(0.3))
