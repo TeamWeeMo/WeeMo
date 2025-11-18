@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Kingfisher
 
 struct SpaceListCardView: View {
     let space: Space
@@ -13,15 +14,33 @@ struct SpaceListCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.xSmall) {
             // 이미지
-            Rectangle()
-                .fill(Color.gray.opacity(0.3))
-                .frame(height: 200)
-                .overlay(
-                    Image(systemName: "photo")
-                        .font(.system(size: 60))
-                        .foregroundColor(.gray)
-                )
-                .cornerRadius(Spacing.radiusMedium)
+            if let imageURLString = space.imageURLs.first,
+               let imageURL = URL(string: FileRouter.fileURL(from: imageURLString)) {
+                KFImage(imageURL)
+                    .withAuthHeaders()
+                    .placeholder {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .overlay(
+                                ProgressView()
+                            )
+                    }
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(height: 200)
+                    .clipped()
+                    .cornerRadius(Spacing.radiusMedium)
+            } else {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(height: 200)
+                    .overlay(
+                        Image(systemName: "photo")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                    )
+                    .cornerRadius(Spacing.radiusMedium)
+            }
 
             // 제목
             Text(space.title)
@@ -81,11 +100,5 @@ struct AllSpaceListView: View {
                 }
             }
         }
-    }
-}
-
-#Preview {
-    ScrollView {
-        AllSpaceListView(spaces: Space.mockSpaces)
     }
 }

@@ -10,8 +10,7 @@ import PhotosUI
 
 // MARK: - Feed 작성/수정 화면
 
-/// 피드 작성/수정 화면 (Instagram 스타일)
-/// - Enum Mode 패턴으로 하나의 View를 재사용
+/// 피드 작성/수정 화면
 /// - 구조: 이미지 선택 영역 + 텍스트 입력 영역
 struct FeedEditView: View {
     // MARK: - Mode Definition
@@ -34,16 +33,6 @@ struct FeedEditView: View {
             case .edit: return "수정"
             }
         }
-
-        var isEditing: Bool {
-            if case .edit = self { return true }
-            return false
-        }
-
-        var existingItem: Feed? {
-            if case .edit(let item) = self { return item }
-            return nil
-        }
     }
 
     // MARK: - Properties
@@ -51,21 +40,32 @@ struct FeedEditView: View {
     let mode: Mode
     @Environment(\.dismiss) private var dismiss
 
-    // 입력 상태
-    @State private var content: String = ""
+    // Store (MVI)
+    @State private var store: FeedEditStore
+
+    // 입력 상태 (PhotosPicker용)
     @State private var selectedPhotos: [PhotosPickerItem] = []
-    @State private var selectedImages: [UIImage] = []
+
+    // Alert
+    @State private var showErrorAlert: Bool = false
+    @State private var showSuccessAlert: Bool = false
+
+    // 키보드 제어
+    @FocusState private var isTextEditorFocused: Bool
 
     // MARK: - Initializer
 
-    init(mode: Mode) {
+    init(
+        mode: Mode,
+        networkService: NetworkServiceProtocol = NetworkService(),
+        // TODO: 임시 accessToken 토큰 입력 필요
+        temporaryToken: String = ""
+    ) {
         self.mode = mode
-
-        // 수정 모드일 경우 기존 데이터로 초기화
-        if case .edit(let item) = mode {
-            _content = State(initialValue: item.content)
-            // TODO: 기존 이미지 로드
-        }
+        self.store = FeedEditStore(
+            networkService: networkService,
+            temporaryToken: temporaryToken
+        )
     }
 
     // MARK: - Body
@@ -84,21 +84,53 @@ struct FeedEditView: View {
                 .padding(.vertical, Spacing.medium)
             }
             .background(.wmBg)
+            .onTapGesture {
+                // 외부 터치 시 키보드 숨김
+                isTextEditorFocused = false
+            }
             .navigationTitle(mode.title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("취소") {
-                        dismiss()
-                    }
-                }
-
                 ToolbarItem(placement: .confirmationAction) {
                     Button(mode.actionTitle) {
-                        handleSubmit()
+                        store.send(.submitPost)
                     }
-                    .disabled(!isFormValid)
-                    .foregroundStyle(isFormValid ? .wmMain : .textSub)
+                    .disabled(!store.state.canSubmit)
+                    .foregroundStyle(store.state.canSubmit ? .wmMain : .textSub)
+                }
+            }
+            .overlay {
+                if store.state.isUploading {
+                    UploadingOverlay(message: "게시글 업로드 중...")
+                }
+            }
+            .alert("오류", isPresented: $showErrorAlert) {
+                Button("확인", role: .cancel) {
+                    showErrorAlert = false
+                }
+            } message: {
+                Text(store.state.errorMessage ?? "알 수 없는 오류가 발생했습니다.")
+            }
+            .alert("완료", isPresented: $showSuccessAlert) {
+                Button("확인", role: .cancel) {
+                    showSuccessAlert = false
+                    dismiss()
+                }
+            } message: {
+                Text("게시글이 등록되었습니다.")
+            }
+            .onChange(of: store.state.errorMessage) { _, newValue in
+                if newValue != nil {
+                    showErrorAlert = true
+                }
+            }
+            .onChange(of: store.state.isSubmitted) { _, isSubmitted in
+                if isSubmitted {
+                    // 햅틱 피드백
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+
+                    // 성공 Alert 표시
+                    showSuccessAlert = true
                 }
             }
         }
@@ -120,7 +152,7 @@ struct FeedEditView: View {
                 maxSelectionCount: 5,
                 matching: .images
             ) {
-                if selectedImages.isEmpty {
+                if store.state.selectedImages.isEmpty {
                     // 이미지 없을 때: 플레이스홀더
                     imagePlaceholder
                 } else {
@@ -131,6 +163,7 @@ struct FeedEditView: View {
             .onChange(of: selectedPhotos) { _, newItems in
                 loadPhotos(from: newItems)
             }
+            .disabled(store.state.isUploading)
         }
     }
 
@@ -162,12 +195,12 @@ struct FeedEditView: View {
             ],
             spacing: Spacing.small
         ) {
-            ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, image in
+            ForEach(Array(store.state.selectedImages.enumerated()), id: \.offset) { index, image in
                 imageGridCell(image: image, index: index)
             }
 
             // 5장 미만일 때 추가 버튼
-            if selectedImages.count < 5 {
+            if store.state.selectedImages.count < 5 {
                 addMoreButton
             }
         }
@@ -175,20 +208,16 @@ struct FeedEditView: View {
 
     /// 이미지 그리드 셀
     private func imageGridCell(image: UIImage, index: Int) -> some View {
-        ZStack(alignment: .topTrailing) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFill()
-                .frame(height: 120)
-                .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusSmall))
+        GeometryReader { geometry in
+            ZStack(alignment: .topTrailing) {
+                Image(uiImage: image)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                    .clipped()
+                    .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusSmall))
 
-            // 삭제 버튼
-            Button {
-                withAnimation(.spring(duration: 0.3, bounce: 0.4)) {
-                    selectedImages.remove(at: index)
-                    selectedPhotos.remove(at: index)
-                }
-            } label: {
+                // 삭제 버튼
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 24))
                     .foregroundStyle(.white)
@@ -197,16 +226,28 @@ struct FeedEditView: View {
                             .fill(Color.black.opacity(0.3))
                             .frame(width: 24, height: 24)
                     )
+                    .buttonWrapper {
+                        withAnimation(.spring(duration: 0.3, bounce: 0.4)) {
+                            // Store의 이미지 제거
+                            store.send(.removeImage(at: index))
+
+                            // PhotosPicker 선택 동기화 (안전한 인덱스 체크)
+                            if index < selectedPhotos.count {
+                                selectedPhotos.remove(at: index)
+                            }
+                        }
+                    }
+                    .padding(Spacing.xSmall)
             }
-            .padding(Spacing.xSmall)
         }
+        .aspectRatio(1, contentMode: .fit)
     }
 
     /// 추가 버튼
     private var addMoreButton: some View {
         RoundedRectangle(cornerRadius: Spacing.radiusSmall)
             .fill(Color.gray.opacity(0.1))
-            .frame(height: 120)
+            .aspectRatio(1, contentMode: .fit)
             .overlay {
                 Image(systemName: "plus")
                     .font(.system(size: 32))
@@ -225,7 +266,7 @@ struct FeedEditView: View {
             // TextEditor (여러 줄 입력)
             ZStack(alignment: .topLeading) {
                 // 플레이스홀더
-                if content.isEmpty {
+                if store.state.content.isEmpty {
                     Text("무슨 일이 일어나고 있나요?")
                         .font(.app(.content2))
                         .foregroundStyle(.textSub)
@@ -233,11 +274,27 @@ struct FeedEditView: View {
                         .padding(.vertical, 8)
                 }
 
-                TextEditor(text: $content)
+                TextEditor(text: Binding(
+                    get: { store.state.content },
+                    set: { store.send(.updateContent($0))
+                    }
+                ))
                     .font(.app(.content2))
                     .foregroundStyle(.textMain)
                     .scrollContentBackground(.hidden)
                     .frame(minHeight: 150)
+                    .disabled(store.state.isUploading)
+                    .focused($isTextEditorFocused)
+                    .toolbar {
+                        ToolbarItemGroup(placement: .keyboard) {
+                            Spacer()
+                            Button("완료") {
+                                isTextEditorFocused = false
+                            }
+                            .font(.app(.content1))
+                            .foregroundStyle(.wmMain)
+                        }
+                    }
             }
             .padding(Spacing.medium)
             .background(
@@ -252,58 +309,40 @@ struct FeedEditView: View {
             // 글자 수 표시
             HStack {
                 Spacer()
-                Text("\(content.count)/500")
+                Text(store.state.characterCountText)
                     .font(.app(.subContent2))
-                    .foregroundStyle(content.count > 500 ? .red : .textSub)
+                    .foregroundStyle(store.state.isCharacterOverLimit ? .red : .textSub)
             }
         }
     }
 
     // MARK: - Helper Methods
 
-    /// 폼 유효성 검사
-    private var isFormValid: Bool {
-        // 내용이 있고, 500자 이하, 이미지가 1장 이상
-        !content.isEmpty && content.count <= 500 && !selectedImages.isEmpty
-    }
-
     /// 사진 로드 (PhotosPickerItem -> UIImage)
+    /// - Note: 선택 순서를 보장하기 위해 순차 로드
     private func loadPhotos(from items: [PhotosPickerItem]) {
-        selectedImages = []
+        Task {
+            var loadedImages: [UIImage] = []
 
-        for item in items {
-            item.loadTransferable(type: Data.self) { result in
-                switch result {
-                case .success(let data):
-                    if let data = data, let image = UIImage(data: data) {
-                        DispatchQueue.main.async {
-                            selectedImages.append(image)
-                        }
+            // 선택 순서대로 순차 로드 (인덱스 일치 보장)
+            for item in items {
+                do {
+                    guard let data = try await item.loadTransferable(type: Data.self),
+                          let image = UIImage(data: data) else {
+                        continue
                     }
-                case .failure(let error):
-                    print("이미지 로드 실패: \(error)")
+                    loadedImages.append(image)
+                } catch {
+                    // TODO: 에러 로깅 시스템 구현 - 2025.11.15
+                    print("이미지 로드 실패: \(error.localizedDescription)")
                 }
             }
+
+            // 메인 스레드에서 Store 업데이트
+            await MainActor.run {
+                store.send(.selectImages(loadedImages))
+            }
         }
-    }
-
-    /// 게시/수정 처리
-    private func handleSubmit() {
-        // TODO: 실제 API 연동
-        switch mode {
-        case .create:
-            print("새 게시물 작성: \(content)")
-            print("이미지 \(selectedImages.count)장")
-        case .edit(let item):
-            print("게시물 수정: \(item.id)")
-            print("새 내용: \(content)")
-        }
-
-        // 햅틱 피드백
-        let impact = UIImpactFeedbackGenerator(style: .medium)
-        impact.impactOccurred()
-
-        dismiss()
     }
 }
 
@@ -313,6 +352,6 @@ struct FeedEditView: View {
     FeedEditView(mode: .create)
 }
 
-#Preview("수정 모드") {
-    FeedEditView(mode: .edit(MockFeedData.sampleFeeds[0]))
-}
+//#Preview("수정 모드") {
+//    FeedEditView(mode: .edit(MockFeedData.sampleFeeds[0]))
+//}

@@ -25,6 +25,7 @@ enum SpaceAmenity: String {
     case parking = "주차"
     case printer = "프린터"
 }
+<<<<<<< HEAD
 
 // MARK: - Mock Data
 extension Space {
@@ -106,3 +107,5 @@ extension Space {
         )
     ]
 }
+=======
+>>>>>>> develop
