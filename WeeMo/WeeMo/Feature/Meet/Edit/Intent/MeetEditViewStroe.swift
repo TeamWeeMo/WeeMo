@@ -10,7 +10,7 @@ import Combine
 
 // MARK: - Meet ViewModel
 
-final class MeetEditViewModel: ObservableObject {
+final class MeetEditViewStroe: ObservableObject {
     @Published var state = MeetEditState()
     private let networkService = NetworkService()
 

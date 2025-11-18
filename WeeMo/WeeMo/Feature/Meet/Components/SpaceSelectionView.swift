@@ -12,7 +12,7 @@ import Kingfisher
 struct SpaceSelectionView: View {
     @Binding var selectedSpace: Space?
     @Environment(\.presentationMode) var presentationMode
-    @StateObject private var viewModel = MeetEditViewModel()
+    @StateObject private var viewModel = MeetEditViewStroe()
 
     var body: some View {
         NavigationView {

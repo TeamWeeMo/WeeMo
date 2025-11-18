@@ -8,7 +8,7 @@
 import Foundation
 import Combine
 
-final class MeetDetailViewModel: ObservableObject {
+final class MeetDetailStore: ObservableObject {
     @Published var state = MeetDetailState()
     private let networkService = NetworkService()
 

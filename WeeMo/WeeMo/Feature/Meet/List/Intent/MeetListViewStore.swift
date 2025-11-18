@@ -9,7 +9,7 @@ import Foundation
 import Combine
 
 
-final class MeetListViewModel: ObservableObject {
+final class MeetListViewStore: ObservableObject {
     @Published var state = MeetListState()
     private let networkService = NetworkService()
 

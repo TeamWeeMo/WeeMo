@@ -10,17 +10,17 @@ import Kingfisher
 
 struct MeetDetailView: View {
     let postId: String
-    @StateObject private var viewModel = MeetDetailViewModel()
+    @StateObject private var store = MeetDetailStore()
 
     var body: some View {
         VStack(spacing: 0) {
-            if viewModel.state.isLoading {
+            if store.state.isLoading {
                 VStack {
                     ProgressView("모임 정보를 불러오는 중...")
                         .padding()
                     Spacer()
                 }
-            } else if let errorMessage = viewModel.state.errorMessage {
+            } else if let errorMessage = store.state.errorMessage {
                 VStack(spacing: 16) {
                     Text("오류가 발생했습니다")
                         .font(.headline)
@@ -29,13 +29,13 @@ struct MeetDetailView: View {
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                     Button("다시 시도") {
-                        viewModel.handle(.retryLoadMeetDetail)
+                        store.handle(.retryLoadMeetDetail)
                     }
                     .buttonStyle(.bordered)
                     Spacer()
                 }
                 .padding()
-            } else if let meetDetail = viewModel.state.meetDetail {
+            } else if let meetDetail = store.state.meetDetail {
                 meetDetailContent(meetDetail)
             }
         }
@@ -43,7 +43,7 @@ struct MeetDetailView: View {
         .navigationTitle("모임 상세")
         .background(Color("wmBg"))
         .onAppear {
-            viewModel.handle(.loadMeetDetail(postId: postId))
+            store.handle(.loadMeetDetail(postId: postId))
         }
     }
 
@@ -208,9 +208,9 @@ struct MeetDetailView: View {
 
                     // 참가하기 버튼
                     Button(action: {
-                        viewModel.handle(.joinMeet(postId: meetDetail.postId))
+                        store.handle(.joinMeet(postId: meetDetail.postId))
                     }) {
-                        if viewModel.state.isJoining {
+                        if store.state.isJoining {
                             ProgressView()
                                 .progressViewStyle(CircularProgressViewStyle(tint: .white))
                                 .frame(maxWidth: .infinity, minHeight: 50)
@@ -221,16 +221,16 @@ struct MeetDetailView: View {
                                 .font(.app(.content1))
                                 .foregroundColor(.white)
                                 .frame(maxWidth: .infinity, minHeight: 50)
-                                .background(viewModel.state.hasJoined ? Color.gray : Color.wmMain)
+                                .background(store.state.hasJoined ? Color.gray : Color.wmMain)
                                 .cornerRadius(8)
                         }
                     }
-                    .disabled(viewModel.state.isJoining || viewModel.state.hasJoined)
+                    .disabled(store.state.isJoining || store.state.hasJoined)
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                     .padding(.bottom, 34)
 
-                    if let joinError = viewModel.state.joinErrorMessage {
+                    if let joinError = store.state.joinErrorMessage {
                         Text(joinError)
                             .font(.caption)
                             .foregroundColor(.red)

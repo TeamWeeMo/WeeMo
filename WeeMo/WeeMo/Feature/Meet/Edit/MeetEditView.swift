@@ -15,7 +15,7 @@ struct MeetEditView: View {
     @State private var meetPrice = "0"
     @State private var selectedGender = "누구나"
     @State private var startDate = Date()
-    @StateObject private var viewModel = MeetEditViewModel()
+    @StateObject private var store = MeetEditViewStroe()
     @Environment(\.presentationMode) var presentationMode
 
     var body: some View {
@@ -23,7 +23,7 @@ struct MeetEditView: View {
             CustomNavigationBar(
                 onCancel: { presentationMode.wrappedValue.dismiss() },
                 onComplete: {
-                    viewModel.handle(.createMeet(
+                    store.handle(.createMeet(
                         title: meetTitle,
                         description: meetDescription,
                         capacity: meetCapacity,
@@ -59,7 +59,7 @@ struct MeetEditView: View {
         }
         .background(Color("wmBg"))
         .navigationBarHidden(true)
-        .onChange(of: viewModel.state.isMeetCreated) { isMeetCreated in
+        .onChange(of: store.state.isMeetCreated) { isMeetCreated in
             if isMeetCreated {
                 presentationMode.wrappedValue.dismiss()
             }
