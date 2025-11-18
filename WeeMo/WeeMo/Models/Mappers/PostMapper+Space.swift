@@ -32,12 +32,13 @@ extension PostDTO {
             category: parseSpaceCategory(from: category),
             isPopular: value3 == "true",
             amenities: amenities,
-            latitude: geolocation.latitude,
-            longitude: geolocation.longitude
             hasParking: value3 == "true",
             description: content,
+            latitude: geolocation.latitude,
+            longitude: geolocation.longitude,
             hashTags: hashTags  // 서버에서 받은 해시태그
         )
+        
     }
 
     // MARK: - Private Helpers

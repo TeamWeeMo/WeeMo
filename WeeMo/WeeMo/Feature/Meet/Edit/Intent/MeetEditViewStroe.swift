@@ -100,7 +100,8 @@ final class MeetEditViewStroe: ObservableObject {
                         hasParking: false, // 필요시 postDTO의 다른 필드로 매핑
                         description: postDTO.content,
                         latitude: postDTO.geolocation.latitude,
-                        longitude: postDTO.geolocation.longitude
+                        longitude: postDTO.geolocation.longitude,
+                        hashTags: []
                     )
                 }
 
@@ -167,6 +168,7 @@ final class MeetEditViewStroe: ObservableObject {
                 let response = try await networkService.request(
                     PostRouter.createPost(
                         title: title,
+                        price: 0,
                         content: fullDescription,
                         category: .meet,
                         files: files,
