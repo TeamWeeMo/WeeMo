@@ -8,6 +8,7 @@
 import Foundation
 import Combine
 
+@MainActor
 final class AppState: ObservableObject {
     @Published var isLoggedIn: Bool
 
@@ -25,6 +26,8 @@ final class AppState: ObservableObject {
 
     func logout() {
         TokenManager.shared.clearTokens()
+        UserManager.shared.clearNickname()
+        UserManager.shared.clearProfileImageURL()
         isLoggedIn = false
     }
 }

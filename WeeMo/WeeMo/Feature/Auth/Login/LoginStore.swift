@@ -67,8 +67,14 @@ final class LoginStore: ObservableObject {
                     accessToken: result.accessToken,
                     refreshToken: result.refreshToken
                 )
+                TokenManager.shared.saveUserId(result.userId)
+                UserManager.shared.saveNickname(result.nick)
+                UserManager.shared.saveProfileImageURL(result.profileImage)
 
                 print("\(result)")
+                print("[LoginStore] userId 저장 완료: \(result.userId)")
+                print("[LoginStore] nickname 저장 완료: \(result.nick)")
+                print("[LoginStore] profileImageURL 저장 완료: \(result.profileImage ?? "nil")")
                 state.isLoading = false
                 state.isLoginSucceeded = true
             } catch let error as NetworkError {
@@ -110,7 +116,13 @@ extension LoginStore {
                     accessToken: result.accessToken,
                     refreshToken: result.refreshToken
                 )
+                TokenManager.shared.saveUserId(result.userId)
+                UserManager.shared.saveNickname(result.nick)
+                UserManager.shared.saveProfileImageURL(result.profileImage)
 
+                print("[LoginStore] userId 저장 완료: \(result.userId)")
+                print("[LoginStore] nickname 저장 완료: \(result.nick)")
+                print("[LoginStore] profileImageURL 저장 완료: \(result.profileImage ?? "nil")")
                 state.isLoading = false
                 state.isLoginSucceeded = true
             } catch let error as NetworkError {
