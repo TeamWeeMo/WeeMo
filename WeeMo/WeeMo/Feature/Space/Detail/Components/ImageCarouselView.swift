@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Kingfisher
 
 struct ImageCarouselView: View {
     let imageURLs: [String]
@@ -15,14 +16,33 @@ struct ImageCarouselView: View {
         ZStack(alignment: .bottomTrailing) {
             TabView(selection: $currentIndex) {
                 ForEach(imageURLs.indices, id: \.self) { index in
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                        .overlay(
-                            Image(systemName: "photo")
-                                .font(.system(size: 60))
-                                .foregroundColor(.gray)
-                        )
-                        .tag(index)
+                    let imageURLString = imageURLs[index]
+
+                    if let imageURL = URL(string: FileRouter.fileURL(from: imageURLString)) {
+                        KFImage(imageURL)
+                            .requestModifier(AnyModifier.weeMoRequestModifier)
+                            .placeholder {
+                                Rectangle()
+                                    .fill(Color.gray.opacity(0.3))
+                                    .overlay(
+                                        ProgressView()
+                                    )
+                            }
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 300)
+                            .clipped()
+                            .tag(index)
+                    } else {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .overlay(
+                                Image(systemName: "photo")
+                                    .font(.system(size: 60))
+                                    .foregroundColor(.gray)
+                            )
+                            .tag(index)
+                    }
                 }
             }
             .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))

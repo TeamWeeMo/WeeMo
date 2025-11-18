@@ -1,0 +1,39 @@
+//
+//  SpaceCreateIntent.swift
+//  WeeMo
+//
+//  Created by Reimos on 11/16/25.
+//
+
+import Foundation
+import UIKit
+
+// MARK: - Space Create Intent
+
+enum SpaceCreateIntent {
+    // 텍스트 입력
+    case titleChanged(String)
+    case priceChanged(String)
+    case addressChanged(String)
+    case ratingChanged(Double)  // Slider 값 (1.0 ~ 5.0, 0.5 단위)
+    case descriptionChanged(String)
+
+    // 카테고리 선택
+    case categoryChanged(SpaceCategory)
+
+    // 인기 공간 여부
+    case popularToggled(Bool)
+
+    // 해시태그
+    case hashTagInputChanged(String)
+    case addHashTag
+    case removeHashTag(String)
+
+    // 이미지
+    case imageSelected(UIImage)
+    case imageRemoved
+
+    // 제출
+    case submitButtonTapped
+    case resetForm
+}

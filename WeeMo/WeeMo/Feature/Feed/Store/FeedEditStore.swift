@@ -115,7 +115,8 @@ final class FeedEditStore {
             // 3. 게시글 생성
             let postResponse = try await networkService.request(
                 PostRouter.createPost(
-                    title: "",  // 피드는 제목 없음
+                    title: "",
+                    price: nil,  // 피드는 제목 없음
                     content: state.content,
                     category: .feed,
                     files: uploadResponse.files,
@@ -191,6 +192,7 @@ extension FeedEditStore {
             return self.networkService.requestPublisher(
                 PostRouter.createPost(
                     title: "",
+                    price: nil,
                     content: self.state.content,
                     category: .feed,
                     files: uploadResponse.files,

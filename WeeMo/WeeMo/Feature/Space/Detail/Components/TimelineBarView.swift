@@ -9,8 +9,8 @@ import SwiftUI
 
 struct TimelineBarView: View {
     let pricePerHour: Int
-    @State private var startHour: Int?
-    @State private var endHour: Int?
+    @Binding var startHour: Int?
+    @Binding var endHour: Int?
 
     private let hours = Array(0...24) // 0시부터 24시까지
 
@@ -167,6 +167,10 @@ struct TimelineBarView: View {
 }
 
 #Preview {
-    TimelineBarView(pricePerHour: 15000)
-        .padding()
+    TimelineBarView(
+        pricePerHour: 15000,
+        startHour: .constant(10),
+        endHour: .constant(12)
+    )
+    .padding()
 }
