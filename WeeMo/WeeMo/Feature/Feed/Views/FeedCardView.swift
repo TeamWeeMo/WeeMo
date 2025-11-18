@@ -13,28 +13,20 @@ import Kingfisher
 struct FeedCardView: View {
     let item: Feed
 
+    // 동적으로 계산된 이미지 비율 저장
+    // 초기값 1.0 (정사각형)으로 시작, 이미지 로드 후 실제 비율로 업데이트
+    @State private var imageAspectRatio: CGFloat = 1.0
+
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.small) {
             // 이미지 (Kingfisher)
             // KFImage: Kingfisher의 SwiftUI 전용 컴포넌트
-            KFImage(URL(string: item.imageURL))
-                // placeholder: 이미지 로딩 중 표시할 뷰
-                .placeholder {
-                    // Custom Modifier 활용: 재사용 가능한 플레이스홀더 스타일
-                    Rectangle()
-                        .imagePlaceholder()
-                }
-                // retry: 네트워크 실패 시 재시도 (최대 3회, 2초 간격)
-                .retry(maxCount: 3, interval: .seconds(2))
-                // onFailure: 최종 실패 시 에러 핸들링
-                .onFailure { error in
-                    print("이미지 로드 실패: \(error.localizedDescription)")
-                }
-                .resizable()
-                // aspectRatio: 이미지 비율 유지하며 크기 조정
-                // item.aspectRatio: FeedItem마다 다른 높이 비율 (1.0~1.8)
-                // contentMode: .fit -> 주어진 너비에 맞춰 높이 자동 계산
-                .aspectRatio(item.aspectRatio, contentMode: .fit)
+            // 리스트에서는 대표 이미지(첫 번째)만 표시
+            KFImage(URL(string: item.thumbnailURL))
+                // 피드 이미지 설정 (인증 + 재시도 + 비율 계산)
+                .feedImageSetup(aspectRatio: $imageAspectRatio)
+                // aspectRatio: 실제 이미지 비율 사용
+                .aspectRatio(imageAspectRatio, contentMode: .fit)
                 // Custom Modifier 활용: 피드 카드 이미지 스타일
                 .feedCardImage()
 
@@ -65,18 +57,18 @@ struct FeedCardView: View {
 
 // MARK: - Preview
 
-#Preview("Single Card") {
-    FeedCardView(item: MockFeedData.sampleFeeds[0])
-        .padding()
-}
-
-#Preview("Multiple Cards") {
-    ScrollView {
-        VStack(spacing: 16) {
-            ForEach(MockFeedData.sampleFeeds.prefix(3)) { item in
-                FeedCardView(item: item)
-            }
-        }
-        .padding()
-    }
-}
+//#Preview("Single Card") {
+//    FeedCardView(item: MockFeedData.sampleFeeds[0])
+//        .padding()
+//}
+//
+//#Preview("Multiple Cards") {
+//    ScrollView {
+//        VStack(spacing: 16) {
+//            ForEach(MockFeedData.sampleFeeds.prefix(3)) { item in
+//                FeedCardView(item: item)
+//            }
+//        }
+//        .padding()
+//    }
+//}
