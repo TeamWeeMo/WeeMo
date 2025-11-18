@@ -19,8 +19,12 @@ struct CalendarCell: Identifiable {
 }
 
 struct DatePickerCalendarView: View {
+    @Binding var selectedDate: Date?
+    @Binding var startHour: Int?
+    @Binding var endHour: Int?
+    let pricePerHour: Int
+
     @State private var currentMonth: Date = Date()
-    @State private var selectedDate: Date?
 
     private let calendar = Calendar.current
     private let daysOfWeek = ["일", "월", "화", "수", "목", "금", "토"]
@@ -138,7 +142,11 @@ struct DatePickerCalendarView: View {
                 Divider()
                     .padding(.vertical, Spacing.small)
 
-                TimelineBarView(pricePerHour: 15000)
+                TimelineBarView(
+                    pricePerHour: pricePerHour,
+                    startHour: $startHour,
+                    endHour: $endHour
+                )
             }
         }
         .padding(Spacing.base)
@@ -180,6 +188,11 @@ struct DateCellView: View {
 }
 
 #Preview {
-    DatePickerCalendarView()
-        .padding()
+    DatePickerCalendarView(
+        selectedDate: .constant(Date()),
+        startHour: .constant(nil),
+        endHour: .constant(nil),
+        pricePerHour: 15000
+    )
+    .padding()
 }

@@ -13,23 +13,28 @@ extension PostDTO {
 
     /// DTO → Domain Model 변환 (Space)
     func toSpace() -> Space {
-        // value1~value10을 Space 필드에 매핑
-        // 서버 스펙에 맞춰 매핑 필요 (임시 매핑)
-        let amenitiesString = value1 ?? ""
+        // value1: 주소
+        // value2: 평점
+        // value3: 인기 공간 여부 ("true" or "false")
+        // value4: 편의시설 (쉼표로 구분된 문자열)
+        // value5: 주차 가능 여부 ("true" or "false")
+
+        let amenitiesString = value4 ?? ""
         let amenities = parseAmenities(from: amenitiesString)
 
         return Space(
             id: postId,
             title: title,
-            address: value2 ?? "주소 없음",
+            address: value1 ?? "주소 없음",
             imageURLs: files,
-            rating: Double(value3 ?? "0.0") ?? 0.0,
+            rating: Double(value2 ?? "0.0") ?? 0.0,
             pricePerHour: price ?? 0,
             category: parseSpaceCategory(from: category),
-            isPopular: value4 == "true",
+            isPopular: value3 == "true",
             amenities: amenities,
-            hasParking: value5 == "true",
-            description: content
+            hasParking: value3 == "true",
+            description: content,
+            hashTags: hashTags  // 서버에서 받은 해시태그
         )
     }
 

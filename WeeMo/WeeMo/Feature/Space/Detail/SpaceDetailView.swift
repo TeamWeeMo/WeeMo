@@ -9,7 +9,15 @@ import SwiftUI
 
 struct SpaceDetailView: View {
     let space: Space
+    @StateObject private var store: SpaceDetailStore
     @Environment(\.dismiss) private var dismiss
+
+    // MARK: - Initializer
+
+    init(space: Space) {
+        self.space = space
+        _store = StateObject(wrappedValue: SpaceDetailStore(pricePerHour: space.pricePerHour))
+    }
 
     var body: some View {
         ScrollView(showsIndicators: false) {
@@ -18,8 +26,8 @@ struct SpaceDetailView: View {
                 ImageCarouselView(imageURLs: space.imageURLs)
 
                 VStack(alignment: .leading, spacing: Spacing.base) {
-                    // 편의시설 태그
-                    AmenityTagsView(tags: space.amenityTags)
+                    // 해시태그
+                    AmenityTagsView(tags: space.hashTags)
                         .padding(.horizontal, Spacing.base)
                         .padding(.top, Spacing.base)
 
@@ -35,23 +43,52 @@ struct SpaceDetailView: View {
                     SpaceDescriptionSection(description: space.description)
                         .padding(.horizontal, Spacing.base)
 
-                    // 날짜 선택 캘린더
-                    DatePickerCalendarView()
-                        .padding(.horizontal, Spacing.base)
+                    // 날짜 선택 캘린더 (TimelineBarView 포함)
+                    DatePickerCalendarView(
+                        selectedDate: Binding(
+                            get: { store.state.selectedDate },
+                            set: { date in
+                                if let date = date {
+                                    store.send(.dateSelected(date))
+                                }
+                            }
+                        ),
+                        startHour: store.startHourBinding,
+                        endHour: store.endHourBinding,
+                        pricePerHour: space.pricePerHour
+                    )
+                    .padding(.horizontal, Spacing.base)
 
                     // 예약하기 버튼
                     ReservationButton {
-                        // TODO: 예약 로직 구현
-                        print("예약하기 클릭")
+                        store.send(.reservationButtonTapped)
                     }
                     .padding(.horizontal, Spacing.base)
-                    .padding(.bottom, Spacing.base)
+
+                    // 예약 정보 표시 (예약하기 버튼을 눌렀을 때만 표시)
+                    if store.state.shouldShowReservationInfo {
+                        ReservationInfoSection(
+                            userProfileImage: store.state.userProfileImage,
+                            userNickname: store.state.userNickname,
+                            selectedDate: store.state.formattedDate,
+                            selectedTimeSlot: store.state.formattedTimeSlot,
+                            totalPrice: store.state.totalPrice
+                        )
+                        .padding(.horizontal, Spacing.base)
+                    }
+
+                    Spacer()
+                        .frame(height: Spacing.base)
+                        .padding(.bottom, Spacing.base)
                 }
             }
         }
         .background(Color("wmBg"))
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
+        .onAppear {
+            store.send(.viewAppeared)
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button(action: {
@@ -74,6 +111,19 @@ struct SpaceDetailView: View {
 
 #Preview {
     NavigationStack {
-        SpaceDetailView(space: Space.mockSpaces[0])
+        SpaceDetailView(space: Space(
+            id: "1",
+            title: "모던 카페 라운지",
+            address: "서울 강남구 테헤란로 123",
+            imageURLs: ["cafe1", "cafe2", "cafe3"],
+            rating: 4.8,
+            pricePerHour: 15000,
+            category: .cafe,
+            isPopular: true,
+            amenities: [.quiet, .wifi, .power],
+            hasParking: true,
+            description: "조용하고 아늑한 분위기의 카페입니다. 스터디나 작업하기 좋은 공간으로, 고속 WiFi와 충분한 콘센트를 제공합니다.",
+            hashTags: ["카페"]
+        ))
     }
 }

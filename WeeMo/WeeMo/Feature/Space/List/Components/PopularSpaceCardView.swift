@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Kingfisher
 
 struct PopularSpaceCardView: View {
     let space: Space
@@ -13,14 +14,30 @@ struct PopularSpaceCardView: View {
     var body: some View {
         ZStack(alignment: .bottomLeading) {
             // 배경 이미지
-            Rectangle()
-                .fill(Color.gray.opacity(0.3))
-                .overlay(
-                    // 실제 이미지가 있을 경우 AsyncImage 사용
-                    Image(systemName: "photo")
-                        .font(.system(size: 60))
-                        .foregroundColor(.gray)
-                )
+            if let imageURLString = space.imageURLs.first,
+               let imageURL = URL(string: FileRouter.fileURL(from: imageURLString)) {
+                KFImage(imageURL)
+                    .requestModifier(AnyModifier.weeMoRequestModifier)
+                    .placeholder {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .overlay(
+                                ProgressView()
+                            )
+                    }
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 280, height: 180)
+                    .clipped()
+            } else {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.3))
+                    .overlay(
+                        Image(systemName: "photo")
+                            .font(.system(size: 60))
+                            .foregroundColor(.gray)
+                    )
+            }
 
             // 어두운 그라데이션 오버레이
             LinearGradient(
@@ -79,8 +96,4 @@ struct PopularSpaceSectionView: View {
             }
         }
     }
-}
-
-#Preview {
-    PopularSpaceSectionView(spaces: Space.mockSpaces)
 }
