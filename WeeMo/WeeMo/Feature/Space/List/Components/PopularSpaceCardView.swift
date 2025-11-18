@@ -97,7 +97,3 @@ struct PopularSpaceSectionView: View {
         }
     }
 }
-
-#Preview {
-    PopularSpaceSectionView(spaces: Space.mockSpaces)
-}

@@ -102,9 +102,3 @@ struct AllSpaceListView: View {
         }
     }
 }
-
-#Preview {
-    ScrollView {
-        AllSpaceListView(spaces: Space.mockSpaces)
-    }
-}
