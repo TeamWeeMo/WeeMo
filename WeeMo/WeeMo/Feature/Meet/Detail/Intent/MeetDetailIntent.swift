@@ -2,7 +2,7 @@
 //  MeetDetailIntent.swift
 //  WeeMo
 //
-//  Created by Claude on 11/16/25.
+//  Created by 차지용 on 11/16/25.
 //
 
 import Foundation
