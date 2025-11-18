@@ -20,7 +20,7 @@ protocol PostServicing {
     func fetchPost(postId: String) async throws -> PostDTO
 
     /// 게시글 좋아요
-    func likePost(postId: String) async throws -> LikeStatusDTO
+    func likePost(postId: String, likeStatus: Bool) async throws -> LikeStatusDTO
 }
 
 // MARK: - Post Service Implementation
@@ -53,9 +53,9 @@ struct PostService: PostServicing {
         )
     }
 
-    func likePost(postId: String) async throws -> LikeStatusDTO {
+    func likePost(postId: String, likeStatus: Bool) async throws -> LikeStatusDTO {
         try await networkService.request(
-            PostRouter.likePost(postId: postId),
+            PostRouter.likePost(postId: postId, likeStatus: likeStatus),
             responseType: LikeStatusDTO.self
         )
     }

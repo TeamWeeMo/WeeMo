@@ -16,7 +16,7 @@ struct ProfileGridCard: View {
         ZStack {
             if let imageURL = imageURL, let url = URL(string: imageURL) {
                 KFImage(url)
-                    .requestModifier(imageRequestModifier)
+                    .withAuthHeaders()
                     .placeholder {
                         ProgressView()
                     }
@@ -47,27 +47,6 @@ struct ProfileGridCard: View {
                 .padding(8)
                 .foregroundStyle(.wmBg)
                 .lineLimit(2)
-        }
-    }
-
-    private var imageRequestModifier: AnyModifier {
-        AnyModifier { request in
-            var r = request
-
-            // SeSACKey 추가
-            if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
-                r.setValue(sesacKey, forHTTPHeaderField: HTTPHeaderKey.sesacKey)
-            }
-
-            // ProductId 추가
-            r.setValue(NetworkConstants.productId, forHTTPHeaderField: HTTPHeaderKey.productId)
-
-            // Authorization 추가
-            if let token = TokenManager.shared.accessToken {
-                r.setValue(token, forHTTPHeaderField: HTTPHeaderKey.authorization)
-            }
-
-            return r
         }
     }
 }
@@ -119,7 +98,7 @@ struct HorizontalMeetingCard: View {
         ZStack {
             if let imageURL = imageURL, let url = URL(string: imageURL) {
                 KFImage(url)
-                    .requestModifier(imageRequestModifier)
+                    .withAuthHeaders()
                     .placeholder {
                         ProgressView()
                     }
@@ -150,27 +129,6 @@ struct HorizontalMeetingCard: View {
                 .padding(8)
                 .foregroundStyle(.wmBg)
                 .lineLimit(2)
-        }
-    }
-
-    private var imageRequestModifier: AnyModifier {
-        AnyModifier { request in
-            var r = request
-
-            // SeSACKey 추가
-            if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
-                r.setValue(sesacKey, forHTTPHeaderField: HTTPHeaderKey.sesacKey)
-            }
-
-            // ProductId 추가
-            r.setValue(NetworkConstants.productId, forHTTPHeaderField: HTTPHeaderKey.productId)
-
-            // Authorization 추가
-            if let token = TokenManager.shared.accessToken {
-                r.setValue(token, forHTTPHeaderField: HTTPHeaderKey.authorization)
-            }
-
-            return r
         }
     }
 }

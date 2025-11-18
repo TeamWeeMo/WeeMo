@@ -15,17 +15,23 @@ extension KFImage {
     /// 인증 헤더를 포함한 이미지 다운로드 설정
     /// - Returns: 인증 헤더가 추가된 KFImage
     func withAuthHeaders() -> KFImage {
-        //TODO: - Keychain에서 토큰 가져오기
-        let accessToken = ""
-
-        let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String
-
         // 헤더 구성
         let modifier = AnyModifier { request in
             var modifiedRequest = request
-            modifiedRequest.setValue(accessToken, forHTTPHeaderField: HTTPHeaderKey.authorization)
-            modifiedRequest.setValue(sesacKey, forHTTPHeaderField: HTTPHeaderKey.sesacKey)
+
+            // 1. SeSACKey 추가
+            if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
+                modifiedRequest.setValue(sesacKey, forHTTPHeaderField: HTTPHeaderKey.sesacKey)
+            }
+
+            // 2. ProductId 추가
             modifiedRequest.setValue(NetworkConstants.productId, forHTTPHeaderField: HTTPHeaderKey.productId)
+
+            // 3. Authorization (AccessToken) 추가 - Keychain에서 가져오기
+            if let token = TokenManager.shared.accessToken {
+                modifiedRequest.setValue(token, forHTTPHeaderField: HTTPHeaderKey.authorization)
+            }
+
             return modifiedRequest
         }
 

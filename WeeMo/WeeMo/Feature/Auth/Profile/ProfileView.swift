@@ -18,20 +18,6 @@ struct ProfileView: View {
     @EnvironmentObject var appState: AppState
     @Namespace private var underlineNS
 
-    private var imageRequestModifier: AnyModifier {
-        AnyModifier { request in
-            var r = request
-            if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
-                r.setValue(sesacKey, forHTTPHeaderField: HTTPHeaderKey.sesacKey)
-            }
-            r.setValue(NetworkConstants.productId, forHTTPHeaderField: HTTPHeaderKey.productId)
-            if let token = TokenManager.shared.accessToken {
-                r.setValue(token, forHTTPHeaderField: HTTPHeaderKey.authorization)
-            }
-            return r
-        }
-    }
-
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -40,7 +26,7 @@ struct ProfileView: View {
                         if let profileImageURL = UserManager.shared.profileImageURL,
                            let url = URL(string: FileRouter.fileURL(from: profileImageURL)) {
                             KFImage(url)
-                                .requestModifier(imageRequestModifier)
+                                .withAuthHeaders()
                                 .placeholder {
                                     Circle()
                                         .fill(.white)

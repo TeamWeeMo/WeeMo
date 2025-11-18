@@ -100,9 +100,6 @@ struct SpaceListView: View {
                 }
             }
             .onAppear {
-                // 임시 AccessToken 저장 (하드코딩)
-                SpaceTokenManager.shared.saveTemporaryToken("")
-
                 // 화면 진입 시 데이터 로드
                 store.send(.viewAppeared)
             }
