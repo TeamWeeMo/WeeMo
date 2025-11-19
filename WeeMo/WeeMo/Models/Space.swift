@@ -20,6 +20,8 @@ struct Space: Identifiable, Hashable {
     let amenities: [SpaceAmenity]
     let hasParking: Bool
     let description: String
+    let latitude: Double
+    let longitude: Double
     let hashTags: [String]  // 서버에서 받은 해시태그
 
     // Hashable 구현

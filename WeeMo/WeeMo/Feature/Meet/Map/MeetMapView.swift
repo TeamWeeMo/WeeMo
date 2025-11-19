@@ -21,6 +21,7 @@ struct MeetMapView: View {
 
     @State private var meets = [
         Meet(
+            postId: "sample-post-1",
             title: "주말 독서 모임",
             date: "📅 2025.11.15 (토) 14:00",
             location: "📍 모던 카페 라운",
@@ -31,6 +32,7 @@ struct MeetMapView: View {
             daysLeft: "D-3"
         ),
         Meet(
+            postId: "sample-post-2",
             title: "요리 클래스",
             date: "📅 2025.11.20 (수) 19:00",
             location: "📍 쿠킹 스튜디오 키친",
@@ -41,6 +43,7 @@ struct MeetMapView: View {
             daysLeft: "D-8"
         ),
         Meet(
+            postId: "sample-post-3",
             title: "등산 동호회",
             date: "📅 2025.11.17 (일) 08:00",
             location: "📍 북한산 입구",
@@ -99,7 +102,7 @@ struct MeetMapView: View {
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     ForEach(meets) { meet in
-                                        NavigationLink(destination: MeetDetailView(meet: meet)) {
+                                        NavigationLink(destination: MeetDetailView(postId: meet.postId)) {
                                             MeetMapCard(meet: meet)
                                         }
                                         .buttonStyle(PlainButtonStyle())

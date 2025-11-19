@@ -31,7 +31,7 @@ struct PostDTO: Decodable {
     let files: [String]
     let likes: [String]
     let likes2: [String]
-    let buyers: [String]
+    let buyers: [UserDTO]
     let hashTags: [String]
     let commentCount: Int
     let geolocation: GeolocationDTO

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Kingfisher
 
 // MARK: - 검색바
 struct SearchBar: View {
@@ -57,18 +58,13 @@ struct FilterButton: View {
         }
         .commonButtonStyle(isSelected: false)
         .commonPadding()
-        .actionSheet(isPresented: $showingOptions) {
-            ActionSheet(
-                title: Text("정렬 기준")
-                    .font(.app(.subHeadline2)),
-                buttons: SortOption.allCases.map { option in
-                    .default(Text(option.rawValue)
-                        .font(.app(.content1))) {
-                        selectedOption = option
-                    }
-                } + [.cancel(Text("취소")
-                    .font(.app(.content1)))]
-            )
+        .confirmationDialog("정렬 기준", isPresented: $showingOptions, titleVisibility: .visible) {
+            ForEach(SortOption.allCases, id: \.self) { option in
+                Button(option.rawValue) {
+                    selectedOption = option
+                }
+            }
+            Button("취소", role: .cancel) { }
         }
     }
 }
@@ -80,19 +76,63 @@ struct MeetCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack {
-                Image("테스트 이미지")
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(height: 200)
-                    .clipped()
-                    .cornerRadius(12, corners: [.topLeft, .topRight])
-
+                if !meet.imageName.isEmpty {
+                    let fullImageURL = meet.imageName.hasPrefix("http") ? meet.imageName : FileRouter.fileURL(from: meet.imageName)
+                    if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                       let url = URL(string: encodedURL) {
+                        KFImage(url)
+                            .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 400, height: 400)))
+                            .requestModifier(AnyModifier { request in
+                                var newRequest = request
+                                // 이미지 요청에도 필요한 헤더 추가
+                                if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
+                                    newRequest.setValue(sesacKey, forHTTPHeaderField: "SeSACKey")
+                                }
+                                newRequest.setValue(NetworkConstants.productId, forHTTPHeaderField: "ProductId")
+                                if let token = UserDefaults.standard.string(forKey: "accessToken") {
+                                    newRequest.setValue(token, forHTTPHeaderField: "Authorization")
+                                }
+                                return newRequest
+                            })
+                            .placeholder {
+                                RoundedRectangle(cornerRadius: 12)
+                                    .fill(Color.gray.opacity(0.3))
+                                    .frame(height: 200)
+                                    .overlay(
+                                        Text("이미지 로딩중")
+                                            .font(.caption)
+                                            .foregroundColor(.gray)
+                                    )
+                            }
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 200)
+                    } else {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(height: 200)
+                            .overlay(
+                                Text("이미지 없음")
+                                    .font(.caption)
+                                    .foregroundColor(.gray)
+                            )
+                    }
+                } else {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(height: 200)
+                        .overlay(
+                            Text("이미지 없음")
+                                .font(.caption)
+                                .foregroundColor(.gray)
+                        )
+                }
                 VStack {
                     HStack {
                         Spacer()
                         ZStack {
                             RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.red)
+                                .fill(Color.wmMain)
                                 .frame(width: 40, height: 24)
                             Text(meet.daysLeft)
                                 .font(.app(.subContent1))
@@ -104,6 +144,8 @@ struct MeetCardView: View {
                     Spacer()
                 }
             }
+            .frame(height: 200)
+            .cornerRadius(12)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(meet.title)
@@ -117,10 +159,6 @@ struct MeetCardView: View {
 
                 Text(meet.location)
                     .font(.app(.content2))
-                    .foregroundColor(Color("textSub"))
-
-                Text(meet.address)
-                    .font(.app(.subContent1))
                     .foregroundColor(Color("textSub"))
 
                 HStack {

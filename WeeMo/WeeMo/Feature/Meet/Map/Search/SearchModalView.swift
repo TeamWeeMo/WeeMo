@@ -11,6 +11,7 @@ struct SearchModalView: View {
     @Binding var searchText: String
     let meets: [Meet]
     @Environment(\.presentationMode) var presentationMode
+    @State private var navigationPath = NavigationPath()
 
     var filteredMeets: [Meet] {
         if searchText.isEmpty {
@@ -24,7 +25,7 @@ struct SearchModalView: View {
     }
 
     var body: some View {
-        NavigationView {
+        NavigationStack(path: $navigationPath) {
             VStack(spacing: 0) {
                 // 검색바
                 HStack {
@@ -69,13 +70,13 @@ struct SearchModalView: View {
                     ScrollView {
                         LazyVStack(spacing: 16) {
                             ForEach(filteredMeets) { meet in
-                                NavigationLink(destination: MeetDetailView(meet: meet)) {
+                                Button(action: {
+                                    navigationPath.append(meet.postId)
+                                    presentationMode.wrappedValue.dismiss()
+                                }) {
                                     MeetCardView(meet: meet)
                                 }
                                 .buttonStyle(PlainButtonStyle())
-                                .onTapGesture {
-                                    presentationMode.wrappedValue.dismiss()
-                                }
                             }
                         }
                         .padding(.horizontal, 16)
@@ -93,6 +94,9 @@ struct SearchModalView: View {
                 .foregroundColor(Color("textMain"))
             )
             .background(Color("wmBg"))
+            .navigationDestination(for: String.self) { postId in
+                MeetDetailView(postId: postId)
+            }
         }
     }
 }

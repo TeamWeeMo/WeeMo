@@ -13,7 +13,7 @@ import Foundation
 struct UserDTO: Decodable {
     let userId: String
     let nick: String
-    let profileImage: String?  // 프로필 이미지가 없을 수 있음
+    let profileImage: String?
 
     enum CodingKeys: String, CodingKey {
         case userId = "user_id"

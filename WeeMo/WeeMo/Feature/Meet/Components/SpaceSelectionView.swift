@@ -6,71 +6,152 @@
 //
 
 import SwiftUI
-
-struct SpaceInfo: Identifiable {
-    let id = UUID()
-    let name: String
-    let address: String
-    let imageName: String
-}
+import Combine
+import Kingfisher
 
 struct SpaceSelectionView: View {
-    @Binding var selectedSpace: SpaceInfo?
+    @Binding var selectedSpace: Space?
     @Environment(\.presentationMode) var presentationMode
-
-    private let mockSpaces = [
-        SpaceInfo(name: "모던 카페 라운지", address: "서울시 강남구 테헤란로 123", imageName: "테스트 이미지"),
-        SpaceInfo(name: "코워킹 스페이스 허브", address: "서울시 마포구 홍대입구로 456", imageName: "테스트 이미지"),
-        SpaceInfo(name: "북카페 리딩룸", address: "서울시 종로구 인사동길 789", imageName: "테스트 이미지"),
-        SpaceInfo(name: "스터디룸 플레이스", address: "서울시 서초구 강남대로 321", imageName: "테스트 이미지")
-    ]
+    @StateObject private var viewModel = MeetEditViewStroe()
 
     var body: some View {
         NavigationView {
             VStack {
                 CustomNavigationBar(
-                    onCancel: { presentationMode.wrappedValue.dismiss() },
-                    onComplete: { presentationMode.wrappedValue.dismiss() }
+                    onCancel: {
+                        presentationMode.wrappedValue.dismiss()
+                    },
+                    onComplete: {
+                        // 선택된 공간이 있으면 바인딩 업데이트
+                        if let selected = viewModel.state.selectedSpace {
+                            selectedSpace = selected
+                        }
+                        presentationMode.wrappedValue.dismiss()
+                    }
                 )
 
-                ScrollView {
-                    LazyVStack(spacing: 12) {
-                        ForEach(mockSpaces) { space in
-                            SpaceRowView(
-                                space: space,
-                                isSelected: selectedSpace?.id == space.id,
-                                onTap: {
-                                    selectedSpace = space
-                                }
-                            )
-                        }
-                    }
-                    .commonPadding()
-                }
+                content
             }
             .background(Color("wmBg"))
             .navigationBarHidden(true)
+            .onAppear {
+                viewModel.handle(.loadSpaces)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if viewModel.state.isLoadingSpaces {
+            VStack {
+                Spacer()
+                ProgressView("공간을 불러오는 중...")
+                    .frame(maxWidth: .infinity)
+                Spacer()
+            }
+        } else if let errorMessage = viewModel.state.spacesErrorMessage {
+            VStack(spacing: 16) {
+                Spacer()
+                Text("오류가 발생했습니다")
+                    .font(.headline)
+                Text(errorMessage)
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                Button("다시 시도") {
+                    viewModel.handle(.retryLoadSpaces)
+                }
+                .buttonStyle(.bordered)
+                Spacer()
+            }
+            .padding()
+        } else {
+            ScrollView {
+                LazyVStack(spacing: 12) {
+                    ForEach(viewModel.state.spaces) { space in
+                        SpaceRowView(
+                            space: space,
+                            isSelected: viewModel.state.selectedSpace?.id == space.id,
+                            onTap: {
+                                viewModel.handle(.selectSpace(space))
+                            }
+                        )
+                    }
+                }
+                .commonPadding()
+            }
         }
     }
 }
 
 struct SpaceRowView: View {
-    let space: SpaceInfo
+    let space: Space
     let isSelected: Bool
     let onTap: () -> Void
 
     var body: some View {
         Button(action: onTap) {
             HStack {
-                Image(space.imageName)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 60, height: 60)
-                    .clipped()
-                    .cornerRadius(8)
+                if let imageURL = space.imageURLs.first {
+                    // FileRouter를 사용하여 올바른 URL 생성
+                    let fullImageURL = imageURL.hasPrefix("http") ? imageURL : FileRouter.fileURL(from: imageURL)
+                    let _ = print("🖼️ Original image URL: \(imageURL)")
+                    let _ = print("🖼️ Full image URL with FileRouter: \(fullImageURL)")
+
+                    // URL 인코딩 처리
+                    if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                       let url = URL(string: encodedURL) {
+                        KFImage(url)
+                        .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 120, height: 120)))
+                        .requestModifier(AnyModifier { request in
+                            var newRequest = request
+                            // 이미지 요청에도 필요한 헤더 추가
+                            if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
+                                newRequest.setValue(sesacKey, forHTTPHeaderField: "SeSACKey")
+                            }
+                            newRequest.setValue(NetworkConstants.productId, forHTTPHeaderField: "ProductId")
+                            if let token = UserDefaults.standard.string(forKey: "accessToken") {
+                                newRequest.setValue(token, forHTTPHeaderField: "Authorization")
+                            }
+                            return newRequest
+                        })
+                        .placeholder {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: 60, height: 60)
+                                .overlay(
+                                    Text("로딩중")
+                                        .font(.caption)
+                                        .foregroundColor(.gray)
+                                )
+                        }
+                        .onFailure { error in
+                            print("🖼️ 이미지 로딩 실패: \(error)")
+                        }
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 60, height: 60)
+                        .clipped()
+                        .cornerRadius(8)
+                    } else {
+                        let _ = print("🖼️ URL 생성 실패: \(fullImageURL)")
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.red.opacity(0.3))
+                            .frame(width: 60, height: 60)
+                            .overlay(
+                                Text("URL 오류")
+                                    .font(.caption)
+                                    .foregroundColor(.red)
+                            )
+                    }
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color("imagePlaceholder"))
+                        .frame(width: 60, height: 60)
+                }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(space.name)
+                    Text(space.title)
                         .font(.app(.content1))
                         .foregroundColor(Color("textMain"))
 

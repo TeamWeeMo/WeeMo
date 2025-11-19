@@ -109,21 +109,21 @@ struct SpaceDetailView: View {
     }
 }
 
-#Preview {
-    NavigationStack {
-        SpaceDetailView(space: Space(
-            id: "1",
-            title: "모던 카페 라운지",
-            address: "서울 강남구 테헤란로 123",
-            imageURLs: ["cafe1", "cafe2", "cafe3"],
-            rating: 4.8,
-            pricePerHour: 15000,
-            category: .cafe,
-            isPopular: true,
-            amenities: [.quiet, .wifi, .power],
-            hasParking: true,
-            description: "조용하고 아늑한 분위기의 카페입니다. 스터디나 작업하기 좋은 공간으로, 고속 WiFi와 충분한 콘센트를 제공합니다.",
-            hashTags: ["카페"]
-        ))
-    }
-}
+//#Preview {
+//    NavigationStack {
+//        SpaceDetailView(space: Space(
+//            id: "1",
+//            title: "모던 카페 라운지",
+//            address: "서울 강남구 테헤란로 123",
+//            imageURLs: ["cafe1", "cafe2", "cafe3"],
+//            rating: 4.8,
+//            pricePerHour: 15000,
+//            category: .cafe,
+//            isPopular: true,
+//            amenities: [.quiet, .wifi, .power],
+//            hasParking: true,
+//            description: "조용하고 아늑한 분위기의 카페입니다. 스터디나 작업하기 좋은 공간으로, 고속 WiFi와 충분한 콘센트를 제공합니다.",
+//            hashTags: ["카페"]
+//        ))
+//    }
+//}

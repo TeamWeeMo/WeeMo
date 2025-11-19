@@ -11,72 +11,11 @@ struct MeetListView: View {
     @State private var searchText = ""
     @State private var selectedSortOption: SortOption = .registrationDate
     @State private var showingSortOptions = false
-
-    @State private var meets = [
-        Meet(
-            title: "주말 독서 모임",
-            date: "📅 2025.11.15 (토) 14:00",
-            location: "📍 모던 카페 라운",
-            address: "서울 강남구 테헤란로 123",
-            price: "💰 15,000원/",
-            participants: "👤 4 / 8명",
-            imageName: "meeting1",
-            daysLeft: "D-3"
-        ),
-        Meet(
-            title: "요리 클래스",
-            date: "📅 2025.11.20 (수) 19:00",
-            location: "📍 쿠킹 스튜디오 키친",
-            address: "서울 마포구 홍대입구역 56",
-            price: "💰 35,000원/",
-            participants: "👤 6 / 10명",
-            imageName: "meeting2",
-            daysLeft: "D-8"
-        ),
-        Meet(
-            title: "등산 동호회",
-            date: "📅 2025.11.17 (일) 08:00",
-            location: "📍 북한산 입구",
-            address: "서울 은평구 진관동 산1",
-            price: "💰 무료",
-            participants: "👤 12 / 15명",
-            imageName: "meeting3",
-            daysLeft: "D-5"
-        ),
-        Meet(
-            title: "보드게임 카페",
-            date: "📅 2025.11.22 (금) 20:00",
-            location: "📍 게임톡톡 강남점",
-            address: "서울 강남구 역삼동 678",
-            price: "💰 8,000원/",
-            participants: "👤 3 / 6명",
-            imageName: "meeting4",
-            daysLeft: "D-10"
-        ),
-        Meet(
-            title: "사진 촬영 워크숍",
-            date: "📅 2025.11.25 (월) 15:00",
-            location: "📍 한강공원 반포지구",
-            address: "서울 서초구 반포동 한강공원",
-            price: "💰 25,000원/",
-            participants: "👤 8 / 12명",
-            imageName: "meeting5",
-            daysLeft: "D-13"
-        ),
-        Meet(
-            title: "영화 토론 모임",
-            date: "📅 2025.11.18 (월) 18:30",
-            location: "📍 씨네큐브 광화문",
-            address: "서울 종로구 세종대로 175",
-            price: "💰 12,000원/",
-            participants: "👤 7 / 10명",
-            imageName: "meeting6",
-            daysLeft: "D-6"
-        )
-    ]
+    @StateObject private var store = MeetListViewStore()
+    @State private var navigationPath = NavigationPath()
 
     var body: some View {
-        NavigationView {
+        NavigationStack(path: $navigationPath) {
             ScrollView {
                 VStack {
                     HStack {
@@ -95,35 +34,109 @@ struct MeetListView: View {
                         showingOptions: $showingSortOptions
                     )
 
-                    LazyVStack(spacing: 16) {
-                        ForEach(meets) { meet in
-                            NavigationLink(destination: MeetDetailView(meet: meet)) {
-                                MeetCardView(meet: meet)
-                            }
-                            .buttonStyle(PlainButtonStyle())
+                    if store.state.isLoading {
+                        VStack {
+                            ProgressView("모임을 불러오는 중...")
+                                .padding()
+                            Spacer()
                         }
+                    } else if let errorMessage = store.state.errorMessage {
+                        VStack(spacing: 16) {
+                            Text("오류가 발생했습니다")
+                                .font(.headline)
+                            Text(errorMessage)
+                                .font(.body)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                            Button("다시 시도") {
+                                store.handle(.retryLoadMeets)
+                            }
+                            .buttonStyle(.bordered)
+                            Spacer()
+                        }
+                        .padding()
+                    } else {
+                        LazyVStack(spacing: 16) {
+                            ForEach(store.state.meets) { meet in
+                                Button(action: {
+                                    navigationPath.append(meet.postId)
+                                }) {
+                                    MeetCardView(meet: meet)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                            }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
                 }
             }
             .navigationBarHidden(true)
             .background(Color("wmBg"))
+            .onAppear {
+                store.handle(.loadMeets)
+            }
+            .onChange(of: selectedSortOption) { sortOption in
+                print("🔄 Sort option changed to: \(sortOption.rawValue)")
+                store.handle(.sortMeets(option: sortOption))
+            }
+            .onChange(of: searchText) { searchQuery in
+                print("🔍 Search text changed to: '\(searchQuery)'")
+                store.handle(.searchMeets(query: searchQuery))
+            }
             .overlay(
                 VStack {
                     Spacer()
                     HStack {
                         Spacer()
                         VStack(spacing: 12) {
-                            MapViewButton()
-                            FloatingActionButton()
+                            Button(action: {
+                                navigationPath.append("map")
+                            }) {
+                                HStack {
+                                    Image(systemName: "map")
+                                        .font(.system(size: 16, weight: .medium))
+                                        .foregroundColor(.black)
+                                    Text("지도보기")
+                                        .font(.app(.content2))
+                                        .foregroundColor(.black)
+                                }
+                                .frame(width: 130, height: 40)
+                                .background(Color.white)
+                                .cornerRadius(25)
+                                .cardShadow()
+                            }
+
+                            Button(action: {
+                                navigationPath.append("edit")
+                            }) {
+                                HStack {
+                                    Image(systemName: "plus")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(.white)
+                                    Text("모임 만들기")
+                                        .font(.app(.content2))
+                                        .foregroundColor(.white)
+                                }
+                                .frame(width: 130, height: 40)
+                                .background(Color.black)
+                                .cornerRadius(25)
+                            }
                         }
                     }
                     .padding(.trailing, 20)
                     .padding(.bottom, 20)
                 }
             )
-
+            .navigationDestination(for: String.self) { value in
+                if value == "map" {
+                    MeetMapView()
+                } else if value == "edit" {
+                    MeetEditView()
+                } else {
+                    MeetDetailView(postId: value)
+                }
+            }
         }
     }
 }

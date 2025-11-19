@@ -120,7 +120,9 @@ final class FeedEditStore {
                     content: state.content,
                     category: .feed,
                     files: uploadResponse.files,
-                    additionalFields: nil
+                    additionalFields: nil,
+                    latitude: nil,
+                    longitude: nil
                 ),
                 responseType: PostDTO.self
             )
@@ -196,7 +198,9 @@ extension FeedEditStore {
                     content: self.state.content,
                     category: .feed,
                     files: uploadResponse.files,
-                    additionalFields: nil
+                    additionalFields: nil,
+                    latitude: nil,
+                    longitude: nil
                 ),
                 responseType: PostDTO.self
             )
