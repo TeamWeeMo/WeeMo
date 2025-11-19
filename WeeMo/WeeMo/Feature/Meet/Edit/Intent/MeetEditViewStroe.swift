@@ -173,9 +173,12 @@ final class MeetEditViewStroe: ObservableObject {
                 if !selectedImages.isEmpty {
                     print("📸 사용자가 선택한 이미지 \(selectedImages.count)개를 업로드합니다.")
                     files = try await uploadImages(selectedImages)
+                    print("✅ 업로드된 이미지 URLs: \(files)")
                 } else {
                     print("⚠️ 선택된 이미지가 없습니다.")
                 }
+
+                print("🚀 모임 생성 요청 - files: \(files)")
 
                 let response = try await networkService.request(
                     PostRouter.createPost(
@@ -190,6 +193,8 @@ final class MeetEditViewStroe: ObservableObject {
                     ),
                     responseType: PostDTO.self
                 )
+
+                print("✅ 모임 생성 응답 - files: \(response.files)")
 
                 await MainActor.run {
                     print("✅ 모임이 성공적으로 생성되었습니다: \(response.title)")
