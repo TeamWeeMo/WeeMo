@@ -28,7 +28,7 @@ struct MeetDetail {
     let capacity: Int
     let currentParticipants: Int
     let participants: [Participant]
-    let imageName: String
+    let imageNames: [String]
     let daysLeft: String
     let gender: String
     let spaceInfo: SpaceInfo?
