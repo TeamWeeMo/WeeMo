@@ -25,17 +25,21 @@ final class MeetListViewStore: ObservableObject {
             loadMeets()
         case .sortMeets(let option):
             sortMeets(by: option)
+        case .loadMoreMeets:
+            loadMoreMeets()
         }
     }
 
     private func loadMeets() {
         state.isLoading = true
         state.errorMessage = nil
+        state.nextCursor = nil // 초기 로드시 커서 리셋
+        state.hasMoreData = true
 
         Task {
             do {
                 let response = try await networkService.request(
-                    PostRouter.fetchPosts(next: nil, limit: nil, category: .meet),
+                    PostRouter.fetchPosts(next: nil, limit: 20, category: .meet),
                     responseType: PostListDTO.self
                 )
 
@@ -65,6 +69,8 @@ final class MeetListViewStore: ObservableObject {
                 await MainActor.run {
                     state.allMeets = meets
                     state.filteredMeets = meets
+                    state.nextCursor = response.nextCursor
+                    state.hasMoreData = response.nextCursor != nil
                     state.isLoading = false
                     // 현재 검색어와 정렬 옵션 적용
                     applyFilterAndSort()
@@ -210,5 +216,68 @@ final class MeetListViewStore: ObservableObject {
         }
         print("❌ Could not parse: '\(daysLeftString)' -> Int.max")
         return Int.max
+    }
+
+    // MARK: - Load More Data
+
+    private func loadMoreMeets() {
+        guard state.hasMoreData && !state.isLoadingMore,
+              let nextCursor = state.nextCursor else {
+            print("⚠️ No more data to load or already loading")
+            return
+        }
+
+        state.isLoadingMore = true
+
+        Task {
+            do {
+                print("🔄 Loading more meets with cursor: \(nextCursor)")
+
+                let response = try await networkService.request(
+                    PostRouter.fetchPosts(next: nextCursor, limit: 20, category: .meet),
+                    responseType: PostListDTO.self
+                )
+
+                let newMeets = response.data.compactMap { (postDTO: PostDTO) -> Meet? in
+                    // PostDTO를 Meet으로 변환 (기존과 동일한 로직)
+                    let meetDate = postDTO.value5 != nil ? formatDate(postDTO.value5!) : formatDate(postDTO.createdAt)
+                    let location = extractLocationFromContent(postDTO.content)
+
+                    return Meet(
+                        postId: postDTO.postId,
+                        title: postDTO.title,
+                        date: meetDate,
+                        location: location.isEmpty ? "장소 미정" : location,
+                        address: postDTO.content,
+                        price: formatPrice(postDTO.value3),
+                        participants: formatParticipants(postDTO.value1, postDTO.buyers.count),
+                        imageName: postDTO.files.first ?? "",
+                        daysLeft: calculateDaysLeft(postDTO.value5 ?? postDTO.createdAt)
+                    )
+                }
+
+                await MainActor.run {
+                    // 중복 제거하여 새로운 데이터만 추가
+                    let existingPostIds = Set(state.allMeets.map { $0.postId })
+                    let uniqueNewMeets = newMeets.filter { !existingPostIds.contains($0.postId) }
+
+                    state.allMeets.append(contentsOf: uniqueNewMeets)
+                    state.nextCursor = response.nextCursor
+                    state.hasMoreData = response.nextCursor != nil
+                    state.isLoadingMore = false
+
+                    print("✅ Loaded \(uniqueNewMeets.count) new meets (filtered \(newMeets.count - uniqueNewMeets.count) duplicates). Total: \(state.allMeets.count)")
+
+                    // 현재 검색어와 정렬 옵션 적용
+                    applyFilterAndSort()
+                }
+
+            } catch {
+                print("❌ Error loading more meets: \(error)")
+                await MainActor.run {
+                    state.isLoadingMore = false
+                }
+            }
+        }
     }
 }
