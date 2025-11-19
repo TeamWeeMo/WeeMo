@@ -7,11 +7,15 @@
 
 import Foundation
 import Combine
+import SwiftUI
+import PhotosUI
 
 // MARK: - Meet ViewModel
 
 final class MeetEditViewStroe: ObservableObject {
     @Published var state = MeetEditState()
+    @Published var selectedPhotoItems: [PhotosPickerItem] = []
+    @Published var selectedImages: [UIImage] = []
     private let networkService = NetworkService()
 
     func handle(_ intent: MeetEditIntent) {
@@ -162,8 +166,15 @@ final class MeetEditViewStroe: ObservableObject {
                 }
                 additionalFields["value5"] = startDateString // 모임 시작일
 
-                // 선택된 공간의 이미지를 사용
-                let files = selectedSpace?.imageURLs ?? []
+                // 업로드된 이미지가 있으면 사용, 없으면 선택된 공간의 이미지를 사용
+                var files = selectedSpace?.imageURLs ?? []
+
+                // TODO: 실제 이미지 업로드 구현 필요
+                // 현재는 선택된 공간의 이미지를 사용하지만, 향후 실제 이미지 업로드 API와 연동 필요
+                if !selectedImages.isEmpty {
+                    // 실제 구현에서는 이미지를 서버에 업로드하고 URL을 받아와야 함
+                    print("📸 사용자가 선택한 이미지 \(selectedImages.count)개가 있습니다. 이미지 업로드 API 연동 필요")
+                }
 
                 let response = try await networkService.request(
                     PostRouter.createPost(

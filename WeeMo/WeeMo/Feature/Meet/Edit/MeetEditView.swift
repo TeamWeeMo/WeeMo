@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import PhotosUI
 
 struct MeetEditView: View {
     @State private var meetTitle = ""
@@ -39,6 +40,8 @@ struct MeetEditView: View {
                 VStack(alignment: .leading, spacing: 24) {
                     ReservedSpaceSection(selectedSpace: $selectedSpace)
 
+                    MeetImageSection(store: store)
+
                     MeetTitleSection(title: $meetTitle)
 
                     MeetDescriptionSection(description: $meetDescription)
@@ -64,9 +67,28 @@ struct MeetEditView: View {
                 presentationMode.wrappedValue.dismiss()
             }
         }
+        .onChange(of: store.selectedPhotoItems) { newItems in
+            Task {
+                var newImages: [UIImage] = []
+
+                for item in newItems {
+                    if let data = try? await item.loadTransferable(type: Data.self) {
+                        if let uiImage = UIImage(data: data) {
+                            newImages.append(uiImage)
+                        }
+                    }
+                }
+
+                await MainActor.run {
+                    store.selectedImages = newImages
+                }
+            }
+        }
     }
 
 }
+
+
 
 #Preview {
     MeetEditView()
