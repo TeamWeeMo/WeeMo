@@ -56,17 +56,22 @@ struct MeetListView: View {
                         }
                         .padding()
                     } else {
-                        LazyVStack(spacing: 16) {
+                        LazyVStack(spacing: 0) {
                             ForEach(store.state.meets) { meet in
                                 Button(action: {
                                     navigationPath.append(meet.postId)
                                 }) {
-                                    MeetCardView(meet: meet)
+                                    MeetListItemView(meet: meet)
                                 }
                                 .buttonStyle(PlainButtonStyle())
+
+                                // 구분선 추가 (마지막 아이템 제외)
+                                if meet.id != store.state.meets.last?.id {
+                                    Divider()
+                                        .padding(.horizontal, 16)
+                                }
                             }
                         }
-                        .padding(.horizontal, 16)
                         .padding(.top, 16)
                     }
                 }

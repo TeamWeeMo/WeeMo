@@ -217,3 +217,112 @@ struct FloatingActionButton: View {
         }
     }
 }
+
+// MARK: - 모임 리스트 아이템
+struct MeetListItemView: View {
+    let meet: Meet
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // 이미지 섹션
+            ZStack {
+                if !meet.imageName.isEmpty {
+                    let fullImageURL = meet.imageName.hasPrefix("http") ? meet.imageName : FileRouter.fileURL(from: meet.imageName)
+                    if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                       let url = URL(string: encodedURL) {
+                        KFImage(url)
+                            .withAuthHeaders()
+                            .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 200, height: 200)))
+                            .placeholder {
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color.gray.opacity(0.2))
+                                    .overlay(
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .gray))
+                                    )
+                            }
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 80, height: 80)
+                            .clipped()
+                            .cornerRadius(8)
+                    } else {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 80, height: 80)
+                            .overlay(
+                                Image(systemName: "photo")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.gray)
+                            )
+                    }
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: 80, height: 80)
+                        .overlay(
+                            Image(systemName: "photo")
+                                .font(.system(size: 20))
+                                .foregroundColor(.gray)
+                        )
+                }
+            }
+
+            // 내용 섹션
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(meet.title)
+                        .font(.app(.subHeadline2))
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color("textMain"))
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    // D-day 뱃지
+                    Text(meet.daysLeft)
+                        .font(.app(.subContent1))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.wmMain)
+                        .cornerRadius(4)
+                }
+
+                Text(meet.date)
+                    .font(.app(.content2))
+                    .foregroundColor(Color("textSub"))
+
+                Text(meet.location)
+                    .font(.app(.content2))
+                    .foregroundColor(Color("textSub"))
+                    .lineLimit(1)
+
+                HStack {
+                    // 프로필 이미지 (추후 구현)
+                    Circle()
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: 20, height: 20)
+                        .overlay(
+                            Image(systemName: "person.fill")
+                                .font(.system(size: 10))
+                                .foregroundColor(.gray)
+                        )
+
+                    Text(meet.price)
+                        .font(.app(.content2))
+                        .foregroundColor(Color("textSub"))
+
+                    Spacer()
+
+                    Text(meet.participants)
+                        .font(.app(.content2))
+                        .foregroundColor(Color("textSub"))
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.white)
+    }
+}
