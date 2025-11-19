@@ -20,4 +20,5 @@ enum MeetEditIntent {
     // Meet Edit
     case loadMeetForEdit(postId: String)
     case updateMeet(postId: String, title: String, description: String, capacity: Int, price: String, gender: String, selectedSpace: Space?, startDate: Date)
+    case deleteMeet(postId: String)
 }

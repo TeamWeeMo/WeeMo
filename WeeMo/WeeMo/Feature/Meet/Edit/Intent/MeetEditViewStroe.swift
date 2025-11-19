@@ -37,6 +37,8 @@ final class MeetEditViewStroe: ObservableObject {
             loadMeetForEdit(postId: postId)
         case .updateMeet(let postId, let title, let description, let capacity, let price, let gender, let selectedSpace, let startDate):
             updateMeet(postId: postId, title: title, description: description, capacity: capacity, price: price, gender: gender, selectedSpace: selectedSpace, startDate: startDate)
+        case .deleteMeet(let postId):
+            deleteMeet(postId: postId)
         }
     }
 
@@ -437,5 +439,33 @@ final class MeetEditViewStroe: ObservableObject {
             }
         }
         return ""
+    }
+
+    private func deleteMeet(postId: String) {
+        state.isDeletingMeet = true
+        state.deleteMeetErrorMessage = nil
+
+        Task {
+            do {
+                print("🔄 Deleting meet: \(postId)")
+
+                // 모임 삭제 API 호출 (응답 데이터 없음)
+                try await networkService.request(PostRouter.deletePost(postId: postId))
+
+                print("✅ Meet deleted successfully: \(postId)")
+
+                await MainActor.run {
+                    state.isDeletingMeet = false
+                    state.isMeetDeleted = true
+                }
+
+            } catch {
+                print("❌ Error deleting meet: \(error)")
+                await MainActor.run {
+                    state.deleteMeetErrorMessage = error.localizedDescription
+                    state.isDeletingMeet = false
+                }
+            }
+        }
     }
 }

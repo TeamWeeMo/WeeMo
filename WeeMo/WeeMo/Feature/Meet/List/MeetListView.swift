@@ -142,6 +142,9 @@ struct MeetListView: View {
                     MeetDetailView(postId: value)
                 }
             }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToRoot"))) { _ in
+                navigationPath = NavigationPath() // NavigationPath 초기화로 루트로 돌아가기
+            }
         }
     }
 }

@@ -19,6 +19,7 @@ struct MeetEditView: View {
     @State private var startDate = Date()
     @StateObject private var store = MeetEditViewStroe()
     @Environment(\.presentationMode) var presentationMode
+    @State private var showingDeleteAlert = false
 
     // 수정 모드인지 확인하는 computed property
     private var isEditMode: Bool {
@@ -31,33 +32,60 @@ struct MeetEditView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            CustomNavigationBar(
-                onCancel: { presentationMode.wrappedValue.dismiss() },
-                onComplete: {
-                    if isEditMode, let postId = editingPostId {
-                        store.handle(.updateMeet(
-                            postId: postId,
-                            title: meetTitle,
-                            description: meetDescription,
-                            capacity: meetCapacity,
-                            price: meetPrice,
-                            gender: selectedGender,
-                            selectedSpace: selectedSpace,
-                            startDate: startDate
-                        ))
-                    } else {
-                        store.handle(.createMeet(
-                            title: meetTitle,
-                            description: meetDescription,
-                            capacity: meetCapacity,
-                            price: meetPrice,
-                            gender: selectedGender,
-                            selectedSpace: selectedSpace,
-                            startDate: startDate
-                        ))
+            VStack(spacing: 0) {
+                // Custom Navigation Bar with Delete Button
+                HStack {
+                    Button("취소") {
+                        presentationMode.wrappedValue.dismiss()
                     }
+                    .foregroundColor(.blue)
+                    .font(.app(.content1))
+
+                    Spacer()
+
+                    // 삭제 버튼 (수정 모드에서만 표시)
+                    if isEditMode {
+                        Button("삭제") {
+                            showingDeleteAlert = true
+                        }
+                        .foregroundColor(.red)
+                        .font(.app(.content1))
+                    }
+
+                    Button("완료") {
+                        if isEditMode, let postId = editingPostId {
+                            store.handle(.updateMeet(
+                                postId: postId,
+                                title: meetTitle,
+                                description: meetDescription,
+                                capacity: meetCapacity,
+                                price: meetPrice,
+                                gender: selectedGender,
+                                selectedSpace: selectedSpace,
+                                startDate: startDate
+                            ))
+                        } else {
+                            store.handle(.createMeet(
+                                title: meetTitle,
+                                description: meetDescription,
+                                capacity: meetCapacity,
+                                price: meetPrice,
+                                gender: selectedGender,
+                                selectedSpace: selectedSpace,
+                                startDate: startDate
+                            ))
+                        }
+                    }
+                    .foregroundColor(.blue)
+                    .font(.app(.content1))
+                    .fontWeight(.semibold)
                 }
-            )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background(Color("wmBg"))
+
+                Divider()
+            }
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
@@ -144,6 +172,22 @@ struct MeetEditView: View {
             if isMeetUpdated {
                 presentationMode.wrappedValue.dismiss()
             }
+        }
+        .onChange(of: store.state.isMeetDeleted) { isMeetDeleted in
+            if isMeetDeleted {
+                // 삭제 완료시 루트로 돌아가기 위해 NotificationCenter 사용
+                NotificationCenter.default.post(name: NSNotification.Name("NavigateToRoot"), object: nil)
+            }
+        }
+        .alert("모임 삭제", isPresented: $showingDeleteAlert) {
+            Button("취소", role: .cancel) {}
+            Button("삭제", role: .destructive) {
+                if let postId = editingPostId {
+                    store.handle(.deleteMeet(postId: postId))
+                }
+            }
+        } message: {
+            Text("정말 모임을 삭제하겠습니까?\n삭제된 모임은 복구할 수 없습니다.")
         }
     }
 
