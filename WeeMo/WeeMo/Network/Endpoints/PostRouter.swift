@@ -18,7 +18,7 @@ enum PostRouter: APIRouter {
     case createPost(title: String, price: Int?, content: String, category: PostCategory, files: [String], additionalFields: [String: String]?, latitude: Double?, longitude: Double?)
     case fetchPosts(next: String?, limit: Int?, category: PostCategory?)
     case fetchPost(postId: String)
-    case updatePost(postId: String, title: String?, content: String?, files: [String]?)
+    case updatePost(postId: String, title: String?, content: String?, files: [String]?, additionalFields: [String: String]?)
     case deletePost(postId: String)
 
     // 좋아요
@@ -63,7 +63,7 @@ enum PostRouter: APIRouter {
             return "\(version)/posts"
         case .fetchPost(let postId):
             return "\(version)/posts/\(postId)"
-        case .updatePost(let postId, _, _, _):
+        case .updatePost(let postId, _, _, _, _):
             return "\(version)/posts/\(postId)"
         case .deletePost(let postId):
             return "\(version)/posts/\(postId)"
@@ -127,11 +127,16 @@ enum PostRouter: APIRouter {
         case .fetchPost:
             return nil
 
-        case .updatePost(_, let title, let content, let files):
+        case .updatePost(_, let title, let content, let files, let additionalFields):
             var params: Parameters = [:]
             if let title = title { params["title"] = title }
             if let content = content { params["content"] = content }
             if let files = files { params["files"] = files }
+            if let additionalFields = additionalFields {
+                for (key, value) in additionalFields {
+                    params[key] = value
+                }
+            }
             return params.isEmpty ? nil : params
 
         case .deletePost:

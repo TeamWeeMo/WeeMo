@@ -95,11 +95,7 @@ final class MeetListViewStore: ObservableObject {
     private func formatDate(_ dateString: String) -> String {
         let formatter = ISO8601DateFormatter()
         guard let date = formatter.date(from: dateString) else { return "" }
-
-        let displayFormatter = DateFormatter()
-        displayFormatter.dateFormat = "M월 d일 (E)"
-        displayFormatter.locale = Locale(identifier: "ko_KR")
-        return displayFormatter.string(from: date)
+        return DateFormatter.simpleFormatter.string(from: date)
     }
 
     private func formatPrice(_ priceString: String?) -> String {
@@ -109,7 +105,7 @@ final class MeetListViewStore: ObservableObject {
         if price == 0 {
             return "무료"
         } else {
-            return "\(price)원"
+            return "\(price.formatted())원"
         }
     }
 

@@ -11,6 +11,7 @@ import Kingfisher
 struct MeetDetailView: View {
     let postId: String
     @StateObject private var store = MeetDetailStore()
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,6 +42,20 @@ struct MeetDetailView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("모임 상세")
+        .navigationBarBackButtonHidden(false)
+        .toolbar {
+            if let meetDetail = store.state.meetDetail,
+               let currentUserId = TokenManager.shared.userId,
+               currentUserId == meetDetail.creator.userId {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: MeetEditView(editingPostId: meetDetail.postId)) {
+                        Text("수정")
+                            .font(.app(.content2))
+                            .foregroundColor(Color.wmMain)
+                    }
+                }
+            }
+        }
         .background(Color("wmBg"))
         .onAppear {
             store.handle(.loadMeetDetail(postId: postId))
@@ -79,10 +94,32 @@ struct MeetDetailView: View {
 
                     // 주최자 정보
                     VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            if let profileImage = meetDetail.creator.profileImage, !profileImage.isEmpty {
-                                KFImage(URL(string: profileImage))
-                                    .placeholder {
+                        Button(action: {
+                            // TODO: 주최자 프로필 페이지로 이동
+                            print("주최자 프로필 클릭: \(meetDetail.creator.nickname)")
+                        }) {
+                            HStack {
+                                if let profileImage = meetDetail.creator.profileImage, !profileImage.isEmpty {
+                                    let fullImageURL = profileImage.hasPrefix("http") ? profileImage : FileRouter.fileURL(from: profileImage)
+                                    if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                                       let url = URL(string: encodedURL) {
+                                        KFImage(url)
+                                            .withAuthHeaders()
+                                            .placeholder {
+                                                Circle()
+                                                    .fill(Color.gray.opacity(0.3))
+                                                    .frame(width: 40, height: 40)
+                                                    .overlay(
+                                                        Text(String(meetDetail.creator.nickname.prefix(1)))
+                                                            .font(.app(.content2))
+                                                            .fontWeight(.medium)
+                                                    )
+                                            }
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 40, height: 40)
+                                            .clipShape(Circle())
+                                    } else {
                                         Circle()
                                             .fill(Color.gray.opacity(0.3))
                                             .frame(width: 40, height: 40)
@@ -92,33 +129,31 @@ struct MeetDetailView: View {
                                                     .fontWeight(.medium)
                                             )
                                     }
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 40, height: 40)
-                                    .clipShape(Circle())
-                            } else {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.3))
-                                    .frame(width: 40, height: 40)
-                                    .overlay(
-                                        Text(String(meetDetail.creator.nickname.prefix(1)))
-                                            .font(.app(.content2))
-                                            .fontWeight(.medium)
-                                    )
-                            }
+                                } else {
+                                    Circle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .frame(width: 40, height: 40)
+                                        .overlay(
+                                            Text(String(meetDetail.creator.nickname.prefix(1)))
+                                                .font(.app(.content2))
+                                                .fontWeight(.medium)
+                                        )
+                                }
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("주최자")
-                                    .font(.app(.subContent1))
-                                    .foregroundColor(Color("textSub"))
-                                Text(meetDetail.creator.nickname)
-                                    .font(.app(.content2))
-                                    .fontWeight(.medium)
-                                    .foregroundColor(Color("textMain"))
-                            }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("주최자")
+                                        .font(.app(.subContent1))
+                                        .foregroundColor(Color("textSub"))
+                                    Text(meetDetail.creator.nickname)
+                                        .font(.app(.content2))
+                                        .fontWeight(.medium)
+                                        .foregroundColor(Color("textMain"))
+                                }
 
-                            Spacer()
+                                Spacer()
+                            }
                         }
+                        .buttonStyle(PlainButtonStyle())
                         .padding(.top, 20)
                         .padding(.bottom, 20)
                     }

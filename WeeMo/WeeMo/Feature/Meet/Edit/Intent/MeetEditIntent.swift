@@ -16,4 +16,8 @@ enum MeetEditIntent {
     // Meet Creation
     case createMeet(title: String, description: String, capacity: Int, price: String, gender: String, selectedSpace: Space?, startDate: Date)
     case retryCreateMeet
+
+    // Meet Edit
+    case loadMeetForEdit(postId: String)
+    case updateMeet(postId: String, title: String, description: String, capacity: Int, price: String, gender: String, selectedSpace: Space?, startDate: Date)
 }
