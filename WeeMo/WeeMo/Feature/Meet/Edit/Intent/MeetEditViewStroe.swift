@@ -166,14 +166,15 @@ final class MeetEditViewStroe: ObservableObject {
                 }
                 additionalFields["value5"] = startDateString // 모임 시작일
 
-                // 업로드된 이미지가 있으면 사용, 없으면 선택된 공간의 이미지를 사용
-                var files = selectedSpace?.imageURLs ?? []
+                // 사용자가 선택한 이미지를 사용
+                var files: [String] = []
 
-                // TODO: 실제 이미지 업로드 구현 필요
-                // 현재는 선택된 공간의 이미지를 사용하지만, 향후 실제 이미지 업로드 API와 연동 필요
+                // 사용자가 선택한 이미지를 업로드
                 if !selectedImages.isEmpty {
-                    // 실제 구현에서는 이미지를 서버에 업로드하고 URL을 받아와야 함
-                    print("📸 사용자가 선택한 이미지 \(selectedImages.count)개가 있습니다. 이미지 업로드 API 연동 필요")
+                    print("📸 사용자가 선택한 이미지 \(selectedImages.count)개를 업로드합니다.")
+                    files = try await uploadImages(selectedImages)
+                } else {
+                    print("⚠️ 선택된 이미지가 없습니다.")
                 }
 
                 let response = try await networkService.request(
@@ -204,5 +205,32 @@ final class MeetEditViewStroe: ObservableObject {
                 }
             }
         }
+    }
+
+    private func uploadImages(_ images: [UIImage]) async throws -> [String] {
+        // 모든 이미지를 Data로 변환
+        var imageDatas: [Data] = []
+        for image in images {
+            guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                print("❌ Failed to convert image to JPEG data")
+                continue
+            }
+            imageDatas.append(imageData)
+        }
+
+        guard !imageDatas.isEmpty else {
+            print("❌ No valid images to upload")
+            return []
+        }
+
+        // 모든 이미지를 한 번에 업로드
+        let fileDTO = try await networkService.upload(
+            PostRouter.uploadFiles(images: imageDatas),
+            images: imageDatas,
+            responseType: FileDTO.self
+        )
+
+        print("✅ Images uploaded successfully: \(fileDTO.files)")
+        return fileDTO.files
     }
 }
