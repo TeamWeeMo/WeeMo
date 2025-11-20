@@ -12,6 +12,8 @@ struct MeetDetailView: View {
     let postId: String
     @StateObject private var store = MeetDetailStore()
     @Environment(\.dismiss) private var dismiss
+    @State private var showingChatAlert = false
+    @State private var chatErrorMessage = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -59,6 +61,42 @@ struct MeetDetailView: View {
         .background(Color("wmBg"))
         .onAppear {
             store.handle(.loadMeetDetail(postId: postId))
+        }
+        .alert("채팅방 생성", isPresented: $showingChatAlert) {
+            Button("확인") { }
+        } message: {
+            Text(chatErrorMessage.isEmpty ? "채팅방이 생성되었습니다!" : chatErrorMessage)
+        }
+    }
+
+    // MARK: - Private Functions
+
+    /// 채팅방 생성 또는 이동
+    private func createChatRoom(with opponentUserId: String) {
+        // 임시: ChatService가 없는 브랜치에서 동작하도록 수정
+        Task {
+            do {
+//                let response = try await ChatService.shared.createOrFetchRoom(opponentUserId:
+//                          - opponentUserId)
+                let networkService = NetworkService()
+                let response = try await networkService.request(
+                    ChatRouter.createOrFetchRoom(opponentUserId: opponentUserId),
+                    responseType: ChatRoomResponseDTO.self
+                )
+
+                await MainActor.run {
+                    chatErrorMessage = ""
+                    showingChatAlert = true
+
+                    // TODO: 채팅 화면으로 이동하는 로직 구현
+                    print("채팅방 생성 성공. 상대방 ID: \(response.opponentId)")
+                }
+            } catch {
+                await MainActor.run {
+                    chatErrorMessage = "채팅방 생성에 실패했습니다: \(error.localizedDescription)"
+                    showingChatAlert = true
+                }
+            }
         }
     }
 
@@ -151,6 +189,26 @@ struct MeetDetailView: View {
                                 }
 
                                 Spacer()
+
+                                // 채팅하기 버튼 (본인이 아닌 경우에만 표시)
+                                if let currentUserId = TokenManager.shared.userId,
+                                   currentUserId != meetDetail.creator.userId {
+                                    Button(action: {
+                                        createChatRoom(with: meetDetail.creator.userId)
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "message")
+                                                .font(.system(size: 14, weight: .medium))
+                                            Text("채팅")
+                                                .font(.app(.subContent1))
+                                        }
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.wmMain)
+                                        .cornerRadius(16)
+                                    }
+                                }
                             }
                         }
                         .buttonStyle(PlainButtonStyle())
