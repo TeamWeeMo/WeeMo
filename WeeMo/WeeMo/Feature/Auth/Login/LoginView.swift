@@ -8,6 +8,7 @@
 import SwiftUI
 
 enum AuthRoute: Hashable {
+    case emailLogin
     case signup
     case profileEdit
 }
@@ -16,20 +17,7 @@ struct LoginView: View {
 
     @StateObject var loginStore = LoginStore()
     @EnvironmentObject var appState: AppState
-
-    private var idBinding: Binding<String> {
-        Binding(
-            get: { loginStore.state.id },
-            set: { loginStore.send(.idChanged($0))}
-        )
-    }
-
-    private var pwBinding: Binding<String> {
-        Binding(
-            get: { loginStore.state.pw },
-            set: { loginStore.send(.pwChanged($0)) }
-        )
-    }
+    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
@@ -37,97 +25,106 @@ struct LoginView: View {
                 Color.wmBg
                     .ignoresSafeArea()
 
-                VStack(spacing: 10) {
-                    VStack(spacing: 6) {
-                        /// 폰트, 컬러 사용 예시
-                        Text("WeeMo")
-                            .font(.app(.headline1))
-                            .foregroundStyle(.wmMain)
-                        Text("모두를 위한 모임, 위모")
-                            .font(.app(.content2))
-                            .foregroundStyle(.textSub)
+                VStack(spacing: 0) {
+                    // 상단 X 버튼
+                    HStack {
+                        Spacer()
+                        Button {
+                            dismiss()
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 20))
+                                .foregroundStyle(.textMain)
+                        }
+                        .padding()
                     }
 
-                    VStack(alignment: .leading) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("아이디")
-                                    .font(.app(.content2))
-                                TextField("아이디를 입력하세요", text: idBinding)
-                                    .asMintCornerView()
-                                Text(loginStore.state.idError)
-                                    .font(.app(.subContent2))
-                                    .foregroundStyle(.red)
-                            }
+                    Spacer()
 
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("비밀번호")
-                                    .font(.app(.content2))
-                                SecureField("비밀번호를 입력하세요", text: pwBinding)
-                                    .asMintCornerView()
-                                Text(loginStore.state.pwError)
-                                    .font(.app(.subContent2))
-                                    .foregroundStyle(.red)
-                            }
+                    // 로고 + WeeMo 텍스트
+                    HStack(spacing: 4) {
+                        Image("WeeMoLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 40, height: 40)
 
-                            Button {
-                                loginStore.send(.loginTapped)
-                            } label: {
-                                Text("로그인")
-                                    .font(.app(.subHeadline2))
-                                    .foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity,
-                                           minHeight: 46,
-                                           alignment: .center)
-                                    .background(.wmMain)
-                                    .cornerRadius(8)
-                            }
-                            
+                        Text("WeeMo")
+                            .font(.app(.headline1))
+                            .foregroundStyle(.textMain)
+                    }
+                    .padding(.bottom, 30)
 
-                            ZStack {
-                                Rectangle()
-                                    .frame(height: 1)
-                                    .background(.textSub)
+                    // 타이틀
+                    HStack(spacing: 0) {
+                        Text("우리만의 ")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundStyle(.textMain)
+                        Text("프라이빗 모임!")
+                            .font(.system(size: 28, weight: .bold))
+                            .foregroundStyle(.wmMain)
+                    }
+                    .padding(.bottom, 60)
 
-                                Text("또는")
-                                    .padding(10)
-                                    .foregroundStyle(.textSub)
-                                    .background(.white)
-                            }
+                    Spacer()
 
+                    // 소셜 로그인 버튼들
+                    VStack(spacing: 20) {
+                        HStack(spacing: 30) {
+                            // 카카오 로그인
                             Button {
                                 loginStore.send(.kakaoLoginTapped)
                             } label: {
-                                Image("kakao_login_large_wide")
-                                    .resizable()
-                                    .frame(maxWidth: .infinity, maxHeight: 46)
+                                Circle()
+                                    .fill(Color("kakaoBg"))
+                                    .frame(width: 70, height: 70)
+                                    .overlay {
+                                        Image(systemName: "message.fill")
+                                            .font(.system(size: 30))
+                                            .foregroundStyle(Color("kakaoSymbol"))
+                                    }
                             }
 
+                            // 이메일 로그인
+                            NavigationLink(value: AuthRoute.emailLogin) {
+                                Circle()
+                                    .fill(.wmMain)
+                                    .frame(width: 70, height: 70)
+                                    .overlay {
+                                        Image(systemName: "envelope.fill")
+                                            .font(.system(size: 30))
+                                            .foregroundStyle(.white)
+                                    }
+                            }
+
+                            // 애플 로그인
                             Button {
-                                print("버튼 클릭")
+                                print("애플 로그인")
                             } label: {
-                                AppleLoginButtonUI()
+                                Circle()
+                                    .fill(.black)
+                                    .frame(width: 70, height: 70)
+                                    .overlay {
+                                        Image(systemName: "apple.logo")
+                                            .font(.system(size: 30))
+                                            .foregroundStyle(.white)
+                                    }
                             }
-
-                            NavigationLink(value: AuthRoute.signup) {
-                                Text("이메일로 회원가입")
-                                    .font(.app(.content2))
-                            }
-                            .frame(maxWidth: .infinity, alignment: .center)
                         }
-                        .navigationTitle("")
-                        .tint(.blue)
-                        .padding(30)
 
+                        NavigationLink(value: AuthRoute.signup) {
+                            Text("이메일로 가입하기")
+                                .font(.app(.content2))
+                                .foregroundStyle(.textMain)
+                                .padding(.top, 10)
+                        }
                     }
-                    .background(.white)
-                    .cornerRadius(16)
-                    .padding(20)
-                    .shadow(radius: 3)
+                    .padding(.bottom, 60)
                 }
             }
+            .navigationTitle("")
             .navigationDestination(for: AuthRoute.self) { route in
                 switch route {
+                case .emailLogin: EmailLoginView()
                 case .signup: SignView()
                 case .profileEdit: ProfileEditView(isNewProfile: true)
                 }
