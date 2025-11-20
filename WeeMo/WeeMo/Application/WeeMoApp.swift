@@ -22,23 +22,13 @@ struct WeeMoApp: App {
 
     var body: some Scene {
         WindowGroup {
-            if appState.isLoggedIn {
-                TapView()
-                    .environmentObject(appState)
-                    .onOpenURL { url in
-                        if AuthApi.isKakaoTalkLoginUrl(url) {
-                            _ = AuthController.handleOpenUrl(url: url)
-                        }
+            HomeView()
+                .environmentObject(appState)
+                .onOpenURL { url in
+                    if AuthApi.isKakaoTalkLoginUrl(url) {
+                        _ = AuthController.handleOpenUrl(url: url)
                     }
-            } else {
-                LoginView()
-                    .environmentObject(appState)
-                    .onOpenURL { url in
-                        if AuthApi.isKakaoTalkLoginUrl(url) {
-                            _ = AuthController.handleOpenUrl(url: url)
-                        }
-                    }
-            }
+                }
         }
     }
 }
