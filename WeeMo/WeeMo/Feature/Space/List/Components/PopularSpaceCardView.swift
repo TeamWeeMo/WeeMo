@@ -51,19 +51,22 @@ struct PopularSpaceCardView: View {
 
             // 텍스트 정보
             VStack(alignment: .leading, spacing: Spacing.xSmall) {
-                Text(space.title)
-                    .font(.app(.headline2))
+                Text("지금 뜨는 핫플레이스")
+                    .font(.app(.subHeadline1))
                     .foregroundColor(.white)
+//                Text(space.title)
+//                    .font(.app(.headline2))
+//                    .foregroundColor(.white)
 
-                HStack(spacing: Spacing.xSmall) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: AppFontSize.s12.rawValue))
-                        .foregroundColor(.yellow)
-
-                    Text(space.formattedRating)
-                        .font(.app(.content2))
-                        .foregroundColor(.white)
-                }
+//                HStack(spacing: Spacing.xSmall) {
+//                    Image(systemName: "star.fill")
+//                        .font(.system(size: AppFontSize.s12.rawValue))
+//                        .foregroundColor(.yellow)
+//
+//                    Text(space.formattedRating)
+//                        .font(.app(.content2))
+//                        .foregroundColor(.white)
+//                }
             }
             .padding(Spacing.base)
         }
@@ -78,10 +81,6 @@ struct PopularSpaceSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.medium) {
-            Text("인기 공간")
-                .font(.app(.headline3))
-                .foregroundColor(Color("textMain"))
-                .padding(.horizontal, Spacing.base)
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Spacing.medium) {

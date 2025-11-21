@@ -50,9 +50,9 @@ struct SpaceListState {
         }
     }
 
-    /// 인기 공간 목록 (전체 카테고리에서만 표시)
+    /// 인기 공간 목록 (검색어가 없을 때만 표시)
     var popularSpaces: [Space] {
-        guard selectedCategory == .all && searchText.isEmpty else {
+        guard searchText.isEmpty else {
             return []
         }
         return allSpaces.filter { $0.isPopular }
@@ -60,6 +60,6 @@ struct SpaceListState {
 
     /// 인기 공간 섹션 표시 여부
     var shouldShowPopularSection: Bool {
-        return selectedCategory == .all && searchText.isEmpty && !popularSpaces.isEmpty
+        return searchText.isEmpty && !popularSpaces.isEmpty
     }
 }

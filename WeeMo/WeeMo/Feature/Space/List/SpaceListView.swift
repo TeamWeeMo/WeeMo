@@ -21,17 +21,6 @@ struct SpaceListView: View {
             ZStack {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: Spacing.base) {
-                        // 상단 타이틀
-                        HStack {
-                            Text("공간 찾기")
-                                .font(.app(.headline1))
-                                .foregroundColor(Color("textMain"))
-
-                            Spacer()
-                        }
-                        .padding(.horizontal, Spacing.base)
-                        .padding(.top, Spacing.small)
-
                         // 검색바
                         SearchBarView(
                             searchText: Binding(
@@ -40,6 +29,23 @@ struct SpaceListView: View {
                             )
                         )
                         .padding(.horizontal, Spacing.base)
+
+                        // 인기 공간 섹션
+                        if store.state.shouldShowPopularSection {
+                            PopularSpaceSectionView(spaces: store.state.popularSpaces)
+                                .padding(.top, Spacing.small)
+                        }
+
+                        // 모든 공간 타이틀
+                        HStack {
+                            Text("모든 공간")
+                                .font(.app(.headline3))
+                                .foregroundColor(Color("textMain"))
+
+                            Spacer()
+                        }
+                        .padding(.horizontal, Spacing.base)
+                        .padding(.top, store.state.searchText.isEmpty ? Spacing.base : Spacing.small)
 
                         // 카테고리 탭
                         CategoryTabView(
@@ -50,15 +56,9 @@ struct SpaceListView: View {
                         )
                         .padding(.top, Spacing.xSmall)
 
-                        // 인기 공간 섹션
-                        if store.state.shouldShowPopularSection {
-                            PopularSpaceSectionView(spaces: store.state.popularSpaces)
-                                .padding(.top, Spacing.small)
-                        }
-
                         // 모든 공간 리스트
                         AllSpaceListView(spaces: store.state.filteredSpaces)
-                            .padding(.top, store.state.searchText.isEmpty ? Spacing.base : Spacing.small)
+                            .padding(.top, Spacing.small)
                     }
                     .padding(.bottom, Spacing.base)
                 }
@@ -84,7 +84,7 @@ struct SpaceListView: View {
                     }
                 }
             }
-            .background(Color("wmBg"))
+            .background(.background)
             .navigationBarHidden(true)
             .navigationDestination(for: Space.self) { space in
                 SpaceDetailView(space: space)
