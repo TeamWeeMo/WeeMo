@@ -20,7 +20,7 @@ struct SpaceListView: View {
         NavigationStack {
             ZStack {
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: Spacing.base) {
+                    VStack(spacing: Spacing.small) {
                         // 검색바
                         SearchBarView(
                             searchText: Binding(
@@ -33,19 +33,8 @@ struct SpaceListView: View {
                         // 인기 공간 섹션
                         if store.state.shouldShowPopularSection {
                             PopularSpaceSectionView(spaces: store.state.popularSpaces)
-                                .padding(.top, Spacing.small)
+                                .padding(.top, Spacing.xSmall)
                         }
-
-                        // 모든 공간 타이틀
-                        HStack {
-                            Text("모든 공간")
-                                .font(.app(.headline3))
-                                .foregroundColor(Color("textMain"))
-
-                            Spacer()
-                        }
-                        .padding(.horizontal, Spacing.base)
-                        .padding(.top, store.state.searchText.isEmpty ? Spacing.base : Spacing.small)
 
                         // 카테고리 탭
                         CategoryTabView(
@@ -54,7 +43,7 @@ struct SpaceListView: View {
                                 set: { store.send(.categoryChanged($0)) }
                             )
                         )
-                        .padding(.top, Spacing.xSmall)
+                        .padding(.top, Spacing.base)
 
                         // 모든 공간 리스트
                         AllSpaceListView(spaces: store.state.filteredSpaces)

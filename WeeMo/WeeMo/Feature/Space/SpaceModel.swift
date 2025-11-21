@@ -9,10 +9,13 @@ import Foundation
 
 enum SpaceCategory: String, CaseIterable {
     case all = "전체"
-    case cafe = "카페"
+    case party = "파티룸"
     case studyRoom = "스터디룸"
+    case studio = "스튜디오"
+    case practice = "연습실"
     case meetingRoom = "회의실"
-    case party = "파티"
+    case cafe = "카페"
+        
 }
 
 enum SpaceAmenity: String {
