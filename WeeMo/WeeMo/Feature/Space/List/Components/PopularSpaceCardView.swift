@@ -10,6 +10,7 @@ import Kingfisher
 
 struct PopularSpaceCardView: View {
     let space: Space
+    let cardWidth: CGFloat
 
     var body: some View {
         ZStack(alignment: .bottomLeading) {
@@ -27,7 +28,7 @@ struct PopularSpaceCardView: View {
                     }
                     .resizable()
                     .aspectRatio(contentMode: .fill)
-                    .frame(width: 280, height: 180)
+                    .frame(width: cardWidth, height: 180)
                     .clipped()
             } else {
                 Rectangle()
@@ -51,8 +52,11 @@ struct PopularSpaceCardView: View {
 
             // 텍스트 정보
             VStack(alignment: .leading, spacing: Spacing.xSmall) {
-                Text("지금 뜨는 핫플레이스")
+                Text("2025년 인기 파티룸")
                     .font(.app(.subHeadline1))
+                    .foregroundColor(.white)
+                Text("소중한 사람과 함께하는 특별한 연말 파티 🎉")
+                    .font(.app(.subContent1))
                     .foregroundColor(.white)
 //                Text(space.title)
 //                    .font(.app(.headline2))
@@ -70,7 +74,7 @@ struct PopularSpaceCardView: View {
             }
             .padding(Spacing.base)
         }
-        .frame(width: 280, height: 180)
+        .frame(width: cardWidth, height: 180)
         .cornerRadius(Spacing.radiusMedium)
         .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
     }
@@ -81,18 +85,22 @@ struct PopularSpaceSectionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.medium) {
+            GeometryReader { geometry in
+                let cardWidth = geometry.size.width - (Spacing.base * 2)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Spacing.medium) {
-                    ForEach(spaces.filter { $0.isPopular }) { space in
-                        NavigationLink(value: space) {
-                            PopularSpaceCardView(space: space)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: Spacing.base) {
+                        ForEach(spaces.filter { $0.isPopular }) { space in
+                            NavigationLink(value: space) {
+                                PopularSpaceCardView(space: space, cardWidth: cardWidth)
+                            }
+                            .buttonStyle(PlainButtonStyle())
                         }
-                        .buttonStyle(PlainButtonStyle())
                     }
+                    .padding(.horizontal, Spacing.base)
                 }
-                .padding(.horizontal, Spacing.base)
             }
+            .frame(height: 180)
         }
     }
 }
