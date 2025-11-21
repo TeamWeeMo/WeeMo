@@ -18,86 +18,67 @@ enum HomeRoute: Hashable {
 struct HomeView: View {
 
     @EnvironmentObject var appState: AppState
+    @State private var showSideMenu = false
     @State private var navigationPath = NavigationPath()
-    @State private var showLoginSheet = false
-    @State private var pendingRoute: HomeRoute?
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    // Top Navigation Bar
-                    HStack {
-                        Text("WeeMo")
-                            .font(.app(.headline1))
-                            .foregroundStyle(.wmMain)
+            ZStack {
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // Top Navigation Bar
+                        HStack {
+                            Text("WeeMo")
+                                .font(.app(.headline1))
+                                .foregroundStyle(.wmMain)
 
-                        Spacer()
-
-                        // Chat Button
-                        Button {
-                            print("채팅 버튼 클릭")
-                        } label: {
-                            Image(systemName: "message")
-                                .font(.system(size: 24))
-                                .foregroundStyle(.textMain)
+                            Spacer()
                         }
-                        .padding(.trailing, 16)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
 
-                        // Profile Button
-                        Button {
-                            navigateWithLoginCheck(to: .profile)
-                        } label: {
-                            Image(systemName: "person.circle")
-                                .font(.system(size: 24))
-                                .foregroundStyle(.textMain)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 12)
-
-                    // Main Feature Cards
+                        // Main Feature Cards
                     VStack(spacing: 16) {
                         // 모임 찾기 (큰 카드)
-                        LargeFeatureCard(
-                            title: "모임 찾기",
-                            description: "내 근처에 있는 모임 구경하기",
-                            imageName: "person",
-                            imageSize: CGSize(width: 88, height: 88)
-                        ) {
-                            navigateWithLoginCheck(to: .meetList)
+                        NavigationLink(value: HomeRoute.meetList) {
+                            LargeFeatureCardContent(
+                                title: "모임 찾기",
+                                description: "내 근처에 있는 모임 구경하기",
+                                imageName: "person",
+                                imageSize: CGSize(width: 88, height: 88)
+                            )
                         }
 
                         HStack(spacing: 16) {
                             // 모임 등록하기 (작은 카드)
-                            SmallFeatureCard(
-                                title: "모임 등록하기",
-                                description: "모임장 되어 시람 모으기",
-                                imageName: "pencil",
-                                imageSize: CGSize(width: 80, height: 80)
-                            ) {
-                                navigateWithLoginCheck(to: .meetEdit)
+                            NavigationLink(value: HomeRoute.meetEdit) {
+                                SmallFeatureCardContent(
+                                    title: "모임 등록하기",
+                                    description: "모임장 되어 시람 모으기",
+                                    imageName: "pencil",
+                                    imageSize: CGSize(width: 80, height: 80)
+                                )
                             }
 
                             // 공간 찾기 (작은 카드)
-                            SmallFeatureCard(
-                                title: "공간 찾기",
-                                description: "모이기 좋은 공간 찾기",
-                                imageName: "find",
-                                imageSize: CGSize(width: 70, height: 70)
-                            ) {
-                                navigateWithLoginCheck(to: .spaceList)
+                            NavigationLink(value: HomeRoute.spaceList) {
+                                SmallFeatureCardContent(
+                                    title: "공간 찾기",
+                                    description: "모이기 좋은 공간 찾기",
+                                    imageName: "find",
+                                    imageSize: CGSize(width: 70, height: 70)
+                                )
                             }
                         }
 
                         // 피드 (큰 카드)
-                        LargeFeatureCard(
-                            title: "피드",
-                            description: "내 주변 시람, 관심사 확인하기",
-                            imageName: "camera",
-                            imageSize: CGSize(width: 88, height: 88)
-                        ) {
-                            navigateWithLoginCheck(to: .feed)
+                        NavigationLink(value: HomeRoute.feed) {
+                            LargeFeatureCardContent(
+                                title: "피드",
+                                description: "내 주변 시람, 관심사 확인하기",
+                                imageName: "camera",
+                                imageSize: CGSize(width: 88, height: 88)
+                            )
                         }
                     }
                     .padding(.horizontal, 20)
@@ -132,10 +113,64 @@ struct HomeView: View {
                     }
                     .padding(.top, 32)
 
-                    Spacer(minLength: 40)
+                        Spacer(minLength: 40)
+                    }
+                }
+                .background(.wmBg)
+                .navigationBarHidden(true)
+
+                // Dark Overlay
+                if showSideMenu {
+                    Color.black.opacity(0.4)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation {
+                                showSideMenu = false
+                            }
+                        }
+                }
+
+                // Side Menu
+                SideMenuView(
+                    isShowing: $showSideMenu,
+                    onMenuClose: {
+                        withAnimation {
+                            showSideMenu = false
+                        }
+                    },
+                    onProfileTap: {
+                        withAnimation {
+                            showSideMenu = false
+                        }
+                        navigationPath.append(HomeRoute.profile)
+                    }
+                )
+
+                // Floating Hamburger Button
+                VStack {
+                    HStack {
+                        Spacer()
+
+                        Button {
+                            withAnimation {
+                                showSideMenu.toggle()
+                            }
+                        } label: {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.system(size: 24))
+                                .foregroundStyle(.textMain)
+                                .padding(12)
+                                .background(.white)
+                                .clipShape(Circle())
+                                .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                        }
+                        .padding(.trailing, 20)
+                        .padding(.top, 12)
+                    }
+
+                    Spacer()
                 }
             }
-            .background(.wmBg)
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case .meetList:
@@ -151,88 +186,20 @@ struct HomeView: View {
                 }
             }
         }
-        .sheet(isPresented: $showLoginSheet, onDismiss: {
-            // 로그인 시트가 닫힐 때 로그인 상태 확인
-            if appState.isLoggedIn, let route = pendingRoute {
-                navigateTo(route)
-                pendingRoute = nil
-            }
-        }) {
-            LoginView()
-        }
-    }
-
-    private func navigateWithLoginCheck(to route: HomeRoute) {
-        if appState.isLoggedIn {
-            navigateTo(route)
-        } else {
-            pendingRoute = route
-            showLoginSheet = true
-        }
-    }
-
-    private func navigateTo(_ route: HomeRoute) {
-        navigationPath.append(route)
     }
 }
 
-// MARK: - Large Feature Card
+// MARK: - Large Feature Card Content
 
-struct LargeFeatureCard: View {
+struct LargeFeatureCardContent: View {
     let title: String
     let description: String
     let imageName: String
     let imageSize: CGSize
-    let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
-            ZStack(alignment: .bottomTrailing) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(title)
-                            .font(.app(.subHeadline1))
-                            .foregroundStyle(.textMain)
-
-                        Text(description)
-                            .font(.app(.subContent2))
-                            .foregroundStyle(.textSub)
-
-                        Spacer()
-                    }
-
-                    Spacer()
-                }
-                .padding(20)
-
-                Image(imageName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: imageSize.width, height: imageSize.height)
-                    .padding(.trailing, 8)
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 120)
-            .background(.white)
-            .cornerRadius(16)
-            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-// MARK: - Small Feature Card
-
-struct SmallFeatureCard: View {
-    let title: String
-    let description: String
-    let imageName: String
-    let imageSize: CGSize
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack(alignment: .bottomTrailing) {
+        ZStack(alignment: .bottomTrailing) {
+            HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(title)
                         .font(.app(.subHeadline1))
@@ -241,28 +208,66 @@ struct SmallFeatureCard: View {
                     Text(description)
                         .font(.app(.subContent2))
                         .foregroundStyle(.textSub)
-                        .lineLimit(2)
 
                     Spacer()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(16)
 
-                ZStack {
-                    Image(imageName)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: imageSize.width, height: imageSize.height)
-                }
-                .frame(width: 80, height: 80)
+                Spacer()
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 160)
-            .background(.white)
-            .cornerRadius(16)
-            .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+            .padding(20)
+
+            Image(imageName)
+                .resizable()
+                .scaledToFit()
+                .frame(width: imageSize.width, height: imageSize.height)
+                .padding(.trailing, 8)
         }
-        .buttonStyle(PlainButtonStyle())
+        .frame(maxWidth: .infinity)
+        .frame(height: 120)
+        .background(.white)
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
+    }
+}
+
+// MARK: - Small Feature Card Content
+
+struct SmallFeatureCardContent: View {
+    let title: String
+    let description: String
+    let imageName: String
+    let imageSize: CGSize
+
+    var body: some View {
+        ZStack(alignment: .bottomTrailing) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.app(.subHeadline1))
+                    .foregroundStyle(.textMain)
+
+                Text(description)
+                    .font(.app(.subContent2))
+                    .foregroundStyle(.textSub)
+                    .lineLimit(2)
+
+                Spacer()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+
+            ZStack {
+                Image(imageName)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: imageSize.width, height: imageSize.height)
+            }
+            .frame(width: 80, height: 80)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: 160)
+        .background(.white)
+        .cornerRadius(16)
+        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 2)
     }
 }
 
@@ -295,6 +300,88 @@ struct TrendingMeetingCard: View {
                 .padding(16)
         }
         .frame(width: 280, height: 160)
+    }
+}
+
+// MARK: - Side Menu View
+
+struct SideMenuView: View {
+    @Binding var isShowing: Bool
+    let onMenuClose: () -> Void
+    let onProfileTap: () -> Void
+
+    var body: some View {
+        GeometryReader { geometry in
+            HStack {
+                Spacer()
+
+                VStack(alignment: .leading, spacing: 0) {
+                    // Menu Header
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("메뉴")
+                            .font(.app(.headline3))
+                            .foregroundStyle(.textMain)
+                    }
+                    .padding(.horizontal, 24)
+                    .padding(.top, 60)
+                    .padding(.bottom, 32)
+
+                    // Menu Items
+                    VStack(spacing: 0) {
+                        Button {
+                            onMenuClose()
+                        } label: {
+                            MenuItemContent(icon: "house", title: "홈")
+                        }
+
+                        Button {
+                            onProfileTap()
+                        } label: {
+                            MenuItemContent(icon: "person.circle", title: "프로필")
+                        }
+
+                        Button {
+                            onMenuClose()
+                            print("채팅으로 이동")
+                            // TODO: 채팅 화면 구현
+                        } label: {
+                            MenuItemContent(icon: "message", title: "채팅")
+                        }
+                    }
+
+                    Spacer()
+                }
+                .frame(width: geometry.size.width * 0.7)
+                .background(.white)
+                .offset(x: isShowing ? 0 : geometry.size.width * 0.7)
+                .animation(.easeInOut(duration: 0.3), value: isShowing)
+            }
+        }
+        .ignoresSafeArea()
+    }
+}
+
+// MARK: - Menu Item Content
+
+struct MenuItemContent: View {
+    let icon: String
+    let title: String
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 22))
+                .foregroundStyle(.textMain)
+                .frame(width: 30)
+
+            Text(title)
+                .font(.app(.content1))
+                .foregroundStyle(.textMain)
+
+            Spacer()
+        }
+        .padding(.horizontal, 24)
+        .padding(.vertical, 16)
     }
 }
 

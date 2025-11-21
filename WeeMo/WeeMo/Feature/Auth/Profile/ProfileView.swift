@@ -19,8 +19,7 @@ struct ProfileView: View {
     @Namespace private var underlineNS
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        ScrollView {
                 VStack(spacing: Spacing.small) {
                     Group {
                         if let profileImageURL = UserManager.shared.profileImageURL,
@@ -239,7 +238,8 @@ struct ProfileView: View {
                 print("[ProfileView] onAppear 호출됨")
                 profileStore.send(.loadInitialData)
             }
-        }
+        .navigationBarHidden(false)
+        .navigationBarTitleDisplayMode(.inline)
         .tint(.wmMain)
         .onChange(of: profileStore.state.selectedTab) { _, newTab in
             // 탭 변경 시 해당 탭의 데이터 로드

@@ -15,8 +15,7 @@ struct MeetListView: View {
     @State private var navigationPath = NavigationPath()
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            ScrollView {
+        ScrollView {
                 VStack {
                     HStack {
                         Text("모임")
@@ -128,14 +127,15 @@ struct MeetListView: View {
                     .padding(.bottom, 20)
                 }
             )
-            .navigationDestination(for: String.self) { value in
-                if value == "map" {
-                    MeetMapView()
-                } else if value == "edit" {
-                    MeetEditView()
-                } else {
-                    MeetDetailView(postId: value)
-                }
+        .navigationBarHidden(false)
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(for: String.self) { value in
+            if value == "map" {
+                MeetMapView()
+            } else if value == "edit" {
+                MeetEditView()
+            } else {
+                MeetDetailView(postId: value)
             }
         }
     }

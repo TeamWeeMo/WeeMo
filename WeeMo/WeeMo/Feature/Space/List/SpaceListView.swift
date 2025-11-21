@@ -17,8 +17,7 @@ struct SpaceListView: View {
     @State private var isShowingCreateView = false
 
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: Spacing.base) {
                         // 상단 타이틀
@@ -114,7 +113,8 @@ struct SpaceListView: View {
                     store.send(.refresh)
                 }
             }
-        }
+        .navigationBarHidden(false)
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
