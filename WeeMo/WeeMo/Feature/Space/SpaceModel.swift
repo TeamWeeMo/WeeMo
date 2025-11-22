@@ -17,14 +17,3 @@ enum SpaceCategory: String, CaseIterable {
     case cafe = "카페"
         
 }
-
-enum SpaceAmenity: String {
-    case quiet = "조용함"
-    case wifi = "WiFi"
-    case power = "콘센트"
-    case projector = "프로젝터"
-    case whiteboard = "화이트보드"
-    case kitchen = "주방시설"
-    case parking = "주차"
-    case printer = "프린터"
-}
