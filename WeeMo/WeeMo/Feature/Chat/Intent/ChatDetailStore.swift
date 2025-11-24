@@ -70,19 +70,19 @@ final class ChatDetailStore: ObservableObject {
     private func handleReceivedMessage(_ newMessage: ChatMessage) async {
         print("📨 Store에서 새 메시지 수신: \(newMessage.content)")
 
-        // 중복 메시지 체크
-        guard !state.messages.contains(where: { $0.id == newMessage.id }) else {
-            print("🔄 중복 메시지 무시: \(newMessage.id)")
-            return
-        }
-
         // 현재 채팅방과 메시지 채팅방 일치 확인
         guard newMessage.roomId == state.room.id else {
             print("🔄 다른 채팅방 메시지 무시: \(newMessage.roomId) vs \(state.room.id)")
             return
         }
 
-        // 메시지 추가
+        // 중복 메시지 체크 (ID만 확인)
+        guard !state.messages.contains(where: { $0.id == newMessage.id }) else {
+            print("🔄 중복 메시지 무시: \(newMessage.id)")
+            return
+        }
+
+        // 새 메시지 추가
         state.messages.append(newMessage)
         state.messages.sort { $0.createdAt < $1.createdAt }
         state.shouldScrollToBottom = true
@@ -217,11 +217,7 @@ final class ChatDetailStore: ObservableObject {
         state.inputText = "" // 입력창 즉시 클리어
         state.isSendingMessage = true
 
-        // 임시 메시지 생성
-        let tempMessage = createTempMessage(content: messageContent, files: files)
-        state.messages.append(tempMessage)
-        state.shouldScrollToBottom = true
-
+        // 임시 메시지는 추가하지 않음 - 소켓에서만 메시지 추가
         Task {
             do {
                 let sentMessage = try await chatService.sendMessage(
@@ -231,18 +227,13 @@ final class ChatDetailStore: ObservableObject {
                 )
 
                 await MainActor.run {
-                    // 임시 메시지를 실제 메시지로 교체
-                    if let index = state.messages.firstIndex(where: { $0.id == tempMessage.id }) {
-                        state.messages[index] = sentMessage
-                    }
                     state.isSendingMessage = false
                     print("✅ 메시지 전송 성공: \(sentMessage.content)")
+                    // 소켓에서 메시지를 받아서 화면에 표시됨
                 }
 
             } catch {
                 await MainActor.run {
-                    // 임시 메시지 제거
-                    state.messages.removeAll { $0.id == tempMessage.id }
                     state.errorMessage = "메시지 전송에 실패했습니다: \(error.localizedDescription)"
                     state.isSendingMessage = false
                     print("❌ 메시지 전송 실패: \(error)")

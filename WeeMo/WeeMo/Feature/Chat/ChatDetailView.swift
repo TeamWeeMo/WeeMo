@@ -99,7 +99,7 @@ struct ChatDetailView: View {
             } else {
                 // 메시지가 있는 경우
                 ScrollView {
-                    LazyVStack(spacing: Spacing.medium) {
+                    VStack(spacing: Spacing.medium) {
                         // 상단 로딩 인디케이터
                         if store.state.hasMoreMessages {
                             VStack {
@@ -118,7 +118,7 @@ struct ChatDetailView: View {
                             .onAppear {
                                 if !store.state.isLoadingMore,
                                    let firstMessage = store.state.messages.first {
-                                    print("🔄 스크롤 상단 도달 - 이전 메시지 로드 시작")
+                                    print("스크롤 상단 도달 - 이전 메시지 로드 시작")
                                     store.handle(.loadMoreMessages(beforeMessageId: firstMessage.id))
                                 }
                             }
@@ -126,22 +126,16 @@ struct ChatDetailView: View {
                         }
 
                         // 메시지 목록
-                        ForEach(store.state.messages) { message in
+                        ForEach(Array(store.state.messages.enumerated()), id: \.element.id) { index, message in
                             ChatBubble(
                                 message: message,
-                                isMine: message.isMine(currentUserId: store.state.currentUserId)
+                                isMine: message.isMine(currentUserId: store.state.currentUserId),
+                                showTime: shouldShowTime(for: message, at: index, in: store.state.messages)
                             )
                             .id(message.id)
                         }
                     }
                     .padding(.horizontal, Spacing.base)
-                    .padding(.vertical, Spacing.medium)
-                }
-                .task {
-                    // 뷰가 나타날 때 맨 아래로 이동
-                    if !store.state.messages.isEmpty, let lastMessage = store.state.messages.last {
-                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                    }
                 }
                 .refreshable {
                     if store.state.hasMoreMessages,
@@ -151,32 +145,67 @@ struct ChatDetailView: View {
                         store.handle(.loadMoreMessages(beforeMessageId: firstMessage.id))
                     }
                 }
+                .task {
+                    // 뷰가 나타날 때 맨 아래로 이동
+                    if !store.state.messages.isEmpty, let lastMessage = store.state.messages.last {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
+                        }
+                    }
+                }
                 .onChange(of: store.state.messages.count) { oldCount, newCount in
-                    // 새 메시지가 추가될 때만 스크롤 (초기 로딩 제외)
-                    guard !store.state.messages.isEmpty, oldCount > 0, newCount > oldCount else { return }
+                    // 새 메시지가 추가될 때 스크롤
+                    guard !store.state.messages.isEmpty, newCount > oldCount else { return }
                     if let lastMessage = store.state.messages.last {
-                        withAnimation(.easeInOut(duration: 0.3)) {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
                         }
                     }
                 }
                 .onChange(of: store.state.shouldScrollToBottom) { _, shouldScroll in
                     if shouldScroll, let lastMessage = store.state.messages.last {
-                        if store.state.isLoading {
-                            // 초기 로딩 시에는 즉시 이동
+                        withAnimation(.easeInOut(duration: 0.2)) {
                             proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                        } else {
-                            // 새 메시지 수신 시에는 애니메이션
-                            withAnimation(.easeInOut(duration: 0.3)) {
-                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                            }
                         }
                         // 스크롤 완료 후 flag 리셋
-                        store.state.shouldScrollToBottom = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            store.state.shouldScrollToBottom = false
+                        }
                     }
                 }
             }
         }
+    }
+
+    /// 시간 표시 여부 결정
+    private func shouldShowTime(for message: ChatMessage, at index: Int, in messages: [ChatMessage]) -> Bool {
+        // 배열 범위 확인
+        guard index >= 0 && index < messages.count else { return true }
+
+        // 마지막 메시지는 항상 시간 표시
+        guard index < messages.count - 1 else { return true }
+
+        let currentMessage = message
+        let nextMessage = messages[index + 1]
+
+        // 메시지 ID로 정확성 확인
+        guard currentMessage.id == messages[index].id else { return true }
+
+        // 다음 메시지와 보낸 사람이 다르면 시간 표시
+        if currentMessage.sender.userId != nextMessage.sender.userId {
+            return true
+        }
+
+        // 다음 메시지와 시간이 다르면 시간 표시 (분 단위로 비교)
+        let calendar = Calendar.current
+        let currentMinute = calendar.dateComponents([.hour, .minute], from: currentMessage.createdAt)
+        let nextMinute = calendar.dateComponents([.hour, .minute], from: nextMessage.createdAt)
+
+        return currentMinute.hour != nextMinute.hour || currentMinute.minute != nextMinute.minute
     }
 
     private func errorView(_ message: String) -> some View {
@@ -222,7 +251,7 @@ struct ChatDetailView: View {
 
             // 전송 버튼
             Image(systemName: "paperplane.fill")
-                .font(.system(size: 20))
+                .font(.system(size: 20)).padding(.vertical, Spacing.small)
                 .foregroundStyle(store.state.canSendMessage ? .wmMain : .textSub)
                 .buttonWrapper {
                     if store.state.canSendMessage {
@@ -251,6 +280,7 @@ struct ChatDetailView: View {
 struct ChatBubble: View {
     let message: ChatMessage
     let isMine: Bool
+    let showTime: Bool
 
     var body: some View {
         HStack(alignment: .bottom, spacing: Spacing.small) {
@@ -258,12 +288,14 @@ struct ChatBubble: View {
                 // 내 메시지: 오른쪽 정렬
                 Spacer(minLength: 60)
                 timeLabel
+                    .opacity(showTime ? 1 : 0)
                 messageContent
             } else {
                 // 상대방 메시지: 왼쪽 정렬
                 profileImage
                 messageContent
                 timeLabel
+                    .opacity(showTime ? 1 : 0)
                 Spacer(minLength: 60)
             }
         }
