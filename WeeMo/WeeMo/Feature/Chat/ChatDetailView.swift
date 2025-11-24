@@ -137,6 +137,12 @@ struct ChatDetailView: View {
                     .padding(.horizontal, Spacing.base)
                     .padding(.vertical, Spacing.medium)
                 }
+                .task {
+                    // 뷰가 나타날 때 맨 아래로 이동
+                    if !store.state.messages.isEmpty, let lastMessage = store.state.messages.last {
+                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                    }
+                }
                 .refreshable {
                     if store.state.hasMoreMessages,
                        !store.state.isLoadingMore,
@@ -145,8 +151,9 @@ struct ChatDetailView: View {
                         store.handle(.loadMoreMessages(beforeMessageId: firstMessage.id))
                     }
                 }
-                .onChange(of: store.state.messages.count) { _, _ in
-                    guard !store.state.messages.isEmpty else { return }
+                .onChange(of: store.state.messages.count) { oldCount, newCount in
+                    // 새 메시지가 추가될 때만 스크롤 (초기 로딩 제외)
+                    guard !store.state.messages.isEmpty, oldCount > 0, newCount > oldCount else { return }
                     if let lastMessage = store.state.messages.last {
                         withAnimation(.easeInOut(duration: 0.3)) {
                             proxy.scrollTo(lastMessage.id, anchor: .bottom)
@@ -155,9 +162,17 @@ struct ChatDetailView: View {
                 }
                 .onChange(of: store.state.shouldScrollToBottom) { _, shouldScroll in
                     if shouldScroll, let lastMessage = store.state.messages.last {
-                        withAnimation(.easeInOut(duration: 0.3)) {
+                        if store.state.isLoading {
+                            // 초기 로딩 시에는 즉시 이동
                             proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        } else {
+                            // 새 메시지 수신 시에는 애니메이션
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
                         }
+                        // 스크롤 완료 후 flag 리셋
+                        store.state.shouldScrollToBottom = false
                     }
                 }
             }
