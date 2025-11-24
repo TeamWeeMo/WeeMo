@@ -16,7 +16,7 @@ struct MeetDetailState {
     var hasJoined: Bool = false
 }
 
-struct MeetDetail {
+struct MeetDetail: Equatable {
     let postId: String
     let title: String
     let content: String
@@ -28,24 +28,24 @@ struct MeetDetail {
     let capacity: Int
     let currentParticipants: Int
     let participants: [Participant]
-    let imageName: String
+    let imageNames: [String]
     let daysLeft: String
     let gender: String
     let spaceInfo: SpaceInfo?
 
-    struct Creator {
+    struct Creator: Equatable {
         let userId: String
         let nickname: String
         let profileImage: String?
     }
 
-    struct Participant {
+    struct Participant: Equatable {
         let userId: String
         let nickname: String
         let profileImage: String?
     }
 
-    struct SpaceInfo {
+    struct SpaceInfo: Equatable {
         let spaceId: String
         let title: String
         let address: String

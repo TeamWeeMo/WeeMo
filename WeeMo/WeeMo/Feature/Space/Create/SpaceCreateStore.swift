@@ -24,7 +24,6 @@ final class SpaceCreateStore: ObservableObject {
     }
 
     // MARK: - Intent Handler
-
     func send(_ intent: SpaceCreateIntent) {
         switch intent {
         case .titleChanged(let title):
@@ -35,6 +34,11 @@ final class SpaceCreateStore: ObservableObject {
 
         case .addressChanged(let address):
             state.address = address
+
+        case .addressSelected(let address, let latitude, let longitude):
+            state.address = address
+            state.latitude = latitude
+            state.longitude = longitude
 
         case .ratingChanged(let rating):
             // 0.5 단위로 반올림
@@ -50,6 +54,15 @@ final class SpaceCreateStore: ObservableObject {
         case .popularToggled(let isPopular):
             state.isPopular = isPopular
 
+        case .parkingToggled(let hasParking):
+            state.hasParking = hasParking
+
+        case .restroomToggled(let hasRestroom):
+            state.hasRestroom = hasRestroom
+
+        case .maxCapacityChanged(let capacity):
+            state.maxCapacity = capacity
+
         case .hashTagInputChanged(let input):
             state.hashTagInput = input
 
@@ -60,10 +73,10 @@ final class SpaceCreateStore: ObservableObject {
             handleRemoveHashTag(tag)
 
         case .imageSelected(let image):
-            state.selectedImage = image
+            handleImageSelected(image)
 
-        case .imageRemoved:
-            state.selectedImage = nil
+        case .imageRemoved(let index):
+            handleImageRemoved(at: index)
 
         case .submitButtonTapped:
             handleSubmit()
@@ -88,6 +101,20 @@ final class SpaceCreateStore: ObservableObject {
         state.hashTags.removeAll { $0 == tag }
     }
 
+    private func handleImageSelected(_ image: UIImage) {
+        guard state.canAddMoreImages else {
+            state.errorMessage = "최대 \(SpaceCreateState.maxImageCount)개까지만 추가할 수 있습니다."
+            return
+        }
+        state.selectedImages.append(image)
+        state.errorMessage = nil
+    }
+
+    private func handleImageRemoved(at index: Int) {
+        guard index < state.selectedImages.count else { return }
+        state.selectedImages.remove(at: index)
+    }
+
     private func handleSubmit() {
         // 유효성 검사
         guard state.isSubmitEnabled else {
@@ -100,7 +127,7 @@ final class SpaceCreateStore: ObservableObject {
             return
         }
 
-        guard let selectedImage = state.selectedImage else {
+        guard !state.selectedImages.isEmpty else {
             state.errorMessage = "이미지를 선택해주세요."
             return
         }
@@ -110,18 +137,15 @@ final class SpaceCreateStore: ObservableObject {
 
         Task {
             do {
-                // 1: 이미지 업로드
-                print("[SpaceCreateStore] 이미지 업로드 시작")
-                let uploadedFilePaths = try await uploadImage(selectedImage)
+                // 1: 이미지 업로드 (다중)
+                print("[SpaceCreateStore] 이미지 \(state.selectedImages.count)개 업로드 시작")
+                let uploadedFilePaths = try await uploadImages(state.selectedImages)
 
-                guard let filePath = uploadedFilePaths.first else {
-                    throw NetworkError.noData
-                }
-                print("[SpaceCreateStore] 이미지 업로드 성공: \(filePath)")
+                print("[SpaceCreateStore] 이미지 업로드 성공: \(uploadedFilePaths)")
 
                 // 2: 게시글 생성
                 print("[SpaceCreateStore] 게시글 생성 시작")
-                try await createSpacePost(filePath: filePath)
+                try await createSpacePost(filePaths: uploadedFilePaths)
 
                 await MainActor.run {
                     state.isLoading = false
@@ -144,15 +168,19 @@ final class SpaceCreateStore: ObservableObject {
 
     // MARK: - Network Methods
 
-    /// 이미지 업로드
-    private func uploadImage(_ image: UIImage) async throws -> [String] {
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-            throw NetworkError.badRequest("이미지를 처리할 수 없습니다.")
+    /// 이미지 업로드 (다중)
+    private func uploadImages(_ images: [UIImage]) async throws -> [String] {
+        // UIImage -> Data 변환
+        let imageDatas = try images.map { image -> Data in
+            guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+                throw NetworkError.badRequest("이미지를 처리할 수 없습니다.")
+            }
+            return imageData
         }
 
         let fileDTO = try await networkService.upload(
-            PostRouter.uploadFiles(images: [imageData]),
-            images: [imageData],
+            PostRouter.uploadFiles(images: imageDatas),
+            images: imageDatas,
             responseType: FileDTO.self
         )
 
@@ -160,13 +188,15 @@ final class SpaceCreateStore: ObservableObject {
     }
 
     /// 공간 게시글 생성
-    private func createSpacePost(filePath: String) async throws {
-        // additionalFields: value1~value5, geolocation 매핑
+    private func createSpacePost(filePaths: [String]) async throws {
         // value1: 주소
-        // value2: 평점
-        // value3: 인기 공간 여부
-        // value4: 편의시설 (현재는 빈 문자열)
-        // value5: 주차 가능 여부 (현재는 false)
+        // value2: 카테고리
+        // value3: 평점
+        // value4: 시간당 가격
+        // value5: 인기 공간 여부 ("true" or "false")
+        // value6: 주차 ("true" or "false")
+        // value7: 화장실 여부 ("true" or "false")
+        // value8: 최대인원 ("6")
 
         guard let priceInt = Int(state.price) else {
             throw NetworkError.badRequest("올바른 가격을 입력해주세요.")
@@ -179,22 +209,37 @@ final class SpaceCreateStore: ObservableObject {
             contentWithHashTags += " \(hashTagString)"
         }
 
-        // SpaceRouter 사용 (longitude, latitude를 Number로 전송)
+        // additionalFields 구성
+        var additionalFields: [String: String] = [
+            "value1": state.address,
+            "value2": state.category.rawValue,
+            "value3": String(format: "%.1f", state.rating),
+            "value4": state.price,
+            "value5": state.isPopular ? "true" : "false",
+            "value6": state.hasParking ? "true" : "false",
+            "value7": state.hasRestroom ? "true" : "false",
+        
+        ]
+        
+
+        // 최대인원 추가 (입력된 경우만)
+        if !state.maxCapacity.isEmpty {
+            additionalFields["value8"] = state.maxCapacity
+        }
+
+        // PostRouter 사용 (사용자가 선택한 실제 좌표 전송)
         _ = try await networkService.request(
-            SpaceRouter.createSpace(
+            PostRouter.createPost(
                 title: state.title,
                 price: priceInt,
                 content: contentWithHashTags,
-                files: [filePath],
-                value1: state.address,
-                value2: String(format: "%.1f", state.rating),
-                value3: state.isPopular ? "true" : "false",
-               // value4: "",  // 편의시설 (현재 미사용)
-               // value5: "false",  // 주차 가능 여부 (현재 미사용)
-                longitude: 126.9244,
-                latitude: 37.5600
-            ),
-            responseType: PostDTO.self
+                category: .space,
+                files: filePaths,
+                additionalFields: additionalFields,
+                latitude: state.latitude,
+                longitude: state.longitude
+            )
         )
     }
+
 }

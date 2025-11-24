@@ -21,4 +21,17 @@ struct MeetEditState {
     var isCreatingMeet: Bool = false
     var createMeetErrorMessage: String? = nil
     var isMeetCreated: Bool = false
+
+    // Meet Edit State
+    var isLoadingMeetForEdit: Bool = false
+    var originalMeetData: MeetDetail? = nil
+    var loadMeetErrorMessage: String? = nil
+    var isUpdatingMeet: Bool = false
+    var updateMeetErrorMessage: String? = nil
+    var isMeetUpdated: Bool = false
+
+    // Meet Delete State
+    var isDeletingMeet: Bool = false
+    var deleteMeetErrorMessage: String? = nil
+    var isMeetDeleted: Bool = false
 }

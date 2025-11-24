@@ -15,4 +15,9 @@ struct MeetListState {
     var errorMessage: String? = nil
     var searchQuery: String = ""
     var currentSortOption: SortOption = .registrationDate
+
+    // 페이지네이션
+    var nextCursor: String? = nil
+    var hasMoreData: Bool = true
+    var isLoadingMore: Bool = false
 }

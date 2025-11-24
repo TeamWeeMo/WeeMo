@@ -63,7 +63,7 @@ final class MeetDetailStore: ObservableObject {
                             profileImage: buyer.profileImage
                         )
                     },
-                    imageName: postData.files.first ?? "",
+                    imageNames: postData.files,
                     daysLeft: calculateDaysLeft(postData.value5 ?? postData.createdAt),
                     gender: postData.value2 ?? "누구나",
                     spaceInfo: postData.value4 != nil ? MeetDetail.SpaceInfo(

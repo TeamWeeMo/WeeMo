@@ -15,19 +15,27 @@ struct SpaceCreateState {
     var title: String = ""
     var price: String = ""
     var address: String = ""
+    var latitude: Double = 37.5665   // 기본값: 서울 중심
+    var longitude: Double = 126.9780  // 기본값: 서울 중심
     var rating: Double = 3.0  // Slider로 1.0 ~ 5.0, 0.5 단위
     var description: String = ""
 
     // 선택 필드
-    var category: SpaceCategory = .cafe
+    var category: SpaceCategory = .all
     var isPopular: Bool = false
+
+    // 편의시설
+    var hasParking: Bool = false
+    var hasRestroom: Bool = false
+    var maxCapacity: String = ""
 
     // 해시태그
     var hashTagInput: String = ""
     var hashTags: [String] = []
 
-    // 이미지
-    var selectedImage: UIImage? = nil
+    // 이미지 (최대 5개)
+    var selectedImages: [UIImage] = []
+    static let maxImageCount = 5
 
     // UI 상태
     var isLoading: Bool = false
@@ -42,8 +50,13 @@ struct SpaceCreateState {
         !price.isEmpty &&
         !address.isEmpty &&
         !description.isEmpty &&
-        selectedImage != nil &&
+        !selectedImages.isEmpty &&
         isValidPrice
+    }
+
+    /// 이미지 추가 가능 여부
+    var canAddMoreImages: Bool {
+        selectedImages.count < Self.maxImageCount
     }
 
     /// 평점 포맷팅 (소수점 1자리)

@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Meet: Identifiable {
+struct Meet: Identifiable, Hashable {
     let id = UUID()
     let postId: String // 서버에서 받은 실제 포스트 ID
     let title: String
@@ -18,4 +18,6 @@ struct Meet: Identifiable {
     let participants: String
     let imageName: String
     let daysLeft: String
+    let latitude: Double
+    let longitude: Double
 }

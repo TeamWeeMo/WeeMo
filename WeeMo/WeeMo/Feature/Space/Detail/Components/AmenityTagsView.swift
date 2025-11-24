@@ -12,15 +12,12 @@ struct AmenityTagsView: View {
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: Spacing.small) {
+            HStack() {
                 ForEach(tags, id: \.self) { tag in
-                    Text(tag)
-                        .font(.app(.content2))
-                        .foregroundColor(Color("textMain"))
-                        .padding(.horizontal, Spacing.medium)
-                        .padding(.vertical, Spacing.small)
-                        .background(Color("wmGray"))
-                        .cornerRadius(Spacing.radiusLarge)
+                    Text("#\(tag)")
+                        .font(.app(.subContent1))
+                        .foregroundColor(.blue)
+                        .padding(.horizontal, Spacing.xSmall)
                 }
             }
         }
