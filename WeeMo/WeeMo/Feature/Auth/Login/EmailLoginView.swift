@@ -41,6 +41,8 @@ struct EmailLoginView: View {
                             get: { loginStore.state.id },
                             set: { loginStore.send(.idChanged($0)) }
                         ))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
                         .asMintCornerView()
 
                         if !loginStore.state.idError.isEmpty {
