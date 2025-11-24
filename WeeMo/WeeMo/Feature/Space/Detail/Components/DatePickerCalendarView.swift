@@ -23,6 +23,7 @@ struct DatePickerCalendarView: View {
     @Binding var startHour: Int?
     @Binding var endHour: Int?
     let pricePerHour: Int
+    var blockedHours: Set<Int> = [] // 예약된(블락된) 시간
 
     @State private var currentMonth: Date = Date()
 
@@ -79,7 +80,7 @@ struct DatePickerCalendarView: View {
                     .foregroundColor(Color("textMain"))
 
                 Text("날짜 선택")
-                    .font(.app(.headline3))
+                    .font(.app(.content1))
                     .foregroundColor(Color("textMain"))
 
                 Spacer()
@@ -89,14 +90,14 @@ struct DatePickerCalendarView: View {
             HStack {
                 Button(action: previousMonth) {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: AppFontSize.s16.rawValue))
+                        .font(.system(size: AppFontSize.s14.rawValue))
                         .foregroundColor(Color("textMain"))
                 }
 
                 Spacer()
 
                 Text(monthYearString)
-                    .font(.app(.subHeadline1))
+                    .font(.app(.subHeadline2))
                     .foregroundColor(Color("textMain"))
 
                 Spacer()
@@ -113,7 +114,7 @@ struct DatePickerCalendarView: View {
             HStack(spacing: 0) {
                 ForEach(daysOfWeek, id: \.self) { day in
                     Text(day)
-                        .font(.app(.content2))
+                        .font(.app(.subContent2))
                         .foregroundColor(Color("textSub"))
                         .frame(maxWidth: .infinity)
                 }
@@ -145,7 +146,8 @@ struct DatePickerCalendarView: View {
                 TimelineBarView(
                     pricePerHour: pricePerHour,
                     startHour: $startHour,
-                    endHour: $endHour
+                    endHour: $endHour,
+                    blockedHours: blockedHours
                 )
             }
         }

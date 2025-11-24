@@ -75,6 +75,12 @@ final class AuthInterceptor: RequestInterceptor {
                 print("[AuthInterceptor] 토큰 삭제 및 로그아웃 처리")
 
                 TokenManager.shared.clearTokens()
+
+                // 메인 스레드에서 강제 로그아웃 Notification 발송
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(name: .forceLogout, object: nil)
+                }
+
                 completion(.doNotRetryWithError(NetworkError.refreshTokenExpired))
             }
         }

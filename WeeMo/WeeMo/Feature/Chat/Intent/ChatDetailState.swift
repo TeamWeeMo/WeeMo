@@ -1,0 +1,36 @@
+//
+//  ChatDetailState.swift
+//  WeeMo
+//
+//  Created by 차지용 on 11/24/25.
+//
+
+import Foundation
+
+struct ChatDetailState {
+    var room: ChatRoom
+    var messages: [ChatMessage] = []
+    var inputText: String = ""
+    var isLoading: Bool = false
+    var isLoadingMore: Bool = false
+    var isSendingMessage: Bool = false
+    var errorMessage: String? = nil
+    var isSocketConnected: Bool = false
+    var shouldScrollToBottom: Bool = false
+    var hasMoreMessages: Bool = true
+
+    init(room: ChatRoom) {
+        self.room = room
+    }
+}
+
+// MARK: - Computed Properties
+extension ChatDetailState {
+    var currentUserId: String {
+        return TokenManager.shared.userId ?? ""
+    }
+
+    var canSendMessage: Bool {
+        return !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSendingMessage
+    }
+}

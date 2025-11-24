@@ -8,9 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		178DEDE12EC5E0CA0014C227 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 178DEDE02EC5E0CA0014C227 /* KeychainAccess */; };
+		179C3FF82ECDD98300EDAE31 /* NMapsMap in Frameworks */ = {isa = PBXBuildFile; productRef = 179C3FF72ECDD98300EDAE31 /* NMapsMap */; };
 		17C580F22EBDE1440055A18E /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F12EBDE1440055A18E /* Alamofire */; };
 		17C580F52EBDE16D0055A18E /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F42EBDE16D0055A18E /* Kingfisher */; };
 		17C580F82EBDE1B60055A18E /* FSCalendar in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F72EBDE1B60055A18E /* FSCalendar */; };
+		3B5C4AAB2ECEE7AD00BA6325 /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 3B5C4AAA2ECEE7AD00BA6325 /* RealmSwift */; };
+		3B5C4E6A2ED3560000BA6325 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 3B5C4E692ED3560000BA6325 /* SocketIO */; };
 		9B8881FC2ECAE43400211811 /* KakaoSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 9B8881FB2ECAE43400211811 /* KakaoSDK */; };
 		9B8881FE2ECAE43400211811 /* KakaoSDKAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 9B8881FD2ECAE43400211811 /* KakaoSDKAuth */; };
 		9B8882002ECAE43400211811 /* KakaoSDKCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 9B8881FF2ECAE43400211811 /* KakaoSDKCommon */; };
@@ -50,7 +53,10 @@
 				178DEDE12EC5E0CA0014C227 /* KeychainAccess in Frameworks */,
 				9B8882002ECAE43400211811 /* KakaoSDKCommon in Frameworks */,
 				9B8881FC2ECAE43400211811 /* KakaoSDK in Frameworks */,
+				3B5C4E6A2ED3560000BA6325 /* SocketIO in Frameworks */,
+				3B5C4AAB2ECEE7AD00BA6325 /* RealmSwift in Frameworks */,
 				17C580F52EBDE16D0055A18E /* Kingfisher in Frameworks */,
+				179C3FF82ECDD98300EDAE31 /* NMapsMap in Frameworks */,
 				9B8882022ECAE43400211811 /* KakaoSDKUser in Frameworks */,
 				17C580F82EBDE1B60055A18E /* FSCalendar in Frameworks */,
 				17C580F22EBDE1440055A18E /* Alamofire in Frameworks */,
@@ -105,6 +111,9 @@
 				9B8881FD2ECAE43400211811 /* KakaoSDKAuth */,
 				9B8881FF2ECAE43400211811 /* KakaoSDKCommon */,
 				9B8882012ECAE43400211811 /* KakaoSDKUser */,
+				179C3FF72ECDD98300EDAE31 /* NMapsMap */,
+				3B5C4AAA2ECEE7AD00BA6325 /* RealmSwift */,
+				3B5C4E692ED3560000BA6325 /* SocketIO */,
 			);
 			productName = WeeMo;
 			productReference = 17C57DF12EBDCC0B0055A18E /* WeeMo.app */;
@@ -140,6 +149,9 @@
 				17C580F62EBDE1B60055A18E /* XCRemoteSwiftPackageReference "FSCalendar" */,
 				178DEDDF2EC5E0CA0014C227 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
 				9B8881FA2ECAE43400211811 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */,
+				179C3FF62ECDD98300EDAE31 /* XCRemoteSwiftPackageReference "SPM-NMapsMap" */,
+				3B5C4AA92ECEE7AD00BA6325 /* XCRemoteSwiftPackageReference "realm-swift" */,
+				3B5C4E682ED3560000BA6325 /* XCRemoteSwiftPackageReference "socket" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 17C57DF22EBDCC0B0055A18E /* Products */;
@@ -403,6 +415,14 @@
 				kind = branch;
 			};
 		};
+		179C3FF62ECDD98300EDAE31 /* XCRemoteSwiftPackageReference "SPM-NMapsMap" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/navermaps/SPM-NMapsMap";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 3.23.0;
+			};
+		};
 		17C580F02EBDE1440055A18E /* XCRemoteSwiftPackageReference "Alamofire" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Alamofire/Alamofire";
@@ -427,6 +447,22 @@
 				minimumVersion = 2.8.4;
 			};
 		};
+		3B5C4AA92ECEE7AD00BA6325 /* XCRemoteSwiftPackageReference "realm-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/realm/realm-swift.git";
+			requirement = {
+				kind = exactVersion;
+				version = 20.0.3;
+			};
+		};
+		3B5C4E682ED3560000BA6325 /* XCRemoteSwiftPackageReference "socket" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/socketio/socket.io-client-swift";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
 		9B8881FA2ECAE43400211811 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kakao/kakao-ios-sdk.git";
@@ -443,6 +479,11 @@
 			package = 178DEDDF2EC5E0CA0014C227 /* XCRemoteSwiftPackageReference "KeychainAccess" */;
 			productName = KeychainAccess;
 		};
+		179C3FF72ECDD98300EDAE31 /* NMapsMap */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 179C3FF62ECDD98300EDAE31 /* XCRemoteSwiftPackageReference "SPM-NMapsMap" */;
+			productName = NMapsMap;
+		};
 		17C580F12EBDE1440055A18E /* Alamofire */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 17C580F02EBDE1440055A18E /* XCRemoteSwiftPackageReference "Alamofire" */;
@@ -457,6 +498,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 17C580F62EBDE1B60055A18E /* XCRemoteSwiftPackageReference "FSCalendar" */;
 			productName = FSCalendar;
+		};
+		3B5C4AAA2ECEE7AD00BA6325 /* RealmSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3B5C4AA92ECEE7AD00BA6325 /* XCRemoteSwiftPackageReference "realm-swift" */;
+			productName = RealmSwift;
+		};
+		3B5C4E692ED3560000BA6325 /* SocketIO */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3B5C4E682ED3560000BA6325 /* XCRemoteSwiftPackageReference "socket" */;
+			productName = SocketIO;
 		};
 		9B8881FB2ECAE43400211811 /* KakaoSDK */ = {
 			isa = XCSwiftPackageProductDependency;

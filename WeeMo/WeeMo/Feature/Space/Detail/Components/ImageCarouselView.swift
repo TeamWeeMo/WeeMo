@@ -13,51 +13,58 @@ struct ImageCarouselView: View {
     @State private var currentIndex: Int = 0
 
     var body: some View {
-        ZStack(alignment: .bottomTrailing) {
-            TabView(selection: $currentIndex) {
-                ForEach(imageURLs.indices, id: \.self) { index in
-                    let imageURLString = imageURLs[index]
+        GeometryReader { geometry in
+            let safeAreaTop = geometry.safeAreaInsets.top
+            let imageHeight: CGFloat = 380 + safeAreaTop
 
-                    if let imageURL = URL(string: FileRouter.fileURL(from: imageURLString)) {
-                        KFImage(imageURL)
-                            .withAuthHeaders()
-                            .placeholder {
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.3))
-                                    .overlay(
-                                        ProgressView()
-                                    )
-                            }
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(height: 300)
-                            .clipped()
-                            .tag(index)
-                    } else {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
-                            .overlay(
-                                Image(systemName: "photo")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.gray)
-                            )
-                            .tag(index)
+            ZStack(alignment: .bottomTrailing) {
+                TabView(selection: $currentIndex) {
+                    ForEach(imageURLs.indices, id: \.self) { index in
+                        let imageURLString = imageURLs[index]
+
+                        if let imageURL = URL(string: FileRouter.fileURL(from: imageURLString)) {
+                            KFImage(imageURL)
+                                .withAuthHeaders()
+                                .placeholder {
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .overlay(
+                                            ProgressView()
+                                        )
+                                }
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width, height: imageHeight)
+                                .clipped()
+                                .tag(index)
+                        } else {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                                .overlay(
+                                    Image(systemName: "photo")
+                                        .font(.system(size: 60))
+                                        .foregroundColor(.gray)
+                                )
+                                .frame(width: geometry.size.width, height: imageHeight)
+                                .tag(index)
+                        }
                     }
                 }
-            }
-            .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-            .frame(height: 300)
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .frame(height: imageHeight)
 
-            // 커스텀 페이지 인디케이터
-            Text("\(currentIndex + 1) / \(imageURLs.count)")
-                .font(.app(.content2))
-                .foregroundColor(.white)
-                .padding(.horizontal, Spacing.medium)
-                .padding(.vertical, Spacing.small)
-                .background(Color.black.opacity(0.6))
-                .cornerRadius(Spacing.radiusSmall)
-                .padding([.trailing, .bottom], Spacing.base)
+                // 커스텀 페이지 인디케이터
+                Text("\(currentIndex + 1) / \(imageURLs.count)")
+                    .font(.app(.content2))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, Spacing.medium)
+                    .padding(.vertical, Spacing.small)
+                    .background(Color.black.opacity(0.6))
+                    .cornerRadius(Spacing.radiusSmall)
+                    .padding([.trailing, .bottom], Spacing.base)
+            }
         }
+        .frame(height: 380)
     }
 }
 

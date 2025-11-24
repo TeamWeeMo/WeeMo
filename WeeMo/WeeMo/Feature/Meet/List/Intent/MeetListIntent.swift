@@ -13,4 +13,5 @@ enum MeetListIntent {
     case searchMeets(query: String)
     case refreshMeets
     case sortMeets(option: SortOption)
+    case loadMoreMeets
 }
