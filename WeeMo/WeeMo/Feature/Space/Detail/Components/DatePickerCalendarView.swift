@@ -23,6 +23,7 @@ struct DatePickerCalendarView: View {
     @Binding var startHour: Int?
     @Binding var endHour: Int?
     let pricePerHour: Int
+    var blockedHours: Set<Int> = [] // 예약된(블락된) 시간
 
     @State private var currentMonth: Date = Date()
 
@@ -145,7 +146,8 @@ struct DatePickerCalendarView: View {
                 TimelineBarView(
                     pricePerHour: pricePerHour,
                     startHour: $startHour,
-                    endHour: $endHour
+                    endHour: $endHour,
+                    blockedHours: blockedHours
                 )
             }
         }

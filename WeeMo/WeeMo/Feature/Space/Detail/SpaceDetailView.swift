@@ -15,7 +15,10 @@ struct SpaceDetailView: View {
     // MARK: - Initializer
     init(space: Space) {
         self.space = space
-        _store = StateObject(wrappedValue: SpaceDetailStore(pricePerHour: space.pricePerHour))
+        _store = StateObject(wrappedValue: SpaceDetailStore(
+            spaceId: space.id,
+            pricePerHour: space.pricePerHour
+        ))
     }
 
     var body: some View {
@@ -53,7 +56,8 @@ struct SpaceDetailView: View {
                         ),
                         startHour: store.startHourBinding,
                         endHour: store.endHourBinding,
-                        pricePerHour: space.pricePerHour
+                        pricePerHour: space.pricePerHour,
+                        blockedHours: store.state.currentBlockedHours
                     )
                     .padding(.horizontal, Spacing.base)
 
