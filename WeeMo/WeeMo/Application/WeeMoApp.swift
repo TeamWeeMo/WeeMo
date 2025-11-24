@@ -23,7 +23,7 @@ struct WeeMoApp: App {
     var body: some Scene {
         WindowGroup {
             if appState.isLoggedIn {
-                TapView()
+                HomeView()
                     .environmentObject(appState)
                     .onOpenURL { url in
                         if AuthApi.isKakaoTalkLoginUrl(url) {

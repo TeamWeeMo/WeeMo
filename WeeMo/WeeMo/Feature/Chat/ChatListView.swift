@@ -15,12 +15,12 @@ struct ChatListView: View {
     // MARK: - Properties
 
     @StateObject private var store = ChatListStore()
+    @State private var navigationPath = NavigationPath()
 
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
                 // 전체 배경색
                 Color.wmBg
                     .ignoresSafeArea(.all)
@@ -39,7 +39,7 @@ struct ChatListView: View {
             }
             .navigationTitle("채팅")
             .navigationBarTitleDisplayMode(.large)
-            .navigationDestination(item: $store.state.selectedRoom) { room in
+            .navigationDestination(for: ChatRoom.self) { room in
                 ChatDetailView(room: room)
             }
             .onAppear {
@@ -57,7 +57,6 @@ struct ChatListView: View {
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
                 print("📱 앱이 백그라운드로 이동 - WebSocket 연결 유지")
             }
-        }
     }
 
     // MARK: - Subviews
@@ -110,7 +109,7 @@ struct ChatListView: View {
                 ForEach(store.state.filteredChatRooms) { room in
                     ChatRoomRow(room: room)
                         .buttonWrapper {
-                            store.handle(.selectChatRoom(room))
+                            navigationPath.append(room)
                         }
 
                     // 구분선
