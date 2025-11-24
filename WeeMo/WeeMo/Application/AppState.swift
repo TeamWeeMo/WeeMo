@@ -18,6 +18,18 @@ final class AppState: ObservableObject {
         print("[AppState] TokenManager.isLoggedIn = \(loggedIn)")
         self.isLoggedIn = loggedIn
         print("[AppState] 초기화 완료")
+
+        // 강제 로그아웃 Notification 옵저버 등록
+        NotificationCenter.default.addObserver(
+            forName: .forceLogout,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            print("[AppState] forceLogout Notification 수신 - 자동 로그아웃 처리")
+            Task { @MainActor in
+                self?.logout()
+            }
+        }
     }
 
     func login() {
@@ -29,5 +41,9 @@ final class AppState: ObservableObject {
         UserManager.shared.clearNickname()
         UserManager.shared.clearProfileImageURL()
         isLoggedIn = false
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 }
