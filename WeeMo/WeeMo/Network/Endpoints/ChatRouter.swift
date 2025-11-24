@@ -54,7 +54,8 @@ enum ChatRouter: APIRouter {
 
         case .fetchMessages(_, let cursorDate):
             guard let cursorDate = cursorDate else { return nil }
-            return ["cursor_date": cursorDate]
+            // 일반적인 페이징 파라미터명 사용
+            return ["before": cursorDate]
 
         case .sendMessage(_, let content, let files):
             var params: [String: Any] = ["content": content]

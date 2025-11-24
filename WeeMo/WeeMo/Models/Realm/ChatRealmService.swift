@@ -160,6 +160,14 @@ class ChatRealmService {
         try realmManager.delete(oldMessages)
     }
 
+    /// 특정 날짜 이후의 메시지 삭제 (30일 정책용)
+    func deleteMessagesAfter(date: Date, roomId: String) throws {
+        let recentMessages = realmManager.fetch(ChatMessageRealm.self).where {
+            $0.roomId == roomId && $0.createdAt > date
+        }
+        try realmManager.delete(recentMessages)
+    }
+
     /// 채팅 데이터 전체 삭제
     func clearAllChatData() throws {
         let chatRooms = realmManager.fetch(ChatRoomRealm.self)

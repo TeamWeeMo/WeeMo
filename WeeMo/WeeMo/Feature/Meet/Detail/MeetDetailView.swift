@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Kingfisher
+import Alamofire
 
 struct MeetDetailView: View {
     let postId: String
@@ -14,6 +15,8 @@ struct MeetDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingChatAlert = false
     @State private var chatErrorMessage = ""
+    @State private var createdChatRoom: ChatRoom?
+    @State private var shouldNavigateToChat = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -62,10 +65,15 @@ struct MeetDetailView: View {
         .onAppear {
             store.handle(.loadMeetDetail(postId: postId))
         }
-        .alert("채팅방 생성", isPresented: $showingChatAlert) {
+        .alert("채팅 오류", isPresented: $showingChatAlert) {
             Button("확인") { }
         } message: {
-            Text(chatErrorMessage.isEmpty ? "채팅방이 생성되었습니다!" : chatErrorMessage)
+            Text(chatErrorMessage)
+        }
+        .navigationDestination(isPresented: $shouldNavigateToChat) {
+            if let chatRoom = createdChatRoom {
+                ChatDetailView(room: chatRoom)
+            }
         }
     }
 
@@ -73,25 +81,76 @@ struct MeetDetailView: View {
 
     /// 채팅방 생성 또는 이동
     private func createChatRoom(with opponentUserId: String) {
-        // 임시: ChatService가 없는 브랜치에서 동작하도록 수정
+        guard let meetDetail = store.state.meetDetail else { return }
+
         Task {
             do {
-//                let response = try await ChatService.shared.createOrFetchRoom(opponentUserId:
-//                          - opponentUserId)
+                print("🔄 채팅방 생성 시작. 상대방 ID: \(opponentUserId)")
+
                 let networkService = NetworkService()
-                let response = try await networkService.request(
-                    ChatRouter.createOrFetchRoom(opponentUserId: opponentUserId),
-                    responseType: ChatRoomResponseDTO.self
-                )
+
+                // 먼저 원본 응답을 확인해보기 위해 Data로 받기
+                let request = ChatRouter.createOrFetchRoom(opponentUserId: opponentUserId)
+                let dataResponse = try await AF.request(request)
+                    .validate()
+                    .serializingData()
+                    .value
+
+                if let jsonString = String(data: dataResponse, encoding: .utf8) {
+                    print("🔍 서버 응답 원본: \(jsonString)")
+                }
+
+                // 일단 ChatRoomDTO로 시도해보기
+                let response = try JSONDecoder().decode(ChatRoomDTO.self, from: dataResponse)
+
+                print("✅ 채팅방 생성 API 성공. 응답: \(response)")
 
                 await MainActor.run {
-                    chatErrorMessage = ""
-                    showingChatAlert = true
+                    // 서버에서 받은 실제 데이터로 ChatRoom 생성
+                    let participants = response.participants.map { userDTO in
+                        User(
+                            userId: userDTO.userId,
+                            nickname: userDTO.nick,
+                            profileImageURL: userDTO.profileImage
+                        )
+                    }
 
-                    // TODO: 채팅 화면으로 이동하는 로직 구현
-                    print("채팅방 생성 성공. 상대방 ID: \(response.opponentId)")
+                    var lastChat: ChatMessage? = nil
+                    if let lastChatDTO = response.lastChat {
+                        let sender = User(
+                            userId: lastChatDTO.sender.userId,
+                            nickname: lastChatDTO.sender.nick,
+                            profileImageURL: lastChatDTO.sender.profileImage
+                        )
+                        lastChat = ChatMessage(
+                            id: lastChatDTO.chatId,
+                            roomId: lastChatDTO.roomId,
+                            content: lastChatDTO.content,
+                            createdAt: ISO8601DateFormatter().date(from: lastChatDTO.createdAt) ?? Date(),
+                            sender: sender,
+                            files: lastChatDTO.files
+                        )
+                    }
+
+                    let chatRoom = ChatRoom(
+                        id: response.roomId,
+                        participants: participants,
+                        lastChat: lastChat,
+                        createdAt: ISO8601DateFormatter().date(from: response.createdAt) ?? Date(),
+                        updatedAt: ISO8601DateFormatter().date(from: response.updatedAt) ?? Date()
+                    )
+
+                    createdChatRoom = chatRoom
+                    shouldNavigateToChat = true
+
+                    print("✅ 채팅방 생성 완료. 방 ID: \(response.roomId)")
                 }
             } catch {
+                print("❌ 채팅방 생성 실패: \(error)")
+                if let afError = error as? AFError {
+                    print("❌ AFError details: \(afError)")
+                }
+
                 await MainActor.run {
                     chatErrorMessage = "채팅방 생성에 실패했습니다: \(error.localizedDescription)"
                     showingChatAlert = true

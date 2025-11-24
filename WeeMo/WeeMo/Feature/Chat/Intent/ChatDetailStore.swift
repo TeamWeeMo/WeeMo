@@ -1,0 +1,343 @@
+//
+//  ChatDetailStore.swift
+//  WeeMo
+//
+//  Created by 차지용 on 11/24/25.
+//
+
+import Foundation
+import Combine
+
+final class ChatDetailStore: ObservableObject {
+    @Published var state: ChatDetailState
+
+    private let chatService = ChatService.shared
+    private let socketManager = ChatSocketIOManager.shared
+    private var cancellables = Set<AnyCancellable>()
+
+    init(room: ChatRoom) {
+        self.state = ChatDetailState(room: room)
+        setupSocketListeners()
+    }
+
+    deinit {
+        handle(.closeSocketConnection)
+    }
+
+    func handle(_ intent: ChatDetailIntent) {
+        switch intent {
+        case .loadMessages(let roomId):
+            loadMessages(roomId: roomId)
+        case .sendMessage(let content, let files):
+            sendMessage(content: content, files: files)
+        case .setupSocketConnection(let roomId):
+            setupSocketConnection(roomId: roomId)
+        case .closeSocketConnection:
+            closeSocketConnection()
+        case .loadMoreMessages(let beforeMessageId):
+            loadMoreMessages(beforeMessageId: beforeMessageId)
+        case .retryLoadMessages:
+            loadMessages(roomId: state.room.id)
+        case .markAsRead:
+            markAsRead()
+        }
+    }
+
+    // MARK: - Socket Setup
+
+    private func setupSocketListeners() {
+        // 새 메시지 수신 - 메인 스레드에서 직접 처리
+        socketManager.chatMessageSubject
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] message in
+                guard let self = self else { return }
+                Task { @MainActor in
+                    await self.handleReceivedMessage(message)
+                }
+            }
+            .store(in: &cancellables)
+
+        // 연결 상태 모니터링
+        socketManager.$isConnected
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isConnected in
+                self?.state.isSocketConnected = isConnected
+            }
+            .store(in: &cancellables)
+    }
+
+    @MainActor
+    private func handleReceivedMessage(_ newMessage: ChatMessage) async {
+        print("📨 Store에서 새 메시지 수신: \(newMessage.content)")
+
+        // 중복 메시지 체크
+        guard !state.messages.contains(where: { $0.id == newMessage.id }) else {
+            print("🔄 중복 메시지 무시: \(newMessage.id)")
+            return
+        }
+
+        // 현재 채팅방과 메시지 채팅방 일치 확인
+        guard newMessage.roomId == state.room.id else {
+            print("🔄 다른 채팅방 메시지 무시: \(newMessage.roomId) vs \(state.room.id)")
+            return
+        }
+
+        // 메시지 추가
+        state.messages.append(newMessage)
+        state.messages.sort { $0.createdAt < $1.createdAt }
+        state.shouldScrollToBottom = true
+
+        // 강제 UI 업데이트
+        objectWillChange.send()
+
+        print("✅ 새 메시지 추가됨: \(newMessage.content) | 총 메시지 수: \(state.messages.count)")
+
+        // 30일 정책에 따른 로컬 DB 저장 (백그라운드)
+        Task.detached {
+            await self.saveMessageToLocal(newMessage)
+        }
+    }
+
+    // MARK: - Message Loading
+
+    private func loadMessages(roomId: String) {
+        state.isLoading = true
+        state.errorMessage = nil
+
+        Task {
+            do {
+                let calendar = Calendar.current
+                let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+
+                // 1. 30일 이후의 메시지만 로컬에서 로드
+                let localOldMessages = chatService.getLocalMessages(roomId: roomId).filter {
+                    $0.createdAt <= thirtyDaysAgo
+                }
+
+                await MainActor.run {
+                    state.messages = localOldMessages
+                    print("📱 로컬에서 \(localOldMessages.count)개 30일+ 이전 메시지 로드")
+                }
+
+                // 2. 서버에서 30일 이내 메시지만 조회
+                let thirtyDaysCursor = ISO8601DateFormatter().string(from: thirtyDaysAgo)
+                let recentServerMessages = try await chatService.fetchMessages(
+                    roomId: roomId,
+                    cursorDate: thirtyDaysCursor // 30일 이내만 조회
+                )
+
+                await MainActor.run {
+                    // 최근 30일 메시지는 서버에서만 가져옴
+                    let recentMessages = recentServerMessages.filter { $0.createdAt > thirtyDaysAgo }
+
+                    // 로컬 30일+ 이전 메시지와 서버 30일 이내 메시지 병합
+                    var finalMessages = localOldMessages
+                    finalMessages.append(contentsOf: recentMessages)
+
+                    // 시간순 정렬
+                    finalMessages.sort { $0.createdAt < $1.createdAt }
+
+                    state.messages = finalMessages
+                    state.shouldScrollToBottom = true
+                    state.isLoading = false
+
+                    print("✅ 메시지 로드 완료: 로컬 30일+ 이전 \(localOldMessages.count)개 + 서버 30일 이내 \(recentMessages.count)개 = 총 \(finalMessages.count)개")
+                }
+
+            } catch {
+                await MainActor.run {
+                    state.errorMessage = "메시지를 불러오는데 실패했습니다: \(error.localizedDescription)"
+                    state.isLoading = false
+                    print("❌ 메시지 로드 실패: \(error)")
+                }
+            }
+        }
+    }
+
+    // 로컬과 서버의 오래된 메시지 병합 (중복 제거)
+    private func mergeOldMessages(local: [ChatMessage], server: [ChatMessage]) -> [ChatMessage] {
+        var merged = local
+
+        for serverMessage in server {
+            if !merged.contains(where: { $0.id == serverMessage.id }) {
+                merged.append(serverMessage)
+            }
+        }
+
+        return merged.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    private func loadMoreMessages(beforeMessageId: String) {
+        guard !state.isLoadingMore && state.hasMoreMessages else { return }
+
+        state.isLoadingMore = true
+
+        Task {
+            do {
+                let moreMessages = try await chatService.loadMoreMessages(
+                    roomId: state.room.id,
+                    beforeMessageId: beforeMessageId,
+                    limit: 50
+                )
+
+                await MainActor.run {
+                    if moreMessages.isEmpty {
+                        state.hasMoreMessages = false
+                        print("📭 더 이상 불러올 메시지가 없음")
+                    } else {
+                        // 스크롤 위치 유지를 위해 현재 첫 번째 메시지 ID 저장
+                        let currentFirstMessageId = state.messages.first?.id
+
+                        // 기존 메시지 앞에 추가
+                        state.messages.insert(contentsOf: moreMessages, at: 0)
+
+                        // 스크롤 위치 유지를 위해 shouldScrollToBottom을 false로 설정
+                        state.shouldScrollToBottom = false
+
+                        print("✅ 이전 메시지 \(moreMessages.count)개 로드 (스크롤 위치 유지)")
+                    }
+                    state.isLoadingMore = false
+                }
+
+            } catch {
+                await MainActor.run {
+                    state.isLoadingMore = false
+                    print("❌ 이전 메시지 로드 실패: \(error)")
+                }
+            }
+        }
+    }
+
+    // MARK: - Message Sending
+
+    private func sendMessage(content: String, files: [String]?) {
+        guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        let messageContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+        state.inputText = "" // 입력창 즉시 클리어
+        state.isSendingMessage = true
+
+        // 임시 메시지 생성
+        let tempMessage = createTempMessage(content: messageContent, files: files)
+        state.messages.append(tempMessage)
+        state.shouldScrollToBottom = true
+
+        Task {
+            do {
+                let sentMessage = try await chatService.sendMessage(
+                    roomId: state.room.id,
+                    content: messageContent,
+                    files: files
+                )
+
+                await MainActor.run {
+                    // 임시 메시지를 실제 메시지로 교체
+                    if let index = state.messages.firstIndex(where: { $0.id == tempMessage.id }) {
+                        state.messages[index] = sentMessage
+                    }
+                    state.isSendingMessage = false
+                    print("✅ 메시지 전송 성공: \(sentMessage.content)")
+                }
+
+            } catch {
+                await MainActor.run {
+                    // 임시 메시지 제거
+                    state.messages.removeAll { $0.id == tempMessage.id }
+                    state.errorMessage = "메시지 전송에 실패했습니다: \(error.localizedDescription)"
+                    state.isSendingMessage = false
+                    print("❌ 메시지 전송 실패: \(error)")
+                }
+            }
+        }
+    }
+
+    // MARK: - Socket Connection
+
+    private func setupSocketConnection(roomId: String) {
+        socketManager.openWebSocket(roomId: roomId)
+    }
+
+    private func closeSocketConnection() {
+        socketManager.closeWebSocket()
+    }
+
+    // MARK: - Helper Methods
+
+    private func createTempMessage(content: String, files: [String]?) -> ChatMessage {
+        let currentUser = User(
+            userId: state.currentUserId,
+            nickname: "나", // 임시로 고정값 사용
+            profileImageURL: nil
+        )
+
+        return ChatMessage(
+            id: "temp-\(UUID().uuidString)",
+            roomId: state.room.id,
+            content: content,
+            createdAt: Date(),
+            sender: currentUser,
+            files: files ?? []
+        )
+    }
+
+    private func getLastMessageDate() -> String? {
+        guard let lastMessage = state.messages.last else { return nil }
+        return ISO8601DateFormatter().string(from: lastMessage.createdAt)
+    }
+
+    private func saveMessageToLocal(_ message: ChatMessage) async {
+        // 30일 이후의 메시지만 Realm에 저장 (30일이 지나면 자동으로 저장)
+        let calendar = Calendar.current
+        let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+
+        // 메시지가 30일이 지났을 때만 저장
+        guard message.createdAt <= thirtyDaysAgo else {
+            print("📅 30일 이내 메시지는 Realm 저장하지 않음 (서버에서 관리): \(message.content)")
+            return
+        }
+
+        // ChatRealmService를 통한 저장
+        do {
+            let messageDTO = ChatMessageDTO(
+                chatId: message.id,
+                roomId: message.roomId,
+                content: message.content,
+                createdAt: ISO8601DateFormatter().string(from: message.createdAt),
+                sender: UserDTO(
+                    userId: message.sender.userId,
+                    nick: message.sender.nickname,
+                    profileImage: message.sender.profileImageURL
+                ),
+                files: message.files
+            )
+
+            try ChatRealmService.shared.saveChatMessage(messageDTO)
+            print("💾 30일+ 이전 메시지 Realm에 저장 완료: \(message.content)")
+        } catch {
+            print("❌ Realm 저장 실패: \(error)")
+        }
+    }
+
+    private func markAsRead() {
+        // 읽음 처리 로직
+    }
+
+    // MARK: - Cleanup Methods
+
+    /// 30일 이내 메시지를 Realm에서 정리 (앱 시작 시 호출)
+    /// 30일 정책: 최근 30일 메시지는 서버에서만, 30일 이후만 Realm 저장
+    func cleanupRecentMessages() {
+        Task {
+            let calendar = Calendar.current
+            let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+
+            do {
+                // 30일 이내의 메시지들을 Realm에서 삭제 (서버에서 관리하므로)
+                try ChatRealmService.shared.deleteMessagesAfter(date: thirtyDaysAgo, roomId: state.room.id)
+                print("🧹 30일 이내 메시지 Realm에서 정리 완료 (서버에서 관리)")
+            } catch {
+                print("❌ 30일 이내 메시지 정리 실패: \(error)")
+            }
+        }
+    }
+}
