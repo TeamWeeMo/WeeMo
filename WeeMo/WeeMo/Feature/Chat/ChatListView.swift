@@ -20,28 +20,30 @@ struct ChatListView: View {
     // MARK: - Body
 
     var body: some View {
-        ZStack {
-                // 전체 배경색
-                Color.wmBg
-                    .ignoresSafeArea(.all)
+        NavigationStack(path: $navigationPath) {
+            ZStack {
+                    // 전체 배경색
+                    Color.wmBg
+                        .ignoresSafeArea(.all)
 
-                VStack {
-                    if store.state.isLoading {
-                        loadingView
-                    } else if let errorMessage = store.state.errorMessage {
-                        errorView(errorMessage)
-                    } else if store.state.isEmpty {
-                        emptyView
-                    } else {
-                        chatRoomListView
+                    VStack {
+                        if store.state.isLoading {
+                            loadingView
+                        } else if let errorMessage = store.state.errorMessage {
+                            errorView(errorMessage)
+                        } else if store.state.isEmpty {
+                            emptyView
+                        } else {
+                            chatRoomListView
+                        }
                     }
                 }
-            }
-            .navigationTitle("채팅")
-            .navigationBarTitleDisplayMode(.large)
-            .navigationDestination(for: ChatRoom.self) { room in
-                ChatDetailView(room: room)
-            }
+                .navigationTitle("채팅")
+                .navigationBarTitleDisplayMode(.large)
+                .navigationDestination(for: ChatRoom.self) { room in
+                    ChatDetailView(room: room)
+                }
+        }
             .onAppear {
                 if store.state.chatRooms.isEmpty {
                     store.handle(.loadChatRooms)
