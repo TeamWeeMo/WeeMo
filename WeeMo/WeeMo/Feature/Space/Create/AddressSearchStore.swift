@@ -1,5 +1,5 @@
 //
-//  AddressSearchViewModel.swift
+//  AddressSearchStore.swift
 //  WeeMo
 //
 //  Created by Reimos on 2025/11/19.

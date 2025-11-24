@@ -33,6 +33,14 @@ enum DateFormatterManager {
         formatter.locale = Locale(identifier: "ko_KR")
         return formatter
     }()
+
+    /// 예약 댓글용 포맷터 (yyyyMMdd)
+    static let reservation: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd"
+        formatter.locale = Locale(identifier: "ko_KR")
+        return formatter
+    }()
 }
 
 // MARK: - String Extension

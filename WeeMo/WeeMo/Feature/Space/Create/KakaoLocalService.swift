@@ -100,7 +100,7 @@ final class KakaoLocalService {
         request.setValue("KakaoAK \(apiKey)", forHTTPHeaderField: "Authorization")
 
         // KA 헤더 추가 (iOS 앱에서 필수)
-        let kaHeader = "os/ios origin/\(Bundle.main.bundleIdentifier ?? "com.weemo.app")"
+        let kaHeader = "os/ios origin/\(Bundle.main.bundleIdentifier ?? "com.TeamWeeMo.WeeMo")"
         request.setValue(kaHeader, forHTTPHeaderField: "KA")
 
         let (data, response) = try await URLSession.shared.data(for: request)
