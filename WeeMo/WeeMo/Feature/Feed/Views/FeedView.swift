@@ -87,11 +87,10 @@ struct FeedView: View {
             )) {
                 FeedEditView(mode: .create)
             }
+            .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 store.send(.onAppear)
             }
-        .navigationBarHidden(false)
-        .navigationBarTitleDisplayMode(.inline)
     }
 
     // MARK: - Subviews

@@ -12,7 +12,6 @@ struct MeetListView: View {
     @State private var selectedSortOption: SortOption = .registrationDate
     @State private var showingSortOptions = false
     @StateObject private var store = MeetListViewStore()
-    @State private var navigationPath = NavigationPath()
 
     var body: some View {
         ScrollView {
@@ -57,12 +56,9 @@ struct MeetListView: View {
                     } else {
                         LazyVStack(spacing: 0) {
                             ForEach(Array(store.state.meets.enumerated()), id: \.element.id) { index, meet in
-                                Button(action: {
-                                    navigationPath.append(meet.postId)
-                                }) {
+                                NavigationLink(value: meet.postId) {
                                     MeetListItemView(meet: meet)
                                 }
-                                .buttonStyle(PlainButtonStyle())
                                 .onAppear {
                                     // 마지막에서 3번째 아이템이 나타날 때 더 로드
                                     if index >= store.state.meets.count - 3 && store.state.hasMoreData && !store.state.isLoadingMore {
@@ -90,78 +86,60 @@ struct MeetListView: View {
                         .padding(.top, 16)
                     }
                 }
-            }
-            .navigationBarHidden(true)
-            .background(Color("wmBg"))
-            .onAppear {
-                store.handle(.loadMeets)
-            }
-            .onChange(of: selectedSortOption) { sortOption in
-                print("🔄 Sort option changed to: \(sortOption.rawValue)")
-                store.handle(.sortMeets(option: sortOption))
-            }
-            .onChange(of: searchText) { searchQuery in
-                print("🔍 Search text changed to: '\(searchQuery)'")
-                store.handle(.searchMeets(query: searchQuery))
-            }
-            .overlay(
-                VStack {
-                    Spacer()
-                    HStack {
+                .background(Color("wmBg"))
+                .onAppear {
+                    store.handle(.loadMeets)
+                }
+                .onChange(of: selectedSortOption) { sortOption in
+                    print("🔄 Sort option changed to: \(sortOption.rawValue)")
+                    store.handle(.sortMeets(option: sortOption))
+                }
+                .onChange(of: searchText) { searchQuery in
+                    print("🔍 Search text changed to: '\(searchQuery)'")
+                    store.handle(.searchMeets(query: searchQuery))
+                }
+                .overlay(
+                    VStack {
                         Spacer()
-                        VStack(spacing: 12) {
-                            Button(action: {
-                                navigationPath.append("map")
-                            }) {
-                                HStack {
-                                    Image(systemName: "map")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.black)
-                                    Text("지도보기")
-                                        .font(.app(.content2))
-                                        .foregroundColor(.black)
+                        HStack {
+                            Spacer()
+                            VStack(spacing: 12) {
+                                NavigationLink(value: "map") {
+                                    HStack {
+                                        Image(systemName: "map")
+                                            .font(.system(size: 16, weight: .medium))
+                                            .foregroundColor(.black)
+                                        Text("지도보기")
+                                            .font(.app(.content2))
+                                            .foregroundColor(.black)
+                                    }
+                                    .frame(width: 130, height: 40)
+                                    .background(Color.white)
+                                    .cornerRadius(25)
+                                    .cardShadow()
                                 }
-                                .frame(width: 130, height: 40)
-                                .background(Color.white)
-                                .cornerRadius(25)
-                                .cardShadow()
-                            }
 
-                            Button(action: {
-                                navigationPath.append("edit")
-                            }) {
-                                HStack {
-                                    Image(systemName: "plus")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.white)
-                                    Text("모임 만들기")
-                                        .font(.app(.content2))
-                                        .foregroundColor(.white)
+                                NavigationLink(value: "edit") {
+                                    HStack {
+                                        Image(systemName: "plus")
+                                            .font(.system(size: 16, weight: .semibold))
+                                            .foregroundColor(.white)
+                                        Text("모임 만들기")
+                                            .font(.app(.content2))
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(width: 130, height: 40)
+                                    .background(Color.black)
+                                    .cornerRadius(25)
                                 }
-                                .frame(width: 130, height: 40)
-                                .background(Color.black)
-                                .cornerRadius(25)
                             }
                         }
+                        .padding(.trailing, 20)
+                        .padding(.bottom, 20)
                     }
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 20)
-                }
-            )
-        .navigationBarHidden(false)
-        .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: String.self) { value in
-            if value == "map" {
-                MeetMapView()
-            } else if value == "edit" {
-                MeetEditView()
-            } else {
-                MeetDetailView(postId: value)
+                )
             }
-            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToRoot"))) { _ in
-                navigationPath = NavigationPath() // NavigationPath 초기화로 루트로 돌아가기
-            }
-        }
+            .navigationBarTitleDisplayMode(.inline)
     }
 }
 

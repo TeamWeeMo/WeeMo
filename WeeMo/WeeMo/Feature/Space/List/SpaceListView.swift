@@ -73,10 +73,7 @@ struct SpaceListView: View {
                 }
             }
             .background(.background)
-            .navigationBarHidden(true)
-            .navigationDestination(for: Space.self) { space in
-                SpaceDetailView(space: space)
-            }
+            .navigationBarTitleDisplayMode(.inline)
             .alert("오류", isPresented: Binding(
                 get: { store.state.errorMessage != nil },
                 set: { if !$0 { store.send(.refresh) } }
@@ -102,8 +99,6 @@ struct SpaceListView: View {
                     store.send(.refresh)
                 }
             }
-        .navigationBarHidden(false)
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

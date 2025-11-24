@@ -15,8 +15,7 @@ struct MeetDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showingChatAlert = false
     @State private var chatErrorMessage = ""
-    @State private var createdChatRoom: ChatRoom?
-    @State private var shouldNavigateToChat = false
+    @State private var navigateToChatRoom: ChatRoom? = nil
 
     var body: some View {
         VStack(spacing: 0) {
@@ -53,7 +52,7 @@ struct MeetDetailView: View {
                let currentUserId = TokenManager.shared.userId,
                currentUserId == meetDetail.creator.userId {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    NavigationLink(destination: MeetEditView(editingPostId: meetDetail.postId)) {
+                    NavigationLink(value: "edit:\(meetDetail.postId)") {
                         Text("수정")
                             .font(.app(.content2))
                             .foregroundColor(Color.wmMain)
@@ -70,10 +69,8 @@ struct MeetDetailView: View {
         } message: {
             Text(chatErrorMessage)
         }
-        .navigationDestination(isPresented: $shouldNavigateToChat) {
-            if let chatRoom = createdChatRoom {
-                ChatDetailView(room: chatRoom)
-            }
+        .navigationDestination(item: $navigateToChatRoom) { chatRoom in
+            ChatDetailView(room: chatRoom)
         }
     }
 
@@ -140,8 +137,7 @@ struct MeetDetailView: View {
                         updatedAt: ISO8601DateFormatter().date(from: response.updatedAt) ?? Date()
                     )
 
-                    createdChatRoom = chatRoom
-                    shouldNavigateToChat = true
+                    navigateToChatRoom = chatRoom
 
                     print("✅ 채팅방 생성 완료. 방 ID: \(response.roomId)")
                 }

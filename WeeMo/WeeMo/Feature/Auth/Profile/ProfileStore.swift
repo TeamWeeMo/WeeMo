@@ -68,15 +68,14 @@ final class ProfileStore: ObservableObject {
         print("[ProfileStore] loadInitialData 호출됨")
         print("[ProfileStore] targetUserId: \(targetUserId ?? "nil (내 프로필)")")
 
+        // 병렬로 모든 데이터 로드
         if isMyProfile {
-            // 내 프로필 로드
             loadMyProfile()
         } else if let userId = targetUserId {
-            // 다른 사람 프로필 로드
             loadUserProfile(userId: userId)
         }
 
-        // 작성한 모임, 피드 로드
+        // 작성한 모임, 피드는 병렬로 로드
         loadUserMeetings()
         loadUserFeeds()
     }

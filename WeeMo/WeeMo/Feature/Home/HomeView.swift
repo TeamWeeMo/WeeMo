@@ -12,7 +12,12 @@ enum HomeRoute: Hashable {
     case meetEdit
     case spaceList
     case feed
+}
+
+enum MainScreen {
+    case home
     case profile
+    case chatList
 }
 
 struct HomeView: View {
@@ -20,104 +25,25 @@ struct HomeView: View {
     @EnvironmentObject var appState: AppState
     @State private var showSideMenu = false
     @State private var navigationPath = NavigationPath()
+    @State private var currentScreen: MainScreen = .home
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
-                ScrollView {
-                    VStack(spacing: 0) {
-                        // Top Navigation Bar
-                        HStack {
-                            Text("WeeMo")
-                                .font(.app(.headline1))
-                                .foregroundStyle(.wmMain)
-
-                            Spacer()
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-
-                        // Main Feature Cards
-                    VStack(spacing: 16) {
-                        // 모임 찾기 (큰 카드)
-                        NavigationLink(value: HomeRoute.meetList) {
-                            LargeFeatureCardContent(
-                                title: "모임 찾기",
-                                description: "내 근처에 있는 모임 구경하기",
-                                imageName: "person",
-                                imageSize: CGSize(width: 88, height: 88)
-                            )
-                        }
-
-                        HStack(spacing: 16) {
-                            // 모임 등록하기 (작은 카드)
-                            NavigationLink(value: HomeRoute.meetEdit) {
-                                SmallFeatureCardContent(
-                                    title: "모임 등록하기",
-                                    description: "모임장 되어 시람 모으기",
-                                    imageName: "pencil",
-                                    imageSize: CGSize(width: 80, height: 80)
-                                )
-                            }
-
-                            // 공간 찾기 (작은 카드)
-                            NavigationLink(value: HomeRoute.spaceList) {
-                                SmallFeatureCardContent(
-                                    title: "공간 찾기",
-                                    description: "모이기 좋은 공간 찾기",
-                                    imageName: "find",
-                                    imageSize: CGSize(width: 70, height: 70)
-                                )
-                            }
-                        }
-
-                        // 피드 (큰 카드)
-                        NavigationLink(value: HomeRoute.feed) {
-                            LargeFeatureCardContent(
-                                title: "피드",
-                                description: "내 주변 시람, 관심사 확인하기",
-                                imageName: "camera",
-                                imageSize: CGSize(width: 88, height: 88)
-                            )
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-
-                    // 요즘 뜨는 모임
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("요즘 뜨는 모임")
-                            .font(.app(.subHeadline1))
-                            .foregroundStyle(.textMain)
-                            .padding(.horizontal, 20)
-
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 16) {
-                                TrendingMeetingCard(
-                                    imageName: "promotionImage1",
-                                    title: "대형 스크린과 함께\n즐기는 축구"
-                                )
-
-                                TrendingMeetingCard(
-                                    imageName: "promotionImage2",
-                                    title: "퇴근 후 와인과 함께\n소소한 대화"
-                                )
-
-                                TrendingMeetingCard(
-                                    imageName: "promotionImage3",
-                                    title: "독서와 함께 쌓는\n마음의 양식"
-                                )
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                    }
-                    .padding(.top, 32)
-
-                        Spacer(minLength: 40)
+                // 현재 선택된 메인 화면
+                Group {
+                    switch currentScreen {
+                    case .home:
+                        homeContent
+                    case .profile:
+                        ProfileView()
+                    case .chatList:
+                        ChatListView()
+                            .navigationBarHidden(true)
                     }
                 }
-                .background(.wmBg)
-                .navigationBarHidden(true)
+                .transition(.opacity)
+                .animation(.easeInOut(duration: 0.2), value: currentScreen)
 
                 // Dark Overlay
                 if showSideMenu {
@@ -137,12 +63,28 @@ struct HomeView: View {
                         withAnimation {
                             showSideMenu = false
                         }
+                        // 메뉴 닫힌 후 화면 전환
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            currentScreen = .home
+                        }
                     },
                     onProfileTap: {
                         withAnimation {
                             showSideMenu = false
                         }
-                        navigationPath.append(HomeRoute.profile)
+                        // 메뉴 닫힌 후 화면 전환
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            currentScreen = .profile
+                        }
+                    },
+                    onChatTap: {
+                        withAnimation {
+                            showSideMenu = false
+                        }
+                        // 메뉴 닫힌 후 화면 전환
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            currentScreen = .chatList
+                        }
                     }
                 )
 
@@ -181,11 +123,131 @@ struct HomeView: View {
                     SpaceListView()
                 case .feed:
                     FeedView()
-                case .profile:
-                    ProfileView()
+                }
+            }
+            .navigationDestination(for: Space.self) { space in
+                SpaceDetailView(space: space)
+            }
+            .navigationDestination(for: ChatRoom.self) { room in
+                ChatDetailView(room: room)
+            }
+            .navigationDestination(for: String.self) { value in
+                if value == "map" {
+                    MeetMapView()
+                } else if value == "edit" {
+                    MeetEditView()
+                } else if value.hasPrefix("edit:") {
+                    // "edit:postId" 형식으로 전달된 경우
+                    let postId = String(value.dropFirst(5))
+                    MeetEditView(editingPostId: postId)
+                } else {
+                    MeetDetailView(postId: value)
                 }
             }
         }
+    }
+
+    // MARK: - Home Content
+
+    private var homeContent: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                // Top Navigation Bar
+                HStack(spacing: 4) {
+                    Image("WeeMoLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(height: 20)
+
+                    Text("WeeMo")
+                        .font(.app(.headline2))
+                        .foregroundStyle(.black)
+
+                    Spacer()
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 12)
+
+                // Main Feature Cards
+                VStack(spacing: 16) {
+                    // 모임 찾기 (큰 카드)
+                    NavigationLink(value: HomeRoute.meetList) {
+                        LargeFeatureCardContent(
+                            title: "모임 찾기",
+                            description: "내 근처에 있는 모임 구경하기",
+                            imageName: "person",
+                            imageSize: CGSize(width: 88, height: 88)
+                        )
+                    }
+
+                    HStack(spacing: 16) {
+                        // 모임 등록하기 (작은 카드)
+                        NavigationLink(value: HomeRoute.meetEdit) {
+                            SmallFeatureCardContent(
+                                title: "모임 등록하기",
+                                description: "모임장 되어 시람 모으기",
+                                imageName: "pencil",
+                                imageSize: CGSize(width: 80, height: 80)
+                            )
+                        }
+
+                        // 공간 찾기 (작은 카드)
+                        NavigationLink(value: HomeRoute.spaceList) {
+                            SmallFeatureCardContent(
+                                title: "공간 찾기",
+                                description: "모이기 좋은 공간 찾기",
+                                imageName: "find",
+                                imageSize: CGSize(width: 70, height: 70)
+                            )
+                        }
+                    }
+
+                    // 피드 (큰 카드)
+                    NavigationLink(value: HomeRoute.feed) {
+                        LargeFeatureCardContent(
+                            title: "피드",
+                            description: "내 주변 시람, 관심사 확인하기",
+                            imageName: "camera",
+                            imageSize: CGSize(width: 88, height: 88)
+                        )
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 20)
+
+                // 요즘 뜨는 모임
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("요즘 뜨는 모임")
+                        .font(.app(.subHeadline1))
+                        .foregroundStyle(.textMain)
+                        .padding(.horizontal, 20)
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 16) {
+                            TrendingMeetingCard(
+                                imageName: "promotionImage1",
+                                title: "대형 스크린과 함께\n즐기는 축구"
+                            )
+
+                            TrendingMeetingCard(
+                                imageName: "promotionImage2",
+                                title: "퇴근 후 와인과 함께\n소소한 대화"
+                            )
+
+                            TrendingMeetingCard(
+                                imageName: "promotionImage3",
+                                title: "독서와 함께 쌓는\n마음의 양식"
+                            )
+                        }
+                        .padding(.horizontal, 20)
+                    }
+                }
+                .padding(.top, 32)
+
+                Spacer(minLength: 40)
+            }
+        }
+        .background(.wmBg)
     }
 }
 
@@ -309,6 +371,7 @@ struct SideMenuView: View {
     @Binding var isShowing: Bool
     let onMenuClose: () -> Void
     let onProfileTap: () -> Void
+    let onChatTap: () -> Void
 
     var body: some View {
         GeometryReader { geometry in
@@ -341,9 +404,7 @@ struct SideMenuView: View {
                         }
 
                         Button {
-                            onMenuClose()
-                            print("채팅으로 이동")
-                            // TODO: 채팅 화면 구현
+                            onChatTap()
                         } label: {
                             MenuItemContent(icon: "message", title: "채팅")
                         }
