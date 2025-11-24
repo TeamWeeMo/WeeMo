@@ -115,7 +115,7 @@ final class ChatSocketIOManager: ObservableObject {
             return nil
         }
 
-        let port = Int(NetworkConstants.port) ?? 30279
+        let port = Int(NetworkConstants.port) ?? 0
 
         // 다양한 네임스페이스 형태 시도
         let possiblePaths = [
