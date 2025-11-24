@@ -56,17 +56,38 @@ struct MeetListView: View {
                         }
                         .padding()
                     } else {
-                        LazyVStack(spacing: 16) {
-                            ForEach(store.state.meets) { meet in
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(store.state.meets.enumerated()), id: \.element.id) { index, meet in
                                 Button(action: {
                                     navigationPath.append(meet.postId)
                                 }) {
-                                    MeetCardView(meet: meet)
+                                    MeetListItemView(meet: meet)
                                 }
                                 .buttonStyle(PlainButtonStyle())
+                                .onAppear {
+                                    // 마지막에서 3번째 아이템이 나타날 때 더 로드
+                                    if index >= store.state.meets.count - 3 && store.state.hasMoreData && !store.state.isLoadingMore {
+                                        store.handle(.loadMoreMeets)
+                                    }
+                                }
+
+                                // 구분선 추가 (마지막 아이템 제외)
+                                if meet.id != store.state.meets.last?.id {
+                                    Divider()
+                                        .padding(.horizontal, 16)
+                                }
+                            }
+
+                            // 로딩 인디케이터 (더 불러올 데이터가 있을 때만)
+                            if store.state.isLoadingMore && store.state.hasMoreData {
+                                HStack {
+                                    Spacer()
+                                    ProgressView("더 불러오는 중...")
+                                        .padding()
+                                    Spacer()
+                                }
                             }
                         }
-                        .padding(.horizontal, 16)
                         .padding(.top, 16)
                     }
                 }
@@ -136,6 +157,9 @@ struct MeetListView: View {
                 } else {
                     MeetDetailView(postId: value)
                 }
+            }
+            .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("NavigateToRoot"))) { _ in
+                navigationPath = NavigationPath() // NavigationPath 초기화로 루트로 돌아가기
             }
         }
     }

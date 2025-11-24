@@ -14,13 +14,14 @@ enum ChatRouter: APIRouter {
     case createOrFetchRoom(opponentUserId: String)
     case fetchRoomList
     case fetchMessages(roomId: String, cursorDate: String?)
+    case sendMessage(roomId: String, content: String, files: [String]?)
     case uploadChatFiles(roomId: String, files: [Data])
 
     // MARK: - APIRouter Implementation
 
     var method: HTTPMethod {
         switch self {
-        case .createOrFetchRoom, .uploadChatFiles:
+        case .createOrFetchRoom, .sendMessage, .uploadChatFiles:
             return .post
         case .fetchRoomList, .fetchMessages:
             return .get
@@ -35,6 +36,8 @@ enum ChatRouter: APIRouter {
         case .fetchRoomList:
             return "\(version)/chats"
         case .fetchMessages(let roomId, _):
+            return "\(version)/chats/\(roomId)"
+        case .sendMessage(let roomId, _, _):
             return "\(version)/chats/\(roomId)"
         case .uploadChatFiles(let roomId, _):
             return "\(version)/chats/\(roomId)/files"
@@ -51,7 +54,15 @@ enum ChatRouter: APIRouter {
 
         case .fetchMessages(_, let cursorDate):
             guard let cursorDate = cursorDate else { return nil }
-            return ["cursor_date": cursorDate]
+            // 일반적인 페이징 파라미터명 사용
+            return ["before": cursorDate]
+
+        case .sendMessage(_, let content, let files):
+            var params: [String: Any] = ["content": content]
+            if let files = files {
+                params["files"] = files
+            }
+            return params
 
         case .uploadChatFiles:
             return nil
