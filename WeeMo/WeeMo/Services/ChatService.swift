@@ -332,13 +332,52 @@ extension ChatMessageDTO {
             profileImageURL: self.sender.profileImage
         )
 
+        // 날짜 파싱 개선
+        let parsedDate = parseDate(from: self.createdAt)
+
         return ChatMessage(
             id: self.chatId,
             roomId: self.roomId,
             content: self.content,
-            createdAt: ISO8601DateFormatter().date(from: self.createdAt) ?? Date(),
+            createdAt: parsedDate,
             sender: sender,
             files: self.files
         )
+    }
+
+    /// 다양한 날짜 형식을 지원하는 파싱 함수
+    private func parseDate(from dateString: String) -> Date {
+        // ISO8601 먼저 시도
+        if let date = ISO8601DateFormatter().date(from: dateString) {
+            return date
+        }
+
+        print("기본 ISO8601 파싱 실패: '\(dateString)' - 다른 포맷 시도")
+
+        // 다른 가능한 포맷들
+        let formatters: [(String, TimeZone?)] = [
+            ("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", TimeZone(secondsFromGMT: 0)),
+            ("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone(secondsFromGMT: 0)),
+            ("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone(secondsFromGMT: 0)),
+            ("yyyy-MM-dd HH:mm:ss", nil),
+            ("yyyy-MM-dd'T'HH:mm:ss.SSSSSS", nil),
+            ("yyyy-MM-dd'T'HH:mm:ss.SSS", nil),
+            ("yyyy-MM-dd'T'HH:mm:ss", nil)
+        ]
+
+        for (format, timeZone) in formatters {
+            let formatter = DateFormatter()
+            formatter.dateFormat = format
+            if let tz = timeZone {
+                formatter.timeZone = tz
+            }
+            if let date = formatter.date(from: dateString) {
+                print("성공한 포맷: \(format) -> \(date)")
+                return date
+            }
+        }
+
+        print("모든 날짜 포맷 파싱 실패: '\(dateString)' - 현재 시간 사용")
+        return Date()
     }
 }
