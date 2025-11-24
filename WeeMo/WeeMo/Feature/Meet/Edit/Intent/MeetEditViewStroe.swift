@@ -58,7 +58,7 @@ final class MeetEditViewStroe: ObservableObject {
                     state.isLoadingSpaces = false
                 }
             } catch {
-                print("❌ Error loading spaces: \(error)")
+                print("Error loading spaces: \(error)")
                 await MainActor.run {
                     if error.localizedDescription.contains("sesac_memolease only") {
                         state.spacesErrorMessage = "서버 설정 문제가 있습니다. 관리자에게 문의하세요."
@@ -94,9 +94,9 @@ final class MeetEditViewStroe: ObservableObject {
                 // 모임 내용에 장소와 날짜 정보 포함
                 var fullDescription = description
                 if let space = selectedSpace {
-                    fullDescription += "\n\n📍 모임 장소: \(space.title)"
+                    fullDescription += "\n\n모임 장소: \(space.title)"
                 }
-                fullDescription += "\n⏰ 모임 시작일: \(DateFormatter.displayFormatter.string(from: startDate))"
+                fullDescription += "\n모임 시작일: \(DateFormatter.displayFormatter.string(from: startDate))"
 
                 // 추가 필드들 (value1~10)
                 var additionalFields: [String: String] = [:]
@@ -113,14 +113,14 @@ final class MeetEditViewStroe: ObservableObject {
 
                 // 사용자가 선택한 이미지를 업로드
                 if !selectedImages.isEmpty {
-                    print("📸 사용자가 선택한 이미지 \(selectedImages.count)개를 업로드합니다.")
+                    print("사용자가 선택한 이미지 \(selectedImages.count)개를 업로드합니다.")
                     files = try await uploadImages(selectedImages)
-                    print("✅ 업로드된 이미지 URLs: \(files)")
+                    print("업로드된 이미지 URLs: \(files)")
                 } else {
-                    print("⚠️ 선택된 이미지가 없습니다.")
+                    print("선택된 이미지가 없습니다.")
                 }
 
-                print("🚀 모임 생성 요청 - files: \(files)")
+                print("모임 생성 요청 - files: \(files)")
 
                 let response = try await networkService.request(
                     PostRouter.createPost(
@@ -136,17 +136,17 @@ final class MeetEditViewStroe: ObservableObject {
                     responseType: PostDTO.self
                 )
 
-                print("✅ 모임 생성 응답 - files: \(response.files)")
+                print("모임 생성 응답 - files: \(response.files)")
 
                 await MainActor.run {
-                    print("✅ 모임이 성공적으로 생성되었습니다: \(response.title)")
+                    print("모임이 성공적으로 생성되었습니다: \(response.title)")
                     state.isCreatingMeet = false
                     state.isMeetCreated = true
                 }
 
             } catch {
                 await MainActor.run {
-                    print("❌ 모임 생성 실패: \(error)")
+                    print("모임 생성 실패: \(error)")
                     state.createMeetErrorMessage = error.localizedDescription
                     state.isCreatingMeet = false
                 }
@@ -159,14 +159,14 @@ final class MeetEditViewStroe: ObservableObject {
         var imageDatas: [Data] = []
         for image in images {
             guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-                print("❌ Failed to convert image to JPEG data")
+                print("Failed to convert image to JPEG data")
                 continue
             }
             imageDatas.append(imageData)
         }
 
         guard !imageDatas.isEmpty else {
-            print("❌ No valid images to upload")
+            print("No valid images to upload")
             return []
         }
 
@@ -177,7 +177,7 @@ final class MeetEditViewStroe: ObservableObject {
             responseType: FileDTO.self
         )
 
-        print("✅ Images uploaded successfully: \(fileDTO.files)")
+        print("Images uploaded successfully: \(fileDTO.files)")
         return fileDTO.files
     }
 
@@ -189,7 +189,7 @@ final class MeetEditViewStroe: ObservableObject {
 
         Task {
             do {
-                print("🔄 Loading meet for edit: \(postId)")
+                print("Loading meet for edit: \(postId)")
 
                 let postData = try await networkService.request(
                     PostRouter.fetchPost(postId: postId),
@@ -237,12 +237,12 @@ final class MeetEditViewStroe: ObservableObject {
                     // 새로 선택한 이미지는 초기화
                     selectedImages = []
                     selectedPhotoItems = []
-                    print("✅ Meet data loaded for edit: \(meetDetail.title)")
-                    print("📸 기존 이미지 \(existingImageURLs.count)개 로드됨")
+                    print("Meet data loaded for edit: \(meetDetail.title)")
+                    print("기존 이미지 \(existingImageURLs.count)개 로드됨")
                 }
 
             } catch {
-                print("❌ Error loading meet for edit: \(error)")
+                print("Error loading meet for edit: \(error)")
                 await MainActor.run {
                     state.loadMeetErrorMessage = error.localizedDescription
                     state.isLoadingMeetForEdit = false
@@ -257,7 +257,7 @@ final class MeetEditViewStroe: ObservableObject {
 
         Task {
             do {
-                print("🔄 Updating meet: \(postId)")
+                print("Updating meet: \(postId)")
 
                 // ISO8601 날짜 형식으로 변환
                 let formatter = ISO8601DateFormatter()
@@ -266,9 +266,9 @@ final class MeetEditViewStroe: ObservableObject {
                 // 모임 내용에 장소와 날짜 정보 포함
                 var fullDescription = description
                 if let space = selectedSpace {
-                    fullDescription += "\n\n📍 모임 장소: \(space.title)"
+                    fullDescription += "\n\n모임 장소: \(space.title)"
                 }
-                fullDescription += "\n⏰ 모임 시작일: \(DateFormatter.displayFormatter.string(from: startDate))"
+                fullDescription += "\n모임 시작일: \(DateFormatter.displayFormatter.string(from: startDate))"
 
                 // 추가 필드들 (value1~10)
                 var additionalFields: [String: String] = [:]
@@ -285,16 +285,16 @@ final class MeetEditViewStroe: ObservableObject {
 
                 if !selectedImages.isEmpty {
                     // 사용자가 새로운 이미지를 선택한 경우 업로드
-                    print("📸 새로운 이미지 \(selectedImages.count)개를 업로드합니다.")
+                    print("새로운 이미지 \(selectedImages.count)개를 업로드합니다.")
                     files = try await uploadImages(selectedImages)
                 } else if shouldKeepExistingImages {
                     // 기존 이미지 유지
                     files = existingImageURLs
-                    print("📸 기존 이미지 \(files.count)개를 유지합니다.")
+                    print("기존 이미지 \(files.count)개를 유지합니다.")
                 } else {
                     // 이미지 없음
                     files = []
-                    print("📸 이미지를 모두 제거합니다.")
+                    print("이미지를 모두 제거합니다.")
                 }
 
                 // 모임 업데이트 API 호출
@@ -309,7 +309,7 @@ final class MeetEditViewStroe: ObservableObject {
                     responseType: PostDTO.self
                 )
 
-                print("✅ Meet updated successfully: \(response.postId)")
+                print("Meet updated successfully: \(response.postId)")
 
                 await MainActor.run {
                     state.isUpdatingMeet = false
@@ -317,7 +317,7 @@ final class MeetEditViewStroe: ObservableObject {
                 }
 
             } catch {
-                print("❌ Error updating meet: \(error)")
+                print("Error updating meet: \(error)")
                 await MainActor.run {
                     state.updateMeetErrorMessage = error.localizedDescription
                     state.isUpdatingMeet = false
@@ -329,7 +329,7 @@ final class MeetEditViewStroe: ObservableObject {
     // MARK: - Helper Functions
 
     private func extractLocationFromContent(_ content: String) -> String {
-        let pattern = "📍 모임 장소: (.*?)(?=\\n|$)"
+        let pattern = "모임 장소: (.*?)(?=\\n|$)"
         if let regex = try? NSRegularExpression(pattern: pattern),
            let match = regex.firstMatch(in: content, range: NSRange(content.startIndex..., in: content)),
            let range = Range(match.range(at: 1), in: content) {
@@ -381,12 +381,12 @@ final class MeetEditViewStroe: ObservableObject {
 
         Task {
             do {
-                print("🔄 Deleting meet: \(postId)")
+                print("Deleting meet: \(postId)")
 
                 // 모임 삭제 API 호출 (응답 데이터 없음)
                 try await networkService.request(PostRouter.deletePost(postId: postId))
 
-                print("✅ Meet deleted successfully: \(postId)")
+                print("Meet deleted successfully: \(postId)")
 
                 await MainActor.run {
                     state.isDeletingMeet = false
@@ -394,7 +394,7 @@ final class MeetEditViewStroe: ObservableObject {
                 }
 
             } catch {
-                print("❌ Error deleting meet: \(error)")
+                print("Error deleting meet: \(error)")
                 await MainActor.run {
                     state.deleteMeetErrorMessage = error.localizedDescription
                     state.isDeletingMeet = false

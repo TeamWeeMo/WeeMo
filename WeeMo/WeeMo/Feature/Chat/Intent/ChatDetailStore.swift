@@ -312,9 +312,9 @@ final class ChatDetailStore: ObservableObject {
             )
 
             try ChatRealmService.shared.saveChatMessage(messageDTO)
-            print("💾 30일+ 이전 메시지 Realm에 저장 완료: \(message.content)")
+            print("30일+ 이전 메시지 Realm에 저장 완료: \(message.content)")
         } catch {
-            print("❌ Realm 저장 실패: \(error)")
+            print("Realm 저장 실패: \(error)")
         }
     }
 
@@ -334,9 +334,9 @@ final class ChatDetailStore: ObservableObject {
             do {
                 // 30일 이내의 메시지들을 Realm에서 삭제 (서버에서 관리하므로)
                 try ChatRealmService.shared.deleteMessagesAfter(date: thirtyDaysAgo, roomId: state.room.id)
-                print("🧹 30일 이내 메시지 Realm에서 정리 완료 (서버에서 관리)")
+                print("30일 이내 메시지 Realm에서 정리 완료 (서버에서 관리)")
             } catch {
-                print("❌ 30일 이내 메시지 정리 실패: \(error)")
+                print("30일 이내 메시지 정리 실패: \(error)")
             }
         }
     }

@@ -47,7 +47,7 @@ extension APIRouter {
         if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
             headers.add(name: HTTPHeaderKey.sesacKey, value: sesacKey)
         } else {
-            print("❌ APIRouter - SeSACKey를 찾을 수 없음")
+            print("APIRouter - SeSACKey를 찾을 수 없음")
         }
 
         // ProductId (항상 필수)
