@@ -58,3 +58,8 @@ struct ChatRoomDTO: Decodable {
 struct ChatRoomListDTO: Decodable {
     let data: [ChatRoomDTO]
 }
+
+/// 채팅 메시지 목록 응답
+struct ChatMessageListDTO: Decodable {
+    let data: [ChatMessageDTO]
+}

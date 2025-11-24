@@ -60,7 +60,7 @@ struct MeetCapacitySection: View {
                         }) {
                             Image(systemName: "minus.circle.fill")
                                 .font(.system(size: 24))
-                                .foregroundColor(capacity > 1 ? .wmMain : Color("textDisabled"))
+                                .foregroundColor(capacity > 1 ? .wmMain : .wmGray)
                         }
                         .disabled(capacity <= 1)
 
@@ -76,14 +76,14 @@ struct MeetCapacitySection: View {
                         }) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 24))
-                                .foregroundColor(capacity < maxCapacity ? .wmMain : Color("textDisabled"))
+                                .foregroundColor(capacity < maxCapacity ? .wmMain : .wmGray)
                         }
                         .disabled(capacity >= maxCapacity)
                     }
                 }
 
                 Divider()
-                    .background(Color("divider"))
+                    .background(Color("wmGray"))
 
                 HStack {
                     Text("최대 \(maxCapacity)명까지 모집 가능")

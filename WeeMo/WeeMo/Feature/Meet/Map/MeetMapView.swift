@@ -3,152 +3,237 @@
 //  WeeMo
 //
 //  Created by 차지용 on 11/10/25.
+//  Refactored by Watson22_YJ on 11/19/25.
 //
 
 import SwiftUI
-import MapKit
+import CoreLocation
+
+// MARK: - MeetMapView (Naver Map)
 
 struct MeetMapView: View {
-    @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 37.5665, longitude: 126.9780),
-        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-    )
+    // MARK: - Properties
 
-    @State private var showingList = false
-    @State private var showingSearch = false
-    @State private var searchText = ""
-    @Environment(\.presentationMode) var presentationMode
+    @State private var store: MeetMapStore
 
-    @State private var meets = [
-        Meet(
-            postId: "sample-post-1",
-            title: "주말 독서 모임",
-            date: "📅 2025.11.15 (토) 14:00",
-            location: "📍 모던 카페 라운",
-            address: "서울 강남구 테헤란로 123",
-            price: "💰 15,000원/",
-            participants: "👤 4 / 8명",
-            imageName: "meeting1",
-            daysLeft: "D-3"
-        ),
-        Meet(
-            postId: "sample-post-2",
-            title: "요리 클래스",
-            date: "📅 2025.11.20 (수) 19:00",
-            location: "📍 쿠킹 스튜디오 키친",
-            address: "서울 마포구 홍대입구역 56",
-            price: "💰 35,000원/",
-            participants: "👤 6 / 10명",
-            imageName: "meeting2",
-            daysLeft: "D-8"
-        ),
-        Meet(
-            postId: "sample-post-3",
-            title: "등산 동호회",
-            date: "📅 2025.11.17 (일) 08:00",
-            location: "📍 북한산 입구",
-            address: "서울 은평구 진관동 산1",
-            price: "💰 무료",
-            participants: "👤 12 / 15명",
-            imageName: "meeting3",
-            daysLeft: "D-5"
-        )
-    ]
+    // MARK: - Initializer
+
+    init(networkService: NetworkServiceProtocol = NetworkService()) {
+        self.store = MeetMapStore(networkService: networkService)
+    }
+
+    // MARK: - Body
 
     var body: some View {
         ZStack {
-            // 지도 영역
-            Map(coordinateRegion: $region, annotationItems: meets) { meet in
-                MapAnnotation(coordinate: CLLocationCoordinate2D(
-                    latitude: 37.5665 + Double.random(in: -0.02...0.02),
-                    longitude: 126.9780 + Double.random(in: -0.02...0.02)
-                )) {
-                    MapPinView(count: Int.random(in: 1...5))
+            // 네이버 지도
+            NaverMapView(
+                cameraPosition: Binding(
+                    get: { store.state.cameraPosition },
+                    set: { _ in }
+                ),
+                meets: store.state.visibleMeets,
+                onRegionChange: { center, zoom in
+                    store.send(.mapRegionChanged(center: center, zoom: zoom))
+                },
+                onVisibleBoundsChange: { minLat, maxLat, minLng, maxLng in
+                    store.send(.updateVisibleBounds(minLat: minLat, maxLat: maxLat, minLng: minLng, maxLng: maxLng))
                 }
-            }
+            )
             .ignoresSafeArea()
 
+            // 상단 검색바
             VStack {
+                SearchBarButton(placeholder: "모임을 검색하세요") {
+                    store.send(.openSearch)
+                }
+                    .padding(.horizontal, Spacing.base)
+                    .padding(.top, Spacing.small)
+                Spacer()
+            }
+
+            // 하단 영역 (현재위치 버튼 + 모임 리스트)
+            VStack(spacing: 0) {
                 Spacer()
 
-                // 하단 리스트 영역
-                VStack(spacing: 0) {
-                    Button(action: {
-                        withAnimation(.spring(response: 0.6)) {
-                            showingList.toggle()
-                        }
-                    }) {
-                        HStack {
-                            Text("모임 리스트")
-                                .font(.app(.content1))
-                                .fontWeight(.medium)
-                                .foregroundColor(.black)
-
-                            Spacer()
-
-                            Image(systemName: showingList ? "chevron.down" : "chevron.up")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundColor(.black)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 16)
-                        .background(Color.white)
-                        .cornerRadius(12, corners: showingList ? [.topLeft, .topRight] : .allCorners)
-                        .cardShadow()
+                // 오른쪽 하단 현재위치 버튼
+                HStack {
+                    Spacer()
+                    FloatingButton(icon: "location.fill") {
+                        store.send(.moveToCurrentLocation)
                     }
-
-                    if showingList {
-                        VStack(spacing: 0) {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(meets) { meet in
-                                        NavigationLink(destination: MeetDetailView(postId: meet.postId)) {
-                                            MeetMapCard(meet: meet)
-                                        }
-                                        .buttonStyle(PlainButtonStyle())
-                                    }
-                                }
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 8)
-                            }
-                            .frame(height: 140)
-                        }
-                        .background(Color.white)
-                        .cornerRadius(12, corners: [.bottomLeft, .bottomRight])
-                        .cardShadow()
-                        .transition(.opacity.combined(with: .move(edge: .bottom)))
-                    }
+                    .animation(.easeInOut(duration: 0.3), value: store.state.meetsInCurrentView.isEmpty)
+                        .padding(.trailing, Spacing.base)
+                        .padding(.bottom, store.state.meetsInCurrentView.isEmpty ? 0 : Spacing.small)
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 30)
+                // 하단 카드 오버레이
+                if !store.state.meetsInCurrentView.isEmpty {
+                    bottomCardOverlay
+                } else {
+                    // 리스트가 없을 때는 버튼을 하단에 고정하기 위한 스페이서
+                    Color.clear
+                        .frame(height: 16)
+                }
             }
+            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: store.state.meetsInCurrentView.isEmpty)
         }
         .navigationBarTitleDisplayMode(.inline)
-        .navigationBarItems(
-            trailing: HStack(spacing: 12) {
-                Button(action: {
-                    showingSearch.toggle()
-                }) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.black)
-                }
-
-                Button(action: {
-                    // 현재 위치 액션
-                }) {
-                    Image(systemName: "location")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundColor(.black)
+        .toolbarRole(.editor)
+        .sheet(isPresented: Binding(
+            get: { store.state.showingSearch },
+            set: { newValue in
+                if !newValue {
+                    store.send(.closeSearch)
                 }
             }
-        )
-        .sheet(isPresented: $showingSearch) {
-            SearchModalView(searchText: $searchText, meets: meets)
+        )) {
+            searchSheet
+                .presentationDetents([.medium, .large]) // 절반 또는 전체 높이
+                .presentationDragIndicator(.visible)
+                .interactiveDismissDisabled(false)
+        }
+        .navigationDestination(item: Binding(
+            get: { store.state.selectedMeet },
+            set: { newValue in
+                if newValue == nil {
+                    store.send(.clearSelectedMeet)
+                }
+            }
+        )) { meet in
+            MeetDetailView(postId: meet.postId)
+        }
+        .onAppear {
+            store.send(.onAppear)
+            store.locationManager.requestAuthorization()
+        }
+    }
+
+    // MARK: - Subviews
+
+    /// 하단 카드 오버레이 (현재 화면에 보이는 모임만 표시)
+    private var bottomCardOverlay: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: Spacing.medium) {
+                ForEach(store.state.meetsInCurrentView) { meet in
+                    MeetMapCardView(meet: meet)
+                        .buttonWrapper {
+                            store.send(.selectMeet(meet))
+                        }
+                }
+            }
+            .padding(.horizontal, Spacing.base)
+            .padding(.vertical, Spacing.medium)
+        }
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+
+    /// 검색 시트
+    private var searchSheet: some View {
+        NavigationStack {
+            VStack {
+                // 검색바 + 검색 버튼
+                HStack(spacing: Spacing.small) {
+                    // 검색바
+                    HStack {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.textSub)
+                            .padding(.leading, Spacing.medium)
+
+                        TextField("모임을 검색하세요", text: Binding(
+                            get: { store.state.searchText },
+                            set: { newValue in
+                                store.send(.updateSearchText(newValue))
+                            }
+                        ))
+                        .font(.app(.content2))
+                        .padding(.vertical, Spacing.medium)
+                        .submitLabel(.search)
+
+                        if !store.state.searchText.isEmpty {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.gray)
+                                .buttonWrapper {
+                                    store.send(.clearSearch)
+                                }
+                                .padding(.trailing, Spacing.small)
+                        }
+                    }
+                    .background(.wmGray)
+                    .cornerRadius(Spacing.radiusMedium)
+
+                    // 검색 버튼
+                    Text("검색")
+                        .buttonWrapper {
+                            store.send(.searchMeets(query: store.state.searchText))
+                        }
+                        .font(.app(.content1))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, Spacing.base)
+                        .padding(.vertical, Spacing.medium)
+                        .background(.wmMain)
+                        .cornerRadius(Spacing.radiusMedium)
+                }
+                .padding(.horizontal, Spacing.base)
+                .padding(.top, Spacing.base)
+
+                // 검색 결과
+                if store.state.isLoading {
+                    LoadingView(message: "검색 중...")
+                } else if store.state.isSearchEmpty {
+                    EmptyStateView(
+                        icon: "magnifyingglass",
+                        title: "검색 결과가 없습니다",
+                        message: "다른 키워드로 검색해보세요"
+                    )
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: Spacing.base) {
+                            ForEach(store.state.filteredMeets) { meet in
+                                MeetListItemView(meet: meet)
+                                    .buttonWrapper {
+                                        store.send(.selectMeetFromSearch(meet))
+                                    }
+                            }
+                        }
+                        .padding(.horizontal, Spacing.base)
+                        .padding(.top, Spacing.base)
+                    }
+                }
+            }
+            .navigationTitle("모임 검색")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("닫기") {
+                        store.send(.closeSearch)
+                    }
+                    .font(.app(.content1))
+                    .foregroundColor(.textMain)
+                }
+            }
+            .background(.wmBg)
+            .alert("알림", isPresented: Binding(
+                get: { store.state.showSearchAlert },
+                set: { newValue in
+                    if !newValue {
+                        store.send(.dismissSearchAlert)
+                    }
+                }
+            )) {
+                Button("확인", role: .cancel) {
+                    store.send(.dismissSearchAlert)
+                }
+            } message: {
+                Text(store.state.searchAlertMessage)
+            }
         }
     }
 }
 
+// MARK: - Preview
+
 #Preview {
-    MeetMapView()
+    NavigationStack {
+        MeetMapView()
+    }
 }

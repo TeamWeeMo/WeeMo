@@ -34,9 +34,8 @@ struct ProfileState {
 
     // 프로필 정보 (추후 확장 가능)
     var nickname: String = "닉네임"
-    var following: Int = 23
-    var follower: Int = 45
-    var manner: Double = 4.8
+    var following: Int = 0
+    var follower: Int = 0
 
     // 다른 사람 프로필 조회 (피드 화면 등에서 사용)
     var otherUserProfile: ProfileDTO? = nil

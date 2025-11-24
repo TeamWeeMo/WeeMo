@@ -15,13 +15,22 @@ final class ProfileStore: ObservableObject {
 
     private let postService: PostServicing
     private let paymentService: PaymentServicing
+    private let targetUserId: String?  // nil이면 내 프로필, 값이 있으면 해당 유저 프로필
 
     init(
+        userId: String? = nil,
         postService: PostServicing = PostService(),
         paymentService: PaymentServicing = PaymentService()
     ) {
+        self.targetUserId = userId
         self.postService = postService
         self.paymentService = paymentService
+    }
+
+    // 내 프로필인지 확인
+    private var isMyProfile: Bool {
+        guard let targetUserId = targetUserId else { return true }
+        return targetUserId == TokenManager.shared.userId
     }
 
     func send(_ intent: ProfileIntent) {
@@ -57,9 +66,16 @@ final class ProfileStore: ObservableObject {
 
     private func loadInitialData() {
         print("[ProfileStore] loadInitialData 호출됨")
-        print("[ProfileStore] userId: \(TokenManager.shared.userId ?? "nil")")
-        // 초기 데이터 로드 (프로필, 작성한 모임, 작성한 피드)
-        loadMyProfile()
+        print("[ProfileStore] targetUserId: \(targetUserId ?? "nil (내 프로필)")")
+
+        // 병렬로 모든 데이터 로드
+        if isMyProfile {
+            loadMyProfile()
+        } else if let userId = targetUserId {
+            loadUserProfile(userId: userId)
+        }
+
+        // 작성한 모임, 피드는 병렬로 로드
         loadUserMeetings()
         loadUserFeeds()
     }
@@ -131,7 +147,10 @@ final class ProfileStore: ObservableObject {
 
     private func loadUserMeetings() {
         print("[ProfileStore] loadUserMeetings 호출됨")
-        guard let userId = TokenManager.shared.userId else {
+
+        // targetUserId가 있으면 그 값 사용, 없으면 내 userId 사용
+        let userId = targetUserId ?? TokenManager.shared.userId
+        guard let userId = userId else {
             print("[ProfileStore] userId가 없습니다!")
             state.errorMessage = "사용자 정보를 찾을 수 없습니다"
             return
@@ -172,7 +191,10 @@ final class ProfileStore: ObservableObject {
 
     private func loadUserFeeds() {
         print("[ProfileStore] loadUserFeeds 호출됨")
-        guard let userId = TokenManager.shared.userId else {
+
+        // targetUserId가 있으면 그 값 사용, 없으면 내 userId 사용
+        let userId = targetUserId ?? TokenManager.shared.userId
+        guard let userId = userId else {
             print("[ProfileStore] userId가 없습니다!")
             state.errorMessage = "사용자 정보를 찾을 수 없습니다"
             return

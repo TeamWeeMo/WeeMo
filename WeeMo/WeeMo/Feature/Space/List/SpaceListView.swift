@@ -17,8 +17,7 @@ struct SpaceListView: View {
     @State private var isShowingCreateView = false
 
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
                 ScrollView(.vertical, showsIndicators: false) {
                     VStack(spacing: Spacing.small) {
                         // 검색바
@@ -74,10 +73,7 @@ struct SpaceListView: View {
                 }
             }
             .background(.background)
-            .navigationBarHidden(true)
-            .navigationDestination(for: Space.self) { space in
-                SpaceDetailView(space: space)
-            }
+            .navigationBarTitleDisplayMode(.inline)
             .alert("오류", isPresented: Binding(
                 get: { store.state.errorMessage != nil },
                 set: { if !$0 { store.send(.refresh) } }
@@ -103,7 +99,6 @@ struct SpaceListView: View {
                     store.send(.refresh)
                 }
             }
-        }
     }
 }
 

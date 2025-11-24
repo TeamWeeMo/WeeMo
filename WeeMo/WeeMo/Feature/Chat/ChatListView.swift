@@ -14,34 +14,117 @@ import Kingfisher
 struct ChatListView: View {
     // MARK: - Properties
 
-    @State private var chatRooms: [ChatRoom] = MockChatData.chatRooms
-    @State private var selectedRoom: ChatRoom?
+    @StateObject private var store = ChatListStore()
+    @State private var navigationPath = NavigationPath()
 
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(chatRooms) { room in
-                        ChatRoomRow(room: room)
-                            .buttonWrapper {
-                                selectedRoom = room
-                            }
+        ZStack {
+                // 전체 배경색
+                Color.wmBg
+                    .ignoresSafeArea(.all)
 
-                        // 구분선
-                        if room.id != chatRooms.last?.id {
-                            Divider()
-                                .padding(.leading, 68)
-                        }
+                VStack {
+                    if store.state.isLoading {
+                        loadingView
+                    } else if let errorMessage = store.state.errorMessage {
+                        errorView(errorMessage)
+                    } else if store.state.isEmpty {
+                        emptyView
+                    } else {
+                        chatRoomListView
                     }
                 }
             }
-            .background(.wmBg)
             .navigationTitle("채팅")
             .navigationBarTitleDisplayMode(.large)
-            .navigationDestination(item: $selectedRoom) { room in
+            .navigationDestination(for: ChatRoom.self) { room in
                 ChatDetailView(room: room)
+            }
+            .onAppear {
+                if store.state.chatRooms.isEmpty {
+                    store.handle(.loadChatRooms)
+                }
+            }
+            .onDisappear {
+                print("🔌 채팅 목록에서 나감 - WebSocket 연결 유지")
+                // Socket 연결은 유지 - 실시간 업데이트를 위해
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
+                ChatSocketIOManager.shared.closeWebSocket()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                print("📱 앱이 백그라운드로 이동 - WebSocket 연결 유지")
+            }
+    }
+
+    // MARK: - Subviews
+
+    private var loadingView: some View {
+        VStack {
+            ProgressView("채팅방을 불러오는 중...")
+                .padding()
+            Spacer()
+        }
+    }
+
+    private func errorView(_ message: String) -> some View {
+        VStack(spacing: 16) {
+            Text("오류가 발생했습니다")
+                .font(.headline)
+            Text(message)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            Button("다시 시도") {
+                store.handle(.retryLoadChatRooms)
+            }
+            .buttonStyle(.bordered)
+            Spacer()
+        }
+        .padding()
+    }
+
+    private var emptyView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            Image(systemName: "message")
+                .font(.system(size: 48))
+                .foregroundColor(.gray)
+            Text("채팅방이 없습니다")
+                .font(.headline)
+                .foregroundColor(.gray)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+
+    private var chatRoomListView: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(store.state.filteredChatRooms) { room in
+                    ChatRoomRow(room: room)
+                        .buttonWrapper {
+                            navigationPath.append(room)
+                        }
+
+                    // 구분선
+                    if room.id != store.state.filteredChatRooms.last?.id {
+                        Divider()
+                            .padding(.leading, 68)
+                    }
+                }
+            }
+        }
+        .refreshable {
+            store.handle(.refreshChatRooms)
+            // 새로고침이 완료될 때까지 기다리기
+            while store.state.isRefreshing {
+                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1초
             }
         }
     }

@@ -24,7 +24,9 @@ extension PostDTO {
             price: "\(price ?? 0)원",
             participants: value4 ?? "0명",
             imageName: files.first ?? "",
-            daysLeft: value5 ?? ""
+            daysLeft: value5 ?? "",
+            latitude: geolocation.latitude,
+            longitude: geolocation.longitude
         )
     }
 
