@@ -13,11 +13,11 @@ struct SpaceDescriptionSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.small) {
             Text("공간 소개")
-                .font(.app(.headline3))
+                .font(.app(.subHeadline2))
                 .foregroundColor(Color("textMain"))
 
             Text(filteredDescription)
-                .font(.app(.content2))
+                .font(.app(.subContent2))
                 .foregroundColor(Color("textSub"))
                 .lineSpacing(4)
         }

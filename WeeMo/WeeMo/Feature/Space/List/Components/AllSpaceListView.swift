@@ -10,73 +10,205 @@ import Kingfisher
 
 struct SpaceListCardView: View {
     let space: Space
+    @State private var currentImageIndex: Int = 0
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.xSmall) {
-            // 이미지
-            if let imageURLString = space.imageURLs.first,
-               let imageURL = URL(string: FileRouter.fileURL(from: imageURLString)) {
-                KFImage(imageURL)
-                    .withAuthHeaders()
-                    .placeholder {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
-                            .overlay(
-                                ProgressView()
-                            )
-                    }
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(height: 200)
-                    .clipped()
-                    .cornerRadius(Spacing.radiusMedium)
-            } else {
+        VStack(alignment: .leading, spacing: 0) {
+            // 이미지 섹션 (카드 밖으로)
+            if space.imageURLs.isEmpty {
+                // 이미지가 없는 경우
                 Rectangle()
                     .fill(Color.gray.opacity(0.3))
-                    .frame(height: 200)
+                    .frame(height: 160)
                     .overlay(
                         Image(systemName: "photo")
                             .font(.system(size: 60))
                             .foregroundColor(.gray)
                     )
-                    .cornerRadius(Spacing.radiusMedium)
+                    .cornerRadius(Spacing.radiusSmall)
+                    .padding(.horizontal, Spacing.base)
+                    .padding(.bottom, Spacing.small)
+            } else if space.imageURLs.count == 1 {
+                // 이미지가 1개인 경우
+                if let imageURL = URL(string: FileRouter.fileURL(from: space.imageURLs[0])) {
+                    KFImage(imageURL)
+                        .withAuthHeaders()
+                        .placeholder {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                                .overlay(ProgressView())
+                        }
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(height: 160)
+                        .clipped()
+                        .cornerRadius(Spacing.radiusSmall)
+                        .padding(.horizontal, Spacing.base)
+                        .padding(.bottom, Spacing.small)
+                }
+            } else if space.imageURLs.count == 2 {
+                // 이미지가 2개인 경우 (2개만 표시)
+                GeometryReader { geometry in
+                    let pageWidth = geometry.size.width * 0.7
+                    let pageSpacing: CGFloat = Spacing.base
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: pageSpacing) {
+                            ForEach(0..<2, id: \.self) { index in
+                                if let imageURL = URL(string: FileRouter.fileURL(from: space.imageURLs[index])) {
+                                    KFImage(imageURL)
+                                        .withAuthHeaders()
+                                        .placeholder {
+                                            Rectangle()
+                                                .fill(Color.gray.opacity(0.3))
+                                                .overlay(ProgressView())
+                                        }
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: pageWidth, height: 160)
+                                        .clipped()
+                                        .cornerRadius(Spacing.radiusSmall)
+                                }
+                            }
+                        }
+                        .padding(.leading, Spacing.base)
+                        .padding(.trailing, Spacing.base)
+                    }
+                }
+                .frame(height: 160)
+                .padding(.bottom, Spacing.small)
+            } else {
+                // 이미지가 3개 이상인 경우
+                GeometryReader { geometry in
+                    let pageWidth = geometry.size.width * 0.7
+                    let pageSpacing: CGFloat = Spacing.base
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: pageSpacing) {
+                            // 첫 3개 이미지는 레이아웃뷰로 표시
+                            imageLayoutView(imageURLs: Array(space.imageURLs.prefix(3)))
+                                .frame(width: pageWidth)
+
+                            // 4번째 이미지부터는 한 개씩 표시
+                            if space.imageURLs.count > 3 {
+                                ForEach(3..<space.imageURLs.count, id: \.self) { index in
+                                    if let imageURL = URL(string: FileRouter.fileURL(from: space.imageURLs[index])) {
+                                        KFImage(imageURL)
+                                            .withAuthHeaders()
+                                            .placeholder {
+                                                Rectangle()
+                                                    .fill(Color.gray.opacity(0.3))
+                                                    .overlay(ProgressView())
+                                            }
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: pageWidth, height: 160)
+                                            .clipped()
+                                            .cornerRadius(Spacing.radiusSmall)
+                                    }
+                                }
+                            }
+                        }
+//                        .padding(Spacing.base)
+                        .padding(.leading, Spacing.base)
+                        .padding(.trailing, Spacing.base)
+                    }
+                }
+                .frame(height: 160)
+                .padding(.bottom, Spacing.small)
             }
 
-            // 제목
-            Text(space.title)
-                .font(.app(.subHeadline2))
-                .foregroundColor(Color("textMain"))
-                .lineLimit(1)
+            // 공간 정보 카드
+            VStack(alignment: .leading, spacing: Spacing.small) {
+                // 제목
+                Text(space.title)
+                    .font(.app(.subHeadline2))
+                    .foregroundColor(Color("textMain"))
+                    .lineLimit(1)
 
-            // 주소
-            Text(space.address)
-                .font(.app(.content4))
-                .foregroundColor(Color("textSub"))
-                .lineLimit(1)
+                // 주소
+                Text(space.address)
+                    .font(.app(.content4))
+                    .foregroundColor(Color("textSub"))
+                    .lineLimit(1)
 
-            // 별점과 가격
-            HStack {
-                HStack(spacing: Spacing.xSmall) {
-                    Image(systemName: "star.fill")
-                        .font(.system(size: AppFontSize.s12.rawValue))
-                        .foregroundColor(.yellow)
+                // 별점과 가격
+                HStack {
+                    HStack(spacing: Spacing.xSmall) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: AppFontSize.s12.rawValue))
+                            .foregroundColor(.yellow)
 
-                    Text(space.formattedRating)
-                        .font(.app(.subContent1))
-                        .foregroundColor(Color("textMain"))
+                        Text(space.formattedRating)
+                            .font(.app(.subContent1))
+                            .foregroundColor(Color("textMain"))
+                    }
+
+                    Spacer()
+
+                    Text(space.formattedPrice)
+                        .font(.app(.subHeadline2))
+                        .foregroundColor(Color("wmMain"))
+                }
+            }
+            .padding(Spacing.medium)
+            .background(Color.white)
+            .cornerRadius(Spacing.radiusSmall)
+            .shadow(color: .black.opacity(0.1), radius: 8, x: 0, y: 4)
+            .padding(.horizontal, Spacing.base)
+        }
+    }
+
+    // MARK: - Helper Views
+
+    /// 첫 3개 이미지 레이아웃 (좌측 큰 이미지 + 우측 작은 이미지 2개)
+    @ViewBuilder
+    private func imageLayoutView(imageURLs: [String]) -> some View {
+        GeometryReader { geometry in
+            let imageSpacing: CGFloat = 2 // 좌우 및 상하 이미지 간 간격
+            let rightImageWidth: CGFloat = 120 // 우측 이미지 섹션 고정 너비
+            let leftImageWidth = geometry.size.width - rightImageWidth - imageSpacing
+
+            HStack(spacing: imageSpacing) {
+                // 좌측 큰 이미지
+                if let imageURL = URL(string: FileRouter.fileURL(from: imageURLs[0])) {
+                    KFImage(imageURL)
+                        .withAuthHeaders()
+                        .placeholder {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                                .overlay(ProgressView())
+                        }
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: leftImageWidth, height: 160)
+                        .clipped()
+//                        .cornerRadius(Spacing.radiusSmall) // 왼쪽 위아래
                 }
 
-                Spacer()
-
-                Text(space.formattedPrice)
-                    .font(.app(.subHeadline2))
-                    .foregroundColor(Color("wmMain"))
+                // 우측 작은 이미지 2개 (세로 배치)
+                VStack(spacing: imageSpacing) {
+                    ForEach(1..<min(3, imageURLs.count), id: \.self) { index in
+                        if let imageURL = URL(string: FileRouter.fileURL(from: imageURLs[index])) {
+                            KFImage(imageURL)
+                                .withAuthHeaders()
+                                .placeholder {
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .overlay(ProgressView())
+                                }
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: rightImageWidth, height: (160 - imageSpacing) / 2)
+                                .clipped()
+//                                .cornerRadius(Spacing.radiusSmall)
+                        }
+                    }
+                }
             }
         }
-        .padding(Spacing.medium)
-        .background(Color.white)
-        .cornerRadius(Spacing.radiusMedium)
-        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+        .cornerRadius(Spacing.radiusSmall)
+        .frame(height: 160)
     }
 }
 
@@ -84,20 +216,12 @@ struct AllSpaceListView: View {
     let spaces: [Space]
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Spacing.medium) {
-            Text("모든 공간")
-                .font(.app(.headline3))
-                .foregroundColor(Color("textMain"))
-                .padding(.horizontal, Spacing.base)
-
-            LazyVStack(spacing: Spacing.base) {
-                ForEach(spaces) { space in
-                    NavigationLink(value: space) {
-                        SpaceListCardView(space: space)
-                            .padding(.horizontal, Spacing.base)
-                    }
-                    .buttonStyle(PlainButtonStyle())
+        LazyVStack(spacing: Spacing.base) {
+            ForEach(spaces) { space in
+                NavigationLink(value: space) {
+                    SpaceListCardView(space: space)
                 }
+                .buttonStyle(PlainButtonStyle())
             }
         }
     }

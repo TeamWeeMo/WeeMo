@@ -48,76 +48,10 @@ final class MeetEditViewStroe: ObservableObject {
 
         Task {
             do {
-                print("🔄 Loading all posts to check available categories")
-
-                // 토큰 확인
-                if let token = UserDefaults.standard.string(forKey: "accessToken") {
-                    print("🔑 Access token exists: \(String(token.prefix(20)))...")
-                } else {
-                    print("❌ No access token found")
-                }
-
-                // 요청 정보 로깅
-                let router = PostRouter.fetchPosts(next: nil, limit: nil, category: .space)
-                do {
-                    let urlRequest = try router.asURLRequest()
-                    print("📡 Request URL: \(urlRequest.url?.absoluteString ?? "nil")")
-                    print("📡 Request Method: \(urlRequest.httpMethod ?? "nil")")
-                    print("📡 Request Headers:")
-                    urlRequest.allHTTPHeaderFields?.forEach { key, value in
-                        print("   \(key): \(value)")
-                    }
-                } catch {
-                    print("❌ Failed to create URL request: \(error)")
-                }
-
-                // 임시로 Data로 먼저 받아서 응답 확인
-                let urlRequest = try router.asURLRequest()
-                let (data, urlResponse) = try await URLSession.shared.data(for: urlRequest)
-
-                print("📋 Raw response data:")
-                if let responseString = String(data: data, encoding: .utf8) {
-                    print(responseString)
-                } else {
-                    print("Unable to convert response to string")
-                }
-
-                // JSON 디코딩 시도
-                let response = try JSONDecoder().decode(PostListDTO.self, from: data)
-
-                print("✅ API Response received: \(response.data.count) posts")
-                print("📋 Categories in response: \(response.data.map { $0.category })")
-
-                let spaces = response.data.compactMap { (postDTO: PostDTO) -> Space? in
-                    print("🔍 Processing post: \(postDTO.title), category: \(postDTO.category)")
-
-                    // space 카테고리만 필터링
-                    guard postDTO.category == "space" else {
-                        print("❌ Filtered out: \(postDTO.title) (category: \(postDTO.category))")
-                        return nil
-                    }
-
-                    print("✅ Converting to Space: \(postDTO.title)")
-                    // PostDTO를 Space로 변환
-                    return Space(
-                        id: postDTO.postId,
-                        title: postDTO.title,
-                        address: postDTO.content,
-                        imageURLs: postDTO.files,
-                        rating: Double(postDTO.value1 ?? "4") ?? 4.5, // value1을 rating으로 사용
-                        pricePerHour: postDTO.price ?? 1234,
-                        category: .cafe, // 기본값, 필요시 postDTO의 다른 필드로 매핑
-                        isPopular: false,
-                        amenities: [], // 필요시 postDTO의 다른 필드로 매핑
-                        hasParking: false, // 필요시 postDTO의 다른 필드로 매핑
-                        description: postDTO.content,
-                        latitude: postDTO.geolocation.latitude,
-                        longitude: postDTO.geolocation.longitude,
-                        hashTags: []
-                    )
-                }
-
-                print("🏠 Final spaces count: \(spaces.count)")
+              
+                let reponse = try await networkService.request(PostRouter.fetchPosts(next: nil, limit: nil, category: .space), responseType: PostListDTO.self)
+               
+                let spaces = reponse.data.map { $0.toSpace() }
 
                 await MainActor.run {
                     state.spaces = spaces

@@ -29,7 +29,22 @@ struct SpaceDetailState {
     // 예약 정보 표시 여부
     var showReservationInfo: Bool = false
 
+    // 좋아요(예약) 상태
+    var isLiked: Bool = false
+    var isLikeLoading: Bool = false
+
+    // 예약된(블락된) 시간 - 날짜별로 관리
+    var blockedHoursByDate: [Date: Set<Int>] = [:]
+
     // MARK: - Computed Properties
+
+    /// 현재 선택된 날짜의 블락된 시간
+    var currentBlockedHours: Set<Int> {
+        guard let date = selectedDate else { return [] }
+        let calendar = Calendar.current
+        let dateOnly = calendar.startOfDay(for: date)
+        return blockedHoursByDate[dateOnly] ?? []
+    }
 
     /// 선택된 시간 (시간 단위)
     var selectedHours: Int {
