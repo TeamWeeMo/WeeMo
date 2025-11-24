@@ -189,7 +189,7 @@ struct MeetMapView: View {
                     ScrollView {
                         LazyVStack(spacing: Spacing.base) {
                             ForEach(store.state.filteredMeets) { meet in
-                                MeetCardView(meet: meet)
+                                MeetListItemView(meet: meet)
                                     .buttonWrapper {
                                         store.send(.selectMeetFromSearch(meet))
                                     }

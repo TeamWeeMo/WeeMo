@@ -254,7 +254,9 @@ final class MeetListViewStore: ObservableObject {
                         price: formatPrice(postDTO.value3),
                         participants: formatParticipants(postDTO.value1, postDTO.buyers.count),
                         imageName: postDTO.files.first ?? "",
-                        daysLeft: calculateDaysLeft(postDTO.value5 ?? postDTO.createdAt)
+                        daysLeft: calculateDaysLeft(postDTO.value5 ?? postDTO.createdAt),
+                        latitude: postDTO.geolocation.latitude,
+                        longitude: postDTO.geolocation.longitude
                     )
                 }
 
