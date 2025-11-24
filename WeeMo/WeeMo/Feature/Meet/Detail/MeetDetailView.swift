@@ -11,6 +11,9 @@ import Kingfisher
 struct MeetDetailView: View {
     let postId: String
     @StateObject private var store = MeetDetailStore()
+    @Environment(\.dismiss) private var dismiss
+    @State private var showingChatAlert = false
+    @State private var chatErrorMessage = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -41,9 +44,59 @@ struct MeetDetailView: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .navigationTitle("모임 상세")
+        .navigationBarBackButtonHidden(false)
+        .toolbar {
+            if let meetDetail = store.state.meetDetail,
+               let currentUserId = TokenManager.shared.userId,
+               currentUserId == meetDetail.creator.userId {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink(destination: MeetEditView(editingPostId: meetDetail.postId)) {
+                        Text("수정")
+                            .font(.app(.content2))
+                            .foregroundColor(Color.wmMain)
+                    }
+                }
+            }
+        }
         .background(Color("wmBg"))
         .onAppear {
             store.handle(.loadMeetDetail(postId: postId))
+        }
+        .alert("채팅방 생성", isPresented: $showingChatAlert) {
+            Button("확인") { }
+        } message: {
+            Text(chatErrorMessage.isEmpty ? "채팅방이 생성되었습니다!" : chatErrorMessage)
+        }
+    }
+
+    // MARK: - Private Functions
+
+    /// 채팅방 생성 또는 이동
+    private func createChatRoom(with opponentUserId: String) {
+        // 임시: ChatService가 없는 브랜치에서 동작하도록 수정
+        Task {
+            do {
+//                let response = try await ChatService.shared.createOrFetchRoom(opponentUserId:
+//                          - opponentUserId)
+                let networkService = NetworkService()
+                let response = try await networkService.request(
+                    ChatRouter.createOrFetchRoom(opponentUserId: opponentUserId),
+                    responseType: ChatRoomResponseDTO.self
+                )
+
+                await MainActor.run {
+                    chatErrorMessage = ""
+                    showingChatAlert = true
+
+                    // TODO: 채팅 화면으로 이동하는 로직 구현
+                    print("채팅방 생성 성공. 상대방 ID: \(response.opponentId)")
+                }
+            } catch {
+                await MainActor.run {
+                    chatErrorMessage = "채팅방 생성에 실패했습니다: \(error.localizedDescription)"
+                    showingChatAlert = true
+                }
+            }
         }
     }
 
@@ -52,85 +105,59 @@ struct MeetDetailView: View {
         ScrollView {
             VStack(spacing: 0) {
                 VStack(alignment: .leading, spacing: 0) {
-                    // 제목과 주최자 정보
-                    VStack(alignment: .leading, spacing: 16) {
-                        HStack {
-                            Text(meetDetail.title)
-                                .font(.app(.headline2))
-                                .foregroundColor(Color("textMain"))
+                    // 이미지 갤러리
+                    MeetImageGallery(imageNames: meetDetail.imageNames)
 
-                            Spacer()
+                    // 제목과 D-day를 이미지 아래에 배치
+                    HStack {
+                        Text(meetDetail.title)
+                            .font(.app(.headline2))
+                            .fontWeight(.bold)
+                            .foregroundColor(Color("textMain"))
+                            .lineLimit(2)
 
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.wmMain)
-                                    .frame(width: 40, height: 24)
-                                Text(meetDetail.daysLeft)
-                                    .font(.app(.subContent1))
-                                    .foregroundColor(.white)
-                            }
-                        }
-                        .padding(.top, 20)
+                        Spacer()
 
-                        // 이미지를 제목 아래로 이동
                         ZStack {
-                            if !meetDetail.imageName.isEmpty {
-                                let fullImageURL = meetDetail.imageName.hasPrefix("http") ? meetDetail.imageName : FileRouter.fileURL(from: meetDetail.imageName)
-                                if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-                                   let url = URL(string: encodedURL) {
-                                    KFImage(url)
-                                        .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 400, height: 400)))
-                                        .requestModifier(AnyModifier { request in
-                                            var newRequest = request
-                                            if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
-                                                newRequest.setValue(sesacKey, forHTTPHeaderField: "SeSACKey")
-                                            }
-                                            newRequest.setValue(NetworkConstants.productId, forHTTPHeaderField: "ProductId")
-                                            if let token = UserDefaults.standard.string(forKey: "accessToken") {
-                                                newRequest.setValue(token, forHTTPHeaderField: "Authorization")
-                                            }
-                                            return newRequest
-                                        })
-                                        .placeholder {
-                                            RoundedRectangle(cornerRadius: 8)
-                                                .fill(Color.gray.opacity(0.3))
-                                                .frame(height: 150)
-                                                .overlay(
-                                                    Text("이미지 로딩중")
-                                                        .font(.caption)
-                                                        .foregroundColor(.gray)
-                                                )
-                                        }
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(height: 150)
-                                        .cornerRadius(8)
-                                } else {
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.gray.opacity(0.3))
-                                        .frame(height: 150)
-                                        .overlay(
-                                            Text("이미지 없음")
-                                                .font(.caption)
-                                                .foregroundColor(.gray)
-                                        )
-                                }
-                            } else {
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.gray.opacity(0.3))
-                                    .frame(height: 150)
-                                    .overlay(
-                                        Text("이미지 없음")
-                                            .font(.caption)
-                                            .foregroundColor(.gray)
-                                    )
-                            }
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.wmMain)
+                                .frame(width: 50, height: 28)
+                            Text(meetDetail.daysLeft)
+                                .font(.app(.subContent1))
+                                .foregroundColor(.white)
                         }
-                        .frame(height: 150)
-                        HStack {
-                            if let profileImage = meetDetail.creator.profileImage, !profileImage.isEmpty {
-                                KFImage(URL(string: profileImage))
-                                    .placeholder {
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+
+                    // 주최자 정보
+                    VStack(alignment: .leading, spacing: 16) {
+                        Button(action: {
+                            // TODO: 주최자 프로필 페이지로 이동
+                            print("주최자 프로필 클릭: \(meetDetail.creator.nickname)")
+                        }) {
+                            HStack {
+                                if let profileImage = meetDetail.creator.profileImage, !profileImage.isEmpty {
+                                    let fullImageURL = profileImage.hasPrefix("http") ? profileImage : FileRouter.fileURL(from: profileImage)
+                                    if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                                       let url = URL(string: encodedURL) {
+                                        KFImage(url)
+                                            .withAuthHeaders()
+                                            .placeholder {
+                                                Circle()
+                                                    .fill(Color.gray.opacity(0.3))
+                                                    .frame(width: 40, height: 40)
+                                                    .overlay(
+                                                        Text(String(meetDetail.creator.nickname.prefix(1)))
+                                                            .font(.app(.content2))
+                                                            .fontWeight(.medium)
+                                                    )
+                                            }
+                                            .resizable()
+                                            .aspectRatio(contentMode: .fill)
+                                            .frame(width: 40, height: 40)
+                                            .clipShape(Circle())
+                                    } else {
                                         Circle()
                                             .fill(Color.gray.opacity(0.3))
                                             .frame(width: 40, height: 40)
@@ -140,33 +167,51 @@ struct MeetDetailView: View {
                                                     .fontWeight(.medium)
                                             )
                                     }
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(width: 40, height: 40)
-                                    .clipShape(Circle())
-                            } else {
-                                Circle()
-                                    .fill(Color.gray.opacity(0.3))
-                                    .frame(width: 40, height: 40)
-                                    .overlay(
-                                        Text(String(meetDetail.creator.nickname.prefix(1)))
-                                            .font(.app(.content2))
-                                            .fontWeight(.medium)
-                                    )
-                            }
+                                } else {
+                                    Circle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .frame(width: 40, height: 40)
+                                        .overlay(
+                                            Text(String(meetDetail.creator.nickname.prefix(1)))
+                                                .font(.app(.content2))
+                                                .fontWeight(.medium)
+                                        )
+                                }
 
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("주최자")
-                                    .font(.app(.subContent1))
-                                    .foregroundColor(Color("textSub"))
-                                Text(meetDetail.creator.nickname)
-                                    .font(.app(.content2))
-                                    .fontWeight(.medium)
-                                    .foregroundColor(Color("textMain"))
-                            }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("주최자")
+                                        .font(.app(.subContent1))
+                                        .foregroundColor(Color("textSub"))
+                                    Text(meetDetail.creator.nickname)
+                                        .font(.app(.content2))
+                                        .fontWeight(.medium)
+                                        .foregroundColor(Color("textMain"))
+                                }
 
-                            Spacer()
+                                Spacer()
+
+                                // 채팅하기 버튼 (본인이 아닌 경우에만 표시)
+                                if let currentUserId = TokenManager.shared.userId,
+                                   currentUserId != meetDetail.creator.userId {
+                                    Button(action: {
+                                        createChatRoom(with: meetDetail.creator.userId)
+                                    }) {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "message")
+                                                .font(.system(size: 14, weight: .medium))
+                                            Text("채팅")
+                                                .font(.app(.subContent1))
+                                        }
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.wmMain)
+                                        .cornerRadius(16)
+                                    }
+                                }
+                            }
                         }
+                        .buttonStyle(PlainButtonStyle())
                         .padding(.top, 20)
                         .padding(.bottom, 20)
                     }
@@ -271,6 +316,89 @@ struct InfoRow: View {
 
             Spacer()
         }
+    }
+}
+
+// MARK: - 모임 이미지 갤러리
+struct MeetImageGallery: View {
+    let imageNames: [String]
+    @State private var currentIndex = 0
+
+    var body: some View {
+        ZStack {
+            if !imageNames.isEmpty {
+                TabView(selection: $currentIndex) {
+                    ForEach(Array(imageNames.enumerated()), id: \.offset) { index, imageName in
+                        let fullImageURL = imageName.hasPrefix("http") ? imageName : FileRouter.fileURL(from: imageName)
+                        if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+                           let url = URL(string: encodedURL) {
+                            KFImage(url)
+                                .withAuthHeaders()
+                                .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 400, height: 400)))
+                                .placeholder {
+                                    RoundedRectangle(cornerRadius: 0)
+                                        .fill(Color.gray.opacity(0.2))
+                                        .overlay(
+                                            ProgressView()
+                                                .progressViewStyle(CircularProgressViewStyle(tint: .gray))
+                                        )
+                                }
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(height: 250)
+                                .clipped()
+                                .tag(index)
+                        } else {
+                            RoundedRectangle(cornerRadius: 0)
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(height: 250)
+                                .overlay(
+                                    Image(systemName: "photo")
+                                        .font(.system(size: 40))
+                                        .foregroundColor(.gray)
+                                )
+                                .tag(index)
+                        }
+                    }
+                }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+                .frame(height: 250)
+
+                // 이미지 인디케이터
+                if imageNames.count > 1 {
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            HStack(spacing: 8) {
+                                ForEach(0..<imageNames.count, id: \.self) { index in
+                                    Circle()
+                                        .fill(index == currentIndex ? Color.white : Color.white.opacity(0.5))
+                                        .frame(width: 8, height: 8)
+                                }
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Color.black.opacity(0.3))
+                            .cornerRadius(20)
+                            Spacer()
+                        }
+                        .padding(.bottom, 20)
+                    }
+                }
+            } else {
+                // 이미지가 없을 때
+                RoundedRectangle(cornerRadius: 0)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(height: 250)
+                    .overlay(
+                        Image(systemName: "photo")
+                            .font(.system(size: 40))
+                            .foregroundColor(.gray)
+                    )
+            }
+        }
+        .frame(height: 250)
     }
 }
 
