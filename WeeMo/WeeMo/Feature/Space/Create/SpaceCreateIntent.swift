@@ -15,6 +15,7 @@ enum SpaceCreateIntent {
     case titleChanged(String)
     case priceChanged(String)
     case addressChanged(String)
+    case addressSelected(address: String, latitude: Double, longitude: Double)
     case ratingChanged(Double)  // Slider 값 (1.0 ~ 5.0, 0.5 단위)
     case descriptionChanged(String)
 
@@ -24,6 +25,11 @@ enum SpaceCreateIntent {
     // 인기 공간 여부
     case popularToggled(Bool)
 
+    // 편의시설
+    case parkingToggled(Bool)
+    case restroomToggled(Bool)
+    case maxCapacityChanged(String)
+
     // 해시태그
     case hashTagInputChanged(String)
     case addHashTag
@@ -31,7 +37,7 @@ enum SpaceCreateIntent {
 
     // 이미지
     case imageSelected(UIImage)
-    case imageRemoved
+    case imageRemoved(at: Int)
 
     // 제출
     case submitButtonTapped

@@ -12,8 +12,8 @@ struct SpaceCreateView: View {
     @StateObject private var store = SpaceCreateStore()
     @Environment(\.dismiss) private var dismiss
 
-    // 이미지 피커
-    @State private var selectedPhotoItem: PhotosPickerItem?
+    // 이미지 피커 (다중 선택)
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,10 +21,11 @@ struct SpaceCreateView: View {
                 VStack(spacing: Spacing.base) {
                 // 이미지 선택
                 ImagePickerSection(
-                    selectedPhotoItem: $selectedPhotoItem,
-                    selectedImage: store.state.selectedImage,
-                    onImageRemove: {
-                        store.send(.imageRemoved)
+                    selectedPhotoItems: $selectedPhotoItems,
+                    selectedImages: store.state.selectedImages,
+                    maxImageCount: SpaceCreateState.maxImageCount,
+                    onImageRemove: { index in
+                        store.send(.imageRemoved(at: index))
                     }
                 )
                 .padding(.horizontal, Spacing.base)
@@ -52,14 +53,19 @@ struct SpaceCreateView: View {
                 )
                 .padding(.horizontal, Spacing.base)
 
-                // 주소 입력
-                InputFieldSection(
-                    text: Binding(
+                // 주소 검색
+                AddressSearchField(
+                    address: Binding(
                         get: { store.state.address },
                         set: { store.send(.addressChanged($0)) }
                     ),
-                    title: "주소",
-                    placeholder: "예) 서울 마포구 연남동 123-4"
+                    onAddressSelected: { address, latitude, longitude in
+                        store.send(.addressSelected(
+                            address: address,
+                            latitude: latitude,
+                            longitude: longitude
+                        ))
+                    }
                 )
                 .padding(.horizontal, Spacing.base)
 
@@ -87,6 +93,28 @@ struct SpaceCreateView: View {
                     isPopular: Binding(
                         get: { store.state.isPopular },
                         set: { store.send(.popularToggled($0)) }
+                    )
+                )
+                .padding(.horizontal, Spacing.base)
+
+                // 편의시설 (주차, 화장실)
+                FacilityToggleSection(
+                    hasParking: Binding(
+                        get: { store.state.hasParking },
+                        set: { store.send(.parkingToggled($0)) }
+                    ),
+                    hasRestroom: Binding(
+                        get: { store.state.hasRestroom },
+                        set: { store.send(.restroomToggled($0)) }
+                    )
+                )
+                .padding(.horizontal, Spacing.base)
+
+                // 최대 인원
+                MaxCapacityInputSection(
+                    maxCapacity: Binding(
+                        get: { store.state.maxCapacity },
+                        set: { store.send(.maxCapacityChanged($0)) }
                     )
                 )
                 .padding(.horizontal, Spacing.base)
@@ -165,12 +193,20 @@ struct SpaceCreateView: View {
                 }
             }
         }
-        .onChange(of: selectedPhotoItem) { oldValue, newValue in
+        .onChange(of: selectedPhotoItems) { oldValue, newValue in
             Task {
-                if let newValue = newValue,
-                   let data = try? await newValue.loadTransferable(type: Data.self),
-                   let image = UIImage(data: data) {
-                    store.send(.imageSelected(image))
+                // 새로 추가된 아이템만 처리
+                let newItems = newValue.filter { newItem in
+                    !oldValue.contains(where: { $0 == newItem })
+                }
+
+                for item in newItems {
+                    if let data = try? await item.loadTransferable(type: Data.self),
+                       let image = UIImage(data: data) {
+                        await MainActor.run {
+                            store.send(.imageSelected(image))
+                        }
+                    }
                 }
             }
         }
