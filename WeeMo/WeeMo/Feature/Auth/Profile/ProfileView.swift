@@ -19,6 +19,7 @@ struct ProfileView: View {
     @StateObject private var profileStore: ProfileStore
     @EnvironmentObject var appState: AppState
     @Namespace private var underlineNS
+    @State private var shouldNavigateToEdit = false
 
     // 내 프로필인지 확인
     private var isMyProfile: Bool {
@@ -32,8 +33,7 @@ struct ProfileView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        ScrollView {
                 VStack(spacing: 0) {
                     // 프로필 헤더 섹션 (프로필 이미지 + 닉네임 + 통계 바)
                     ZStack(alignment: .topLeading) {
@@ -46,24 +46,26 @@ struct ProfileView: View {
 
                                 VStack(alignment: .leading, spacing: 4) {
                                     if isMyProfile {
-                                        HStack {
-                                            Text("반가워요,")
-                                                .font(.app(.headline3))
+                                        Text("반가워요,")
+                                            .font(.app(.headline3))
+                                            .foregroundStyle(.textMain)
+
+                                        HStack(alignment: .center) {
+                                            Text((UserManager.shared.nickname ?? "닉네임") + "님")
+                                                .font(.app(.headline2))
                                                 .foregroundStyle(.textMain)
 
                                             Spacer()
 
                                             // 설정 버튼 (내 프로필일 때만)
-                                            NavigationLink(value: Route.edit) {
+                                            Button {
+                                                shouldNavigateToEdit = true
+                                            } label: {
                                                 Image(systemName: "gearshape")
                                                     .font(.system(size: 20))
                                                     .foregroundStyle(.textMain)
                                             }
                                         }
-
-                                        Text((UserManager.shared.nickname ?? "닉네임") + "님")
-                                            .font(.app(.headline2))
-                                            .foregroundStyle(.textMain)
                                     } else {
                                         let nickname = profileStore.state.otherUserProfile?.nick ?? "닉네임"
                                         HStack {
@@ -149,8 +151,8 @@ struct ProfileView: View {
                         // 프로필 이미지 (나중에 배치 - 앞쪽)
                         VStack {
                             let profileImageURL = isMyProfile
-                                ? UserManager.shared.profileImageURL
-                                : profileStore.state.otherUserProfile?.profileImage
+                            ? UserManager.shared.profileImageURL
+                            : profileStore.state.otherUserProfile?.profileImage
 
                             if let profileImageURL = profileImageURL,
                                let url = URL(string: FileRouter.fileURL(from: profileImageURL)) {
@@ -223,90 +225,90 @@ struct ProfileView: View {
                         switch profileStore.state.selectedTab {
                         case .posts:
                             VStack(alignment: .leading, spacing: 8) {
-                            // 작성한 모임 섹션
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("작성한 모임 (\(profileStore.state.userMeetings.count))")
-                                    .font(.app(.content2))
-                                    .foregroundStyle(.textMain)
-                                    .padding(.horizontal, 16)
+                                // 작성한 모임 섹션
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("작성한 모임 (\(profileStore.state.userMeetings.count))")
+                                        .font(.app(.content2))
+                                        .foregroundStyle(.textMain)
+                                        .padding(.horizontal, 16)
 
-                                if profileStore.state.isLoadingMeetings {
-                                    ProgressView()
-                                        .frame(height: 276)
-                                } else if profileStore.state.userMeetings.isEmpty {
-                                    Text("작성한 모임이 없습니다")
-                                        .font(.app(.subContent2))
-                                        .foregroundStyle(.textSub)
-                                        .frame(height: 276)
-                                        .frame(maxWidth: .infinity)
-                                } else {
-                                    LargeMeetingSection(items: profileStore.state.userMeetings.map { post in
-                                        let imageURL = post.files.first.map { FileRouter.fileURL(from: $0) }
-                                        print("[ProfileView] 작성한 모임 이미지 URL: \(imageURL ?? "nil")")
-                                        return (title: post.title, imageURL: imageURL)
-                                    })
+                                    if profileStore.state.isLoadingMeetings {
+                                        ProgressView()
+                                            .frame(height: 276)
+                                    } else if profileStore.state.userMeetings.isEmpty {
+                                        Text("작성한 모임이 없습니다")
+                                            .font(.app(.subContent2))
+                                            .foregroundStyle(.textSub)
+                                            .frame(height: 276)
+                                            .frame(maxWidth: .infinity)
+                                    } else {
+                                        LargeMeetingSection(items: profileStore.state.userMeetings.map { post in
+                                            let imageURL = post.files.first.map { FileRouter.fileURL(from: $0) }
+                                            print("[ProfileView] 작성한 모임 이미지 URL: \(imageURL ?? "nil")")
+                                            return (title: post.title, imageURL: imageURL)
+                                        })
+                                    }
+                                }
+
+                                // 작성한 피드 섹션
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("작성한 피드 (\(profileStore.state.userFeeds.count))")
+                                        .font(.app(.content2))
+                                        .foregroundStyle(.textMain)
+                                        .padding(.horizontal, 16)
+
+                                    if profileStore.state.isLoadingFeeds {
+                                        ProgressView()
+                                            .frame(height: 216)
+                                    } else if profileStore.state.userFeeds.isEmpty {
+                                        Text("작성한 피드가 없습니다")
+                                            .font(.app(.subContent2))
+                                            .foregroundStyle(.textSub)
+                                            .frame(height: 216)
+                                            .frame(maxWidth: .infinity)
+                                    } else {
+                                        let _ = print("[ProfileView] 피드 렌더링 - count: \(profileStore.state.userFeeds.count), titles: \(profileStore.state.userFeeds.map { $0.title })")
+                                        TwoRowHorizontalSection(items: profileStore.state.userFeeds.map { post in
+                                            let imageURL = post.files.first.map { FileRouter.fileURL(from: $0) }
+                                            print("[ProfileView] 피드 이미지 URL: \(imageURL ?? "nil"), files: \(post.files)")
+                                            return (title: post.title, imageURL: imageURL)
+                                        })
+                                    }
                                 }
                             }
-
-                            // 작성한 피드 섹션
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("작성한 피드 (\(profileStore.state.userFeeds.count))")
-                                    .font(.app(.content2))
-                                    .foregroundStyle(.textMain)
-                                    .padding(.horizontal, 16)
-
-                                if profileStore.state.isLoadingFeeds {
-                                    ProgressView()
-                                        .frame(height: 216)
-                                } else if profileStore.state.userFeeds.isEmpty {
-                                    Text("작성한 피드가 없습니다")
-                                        .font(.app(.subContent2))
-                                        .foregroundStyle(.textSub)
-                                        .frame(height: 216)
-                                        .frame(maxWidth: .infinity)
-                                } else {
-                                    let _ = print("[ProfileView] 피드 렌더링 - count: \(profileStore.state.userFeeds.count), titles: \(profileStore.state.userFeeds.map { $0.title })")
-                                    TwoRowHorizontalSection(items: profileStore.state.userFeeds.map { post in
-                                        let imageURL = post.files.first.map { FileRouter.fileURL(from: $0) }
-                                        print("[ProfileView] 피드 이미지 URL: \(imageURL ?? "nil"), files: \(post.files)")
-                                        return (title: post.title, imageURL: imageURL)
-                                    })
-                                }
+                            .padding(.top, 12)
+                        case .groups:
+                            if profileStore.state.isLoadingLikedPosts {
+                                ProgressView()
+                                    .frame(height: 400)
+                            } else if profileStore.state.likedPosts.isEmpty {
+                                Text("찜한 모임이 없습니다")
+                                    .font(.app(.subContent2))
+                                    .foregroundStyle(.textSub)
+                                    .frame(height: 400)
+                                    .frame(maxWidth: .infinity)
+                            } else {
+                                ProfileGridSection(columnCount: 3, items: profileStore.state.likedPosts.map { post in
+                                    let imageURL = post.files.first.map { FileRouter.fileURL(from: $0) }
+                                    return (title: post.title, imageURL: imageURL)
+                                })
                             }
-                        }
-                        .padding(.top, 12)
-                    case .groups:
-                        if profileStore.state.isLoadingLikedPosts {
-                            ProgressView()
-                                .frame(height: 400)
-                        } else if profileStore.state.likedPosts.isEmpty {
-                            Text("찜한 모임이 없습니다")
-                                .font(.app(.subContent2))
-                                .foregroundStyle(.textSub)
-                                .frame(height: 400)
-                                .frame(maxWidth: .infinity)
-                        } else {
-                            ProfileGridSection(columnCount: 3, items: profileStore.state.likedPosts.map { post in
-                                let imageURL = post.files.first.map { FileRouter.fileURL(from: $0) }
-                                return (title: post.title, imageURL: imageURL)
-                            })
-                        }
-                    case .likes:
-                        if profileStore.state.isLoadingPaidPosts {
-                            ProgressView()
-                                .frame(height: 400)
-                        } else if profileStore.state.paidPosts.isEmpty {
-                            Text("결제한 모임이 없습니다")
-                                .font(.app(.subContent2))
-                                .foregroundStyle(.textSub)
-                                .frame(height: 400)
-                                .frame(maxWidth: .infinity)
-                        } else {
-                            ProfileGridSection(columnCount: 3, items: profileStore.state.paidPosts.map { payment in
-                                // TODO: PaymentHistoryDTO에서 이미지 정보를 가져올 방법이 필요할 수 있음
-                                return (title: payment.productName, imageURL: nil)
-                            })
-                        }
+                        case .likes:
+                            if profileStore.state.isLoadingPaidPosts {
+                                ProgressView()
+                                    .frame(height: 400)
+                            } else if profileStore.state.paidPosts.isEmpty {
+                                Text("결제한 모임이 없습니다")
+                                    .font(.app(.subContent2))
+                                    .foregroundStyle(.textSub)
+                                    .frame(height: 400)
+                                    .frame(maxWidth: .infinity)
+                            } else {
+                                ProfileGridSection(columnCount: 3, items: profileStore.state.paidPosts.map { payment in
+                                    // TODO: PaymentHistoryDTO에서 이미지 정보를 가져올 방법이 필요할 수 있음
+                                    return (title: payment.productName, imageURL: nil)
+                                })
+                            }
                         }
                     } else {
                         // 다른 사람 프로필: 항상 게시글만 표시
@@ -394,37 +396,39 @@ struct ProfileView: View {
                 .padding(.top, 12)
             }
             .background(.wmBg)
-            .navigationDestination(for: Route.self) { route in
-                switch route {
-                case .edit: ProfileEditView(isNewProfile: false)
-                }
-            }
             .navigationTitle("")
-            .onAppear {
-                print("[ProfileView] onAppear 호출됨")
-                profileStore.send(.loadInitialData)
-            }
-        }
-        .tint(.wmMain)
-        .onChange(of: profileStore.state.selectedTab) { _, newTab in
-            // 내 프로필일 때만 탭 변경 처리
-            guard isMyProfile else { return }
+            .navigationBarTitleDisplayMode(.inline)
+            .task {
+                // task는 화면이 나타날 때 한 번만 실행됨 (onAppear보다 효율적)
+                print("[ProfileView] task 호출됨")
 
-            // 탭 변경 시 해당 탭의 데이터 로드
-            switch newTab {
-            case .posts:
-                // 이미 초기 로드에서 불러왔으므로 스킵
-                break
-            case .groups:
-                if profileStore.state.likedPosts.isEmpty && !profileStore.state.isLoadingLikedPosts {
-                    profileStore.send(.loadLikedPosts)
-                }
-            case .likes:
-                if profileStore.state.paidPosts.isEmpty && !profileStore.state.isLoadingPaidPosts {
-                    profileStore.send(.loadPaidPosts)
+                // 이미 데이터가 있으면 스킵 (빠른 화면 전환)
+                if profileStore.state.userMeetings.isEmpty && profileStore.state.userFeeds.isEmpty {
+                    profileStore.send(.loadInitialData)
                 }
             }
-        }
+            .onChange(of: profileStore.state.selectedTab) { _, newTab in
+                // 내 프로필일 때만 탭 변경 처리
+                guard isMyProfile else { return }
+
+                // 탭 변경 시 해당 탭의 데이터 로드
+                switch newTab {
+                case .posts:
+                    // 이미 초기 로드에서 불러왔으므로 스킵
+                    break
+                case .groups:
+                    if profileStore.state.likedPosts.isEmpty && !profileStore.state.isLoadingLikedPosts {
+                        profileStore.send(.loadLikedPosts)
+                    }
+                case .likes:
+                    if profileStore.state.paidPosts.isEmpty && !profileStore.state.isLoadingPaidPosts {
+                        profileStore.send(.loadPaidPosts)
+                    }
+                }
+            }
+            .navigationDestination(isPresented: $shouldNavigateToEdit) {
+                ProfileEditView(isNewProfile: false)
+            }
     }
 }
 

@@ -71,25 +71,24 @@ struct FeedEditView: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: Spacing.base) {
-                    // 이미지 선택 영역
-                    imageSelectionSection
+        ScrollView {
+            VStack(spacing: Spacing.base) {
+                // 이미지 선택 영역
+                imageSelectionSection
 
-                    // 텍스트 입력 영역
-                    textInputSection
-                }
-                .padding(.horizontal, Spacing.base)
-                .padding(.vertical, Spacing.medium)
+                // 텍스트 입력 영역
+                textInputSection
             }
-            .background(.wmBg)
-            .onTapGesture {
-                // 외부 터치 시 키보드 숨김
-                isTextEditorFocused = false
-            }
-            .navigationTitle(mode.title)
-            .navigationBarTitleDisplayMode(.inline)
+            .padding(.horizontal, Spacing.base)
+            .padding(.vertical, Spacing.medium)
+        }
+        .background(.wmBg)
+        .onTapGesture {
+            // 외부 터치 시 키보드 숨김
+            isTextEditorFocused = false
+        }
+        .navigationTitle(mode.title)
+        .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(mode.actionTitle) {
@@ -133,7 +132,6 @@ struct FeedEditView: View {
                     showSuccessAlert = true
                 }
             }
-        }
     }
 
     // MARK: - Subviews
