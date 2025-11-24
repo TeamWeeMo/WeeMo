@@ -186,6 +186,8 @@
 /* Begin XCBuildConfiguration section */
 		17C57DFA2EBDCC0D0055A18E /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReferenceAnchor = 17C57DF32EBDCC0B0055A18E /* WeeMo */;
+			baseConfigurationReferenceRelativePath = Secret/WeeMoKey.xcconfig;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
