@@ -117,7 +117,7 @@ struct FeedDetailView: View {
         )) {
             ForEach(Array(store.state.feed.imageURLs.enumerated()), id: \.offset) { index, imageURL in
                 KFImage(URL(string: imageURL))
-                    .feedDetailImageSetup()
+                    .detailImageSetup()
                     .scaledToFit()
                     .feedDetailImage()
                     .tag(index)

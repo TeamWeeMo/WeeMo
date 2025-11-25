@@ -1,176 +1,194 @@
 //
-//  MeetDetailViewModel.swift
+//  MeetDetailStore.swift
 //  WeeMo
 //
 //  Created by 차지용 on 11/16/25.
 //
 
 import Foundation
-import Combine
 
-final class MeetDetailStore: ObservableObject {
-    @Published var state = MeetDetailState()
-    private let networkService = NetworkService()
+// MARK: - Meet Detail Store
 
-    func handle(_ intent: MeetDetailIntent) {
+@Observable
+final class MeetDetailStore {
+    // MARK: - Properties
+
+    private(set) var state = MeetDetailState()
+    private let networkService: NetworkServiceProtocol
+    private var currentPostId: String?
+
+    // MARK: - Initializer
+
+    init(networkService: NetworkServiceProtocol = NetworkService()) {
+        self.networkService = networkService
+    }
+
+    // MARK: - Intent Handler
+
+    func send(_ intent: MeetDetailIntent) {
         switch intent {
-        case .loadMeetDetail(let postId):
-            loadMeetDetail(postId: postId)
-        case .retryLoadMeetDetail:
-            if let currentPostId = state.meetDetail?.postId {
-                loadMeetDetail(postId: currentPostId)
-            }
-        case .joinMeet(let postId):
-            joinMeet(postId: postId)
+        case .onAppear(let postId):
+            currentPostId = postId
+            Task { await loadMeetDetail(postId: postId) }
+
+        case .retryLoad:
+            guard let postId = currentPostId else { return }
+            Task { await loadMeetDetail(postId: postId) }
+
+        case .joinMeet:
+            guard let postId = currentPostId else { return }
+            Task { await joinMeet(postId: postId) }
+
+        case .createChatRoom(let opponentUserId):
+            Task { await createChatRoom(with: opponentUserId) }
+
+        case .navigateToEdit:
+            state.shouldNavigateToEdit = true
+
+        case .dismissError:
+            state.errorMessage = nil
+
+        case .dismissChatError:
+            state.chatErrorMessage = nil
+
+        case .clearChatNavigation:
+            state.shouldNavigateToChat = false
+            state.createdChatRoom = nil
+
+        case .navigateToSpace(let spaceId):
+            Task { await loadSpace(spaceId: spaceId) }
+
+        case .clearSpaceNavigation:
+            state.shouldNavigateToSpace = false
+            state.loadedSpace = nil
         }
     }
 
-    private func loadMeetDetail(postId: String) {
-        state.isLoading = true
-        state.errorMessage = nil
+    // MARK: - Private Methods
 
-        Task {
-            do {
-                print("🔄 Loading meet detail for postId: \(postId)")
+    private func loadMeetDetail(postId: String) async {
+        await MainActor.run {
+            state.isLoading = true
+            state.errorMessage = nil
+        }
 
-                // PostRouter.fetchPost를 사용해 단일 포스트 조회
-                let postData = try await networkService.request(
-                    PostRouter.fetchPost(postId: postId),
-                    responseType: PostDTO.self
+        do {
+            let postData = try await networkService.request(
+                PostRouter.fetchPost(postId: postId),
+                responseType: PostDTO.self
+            )
+
+            let meet = postData.toMeet()
+            let participants = postData.buyers.map { buyer in
+                User(
+                    userId: buyer.userId,
+                    nickname: buyer.nick,
+                    profileImageURL: buyer.profileImage
                 )
+            }
 
-                print("✅ Meet detail loaded: \(postData.title)")
+            // 현재 사용자가 이미 참가했는지 확인
+            let hasJoined = TokenManager.shared.userId.map { userId in
+                postData.buyers.contains { $0.userId == userId }
+            } ?? false
 
-                let meetDetail = MeetDetail(
-                    postId: postData.postId,
-                    title: postData.title,
-                    content: postData.content,
-                    creator: MeetDetail.Creator(
-                        userId: postData.creator.userId,
-                        nickname: postData.creator.nick,
-                        profileImage: postData.creator.profileImage
-                    ),
-                    date: formatDate(postData.value5 ?? postData.createdAt),
-                    location: extractLocationFromContent(postData.content),
-                    address: postData.content,
-                    price: formatPrice(postData.value3),
-                    capacity: Int(postData.value1 ?? "0") ?? 0,
-                    currentParticipants: postData.buyers.count,
-                    participants: postData.buyers.map { buyer in
-                        MeetDetail.Participant(
-                            userId: buyer.userId,
-                            nickname: buyer.nick,
-                            profileImage: buyer.profileImage
-                        )
-                    },
-                    imageNames: postData.files,
-                    daysLeft: calculateDaysLeft(postData.value5 ?? postData.createdAt),
-                    gender: postData.value2 ?? "누구나",
-                    spaceInfo: postData.value4 != nil ? MeetDetail.SpaceInfo(
-                        spaceId: postData.value4!,
-                        title: extractLocationFromContent(postData.content),
-                        address: postData.content
-                    ) : nil
-                )
+            await MainActor.run {
+                state.meet = meet
+                state.participants = participants
+                state.hasJoined = hasJoined
+                state.isLoading = false
+            }
 
-                await MainActor.run {
-                    state.meetDetail = meetDetail
-                    state.isLoading = false
-                }
-
-            } catch {
-                print("❌ Error loading meet detail: \(error)")
-                await MainActor.run {
-                    state.errorMessage = error.localizedDescription
-                    state.isLoading = false
-                }
+        } catch {
+            await MainActor.run {
+                state.errorMessage = (error as? NetworkError)?.localizedDescription ?? error.localizedDescription
+                state.isLoading = false
             }
         }
     }
 
-    private func joinMeet(postId: String) {
-        state.isJoining = true
-        state.joinErrorMessage = nil
+    private func joinMeet(postId: String) async {
+        await MainActor.run {
+            state.isJoining = true
+            state.joinErrorMessage = nil
+        }
 
-        Task {
-            do {
-                print("🔄 Joining meet: \(postId)")
+        do {
+            _ = try await networkService.request(
+                PostRouter.buyPost(postId: postId),
+                responseType: PaymentValidationDTO.self
+            )
 
-                // 모임 참가 API 호출 (결제 검증 API 사용)
-                let response = try await networkService.request(
-                    PostRouter.buyPost(postId: postId),
-                    responseType: PaymentValidationDTO.self
-                )
+            await MainActor.run {
+                state.isJoining = false
+                state.hasJoined = true
+            }
 
-                print("✅ Successfully joined meet")
+            // 참가 후 상세 정보 다시 로드
+            await loadMeetDetail(postId: postId)
 
-                await MainActor.run {
-                    state.isJoining = false
-                    state.hasJoined = true
-                    // 참가 후 다시 상세 정보 로드
-                    loadMeetDetail(postId: postId)
-                }
-
-            } catch {
-                print("❌ Error joining meet: \(error)")
-                await MainActor.run {
-                    state.joinErrorMessage = error.localizedDescription
-                    state.isJoining = false
-                }
+        } catch {
+            await MainActor.run {
+                state.joinErrorMessage = (error as? NetworkError)?.localizedDescription ?? error.localizedDescription
+                state.isJoining = false
             }
         }
     }
 
-    // MARK: - Helper Functions
-
-    private func extractLocationFromContent(_ content: String) -> String {
-        let pattern = "📍 모임 장소: (.*?)(?=\\n|$)"
-        if let regex = try? NSRegularExpression(pattern: pattern),
-           let match = regex.firstMatch(in: content, range: NSRange(content.startIndex..., in: content)),
-           let range = Range(match.range(at: 1), in: content) {
-            return String(content[range])
+    private func createChatRoom(with opponentUserId: String) async {
+        await MainActor.run {
+            state.isCreatingChat = true
+            state.chatErrorMessage = nil
         }
-        return ""
-    }
 
-    private func formatDate(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return "" }
+        do {
+            let response = try await networkService.request(
+                ChatRouter.createOrFetchRoom(opponentUserId: opponentUserId),
+                responseType: ChatRoomDTO.self
+            )
 
-        let displayFormatter = DateFormatter()
-        displayFormatter.dateFormat = "M월 d일 (E) HH:mm"
-        displayFormatter.locale = Locale(identifier: "ko_KR")
-        return displayFormatter.string(from: date)
-    }
+            let chatRoom = response.toDomain()
 
-    private func formatPrice(_ priceString: String?) -> String {
-        guard let priceString = priceString,
-              let price = Int(priceString) else { return "무료" }
+            await MainActor.run {
+                state.createdChatRoom = chatRoom
+                state.shouldNavigateToChat = true
+                state.isCreatingChat = false
+            }
 
-        if price == 0 {
-            return "무료"
-        } else {
-            return "\(price.formatted())원"
-        }
-    }
-
-    private func calculateDaysLeft(_ dateString: String) -> String {
-        let formatter = ISO8601DateFormatter()
-        guard let date = formatter.date(from: dateString) else { return "" }
-
-        let calendar = Calendar.current
-        let now = Date()
-        let components = calendar.dateComponents([.day], from: now, to: date)
-
-        if let days = components.day {
-            if days < 0 {
-                return "진행 완료"
-            } else if days == 0 {
-                return "오늘"
-            } else {
-                return "D-\(days)"
+        } catch {
+            await MainActor.run {
+                state.chatErrorMessage = "채팅방 생성에 실패했습니다: \(error.localizedDescription)"
+                state.isCreatingChat = false
             }
         }
-        return ""
+    }
+
+    // MARK: - Load Space
+
+    private func loadSpace(spaceId: String) async {
+        await MainActor.run {
+            state.isLoadingSpace = true
+        }
+
+        do {
+            let postDTO = try await networkService.request(
+                PostRouter.fetchPost(postId: spaceId),
+                responseType: PostDTO.self
+            )
+
+            let space = postDTO.toSpace()
+
+            await MainActor.run {
+                state.loadedSpace = space
+                state.shouldNavigateToSpace = true
+                state.isLoadingSpace = false
+            }
+
+        } catch {
+            await MainActor.run {
+                state.isLoadingSpace = false
+                print("[MeetDetailStore] 공간 조회 실패: \(error)")
+            }
+        }
     }
 }

@@ -8,46 +8,30 @@
 import Foundation
 
 struct MeetDetailState {
-    var meetDetail: MeetDetail? = nil
+    // MARK: - Data
+    var meet: Meet? = nil
+    var participants: [User] = []
+
+    // MARK: - Loading States
     var isLoading: Bool = false
     var errorMessage: String? = nil
+
+    // MARK: - Join States
     var isJoining: Bool = false
     var joinErrorMessage: String? = nil
     var hasJoined: Bool = false
-}
 
-struct MeetDetail: Equatable {
-    let postId: String
-    let title: String
-    let content: String
-    let creator: Creator
-    let date: String
-    let location: String
-    let address: String
-    let price: String
-    let capacity: Int
-    let currentParticipants: Int
-    let participants: [Participant]
-    let imageNames: [String]
-    let daysLeft: String
-    let gender: String
-    let spaceInfo: SpaceInfo?
+    // MARK: - Chat States
+    var isCreatingChat: Bool = false
+    var createdChatRoom: ChatRoom? = nil
+    var chatErrorMessage: String? = nil
 
-    struct Creator: Equatable {
-        let userId: String
-        let nickname: String
-        let profileImage: String?
-    }
+    // MARK: - Navigation
+    var shouldNavigateToChat: Bool = false
+    var shouldNavigateToEdit: Bool = false
 
-    struct Participant: Equatable {
-        let userId: String
-        let nickname: String
-        let profileImage: String?
-    }
-
-    struct SpaceInfo: Equatable {
-        let spaceId: String
-        let title: String
-        let address: String
-    }
+    // MARK: - Space Navigation
+    var isLoadingSpace: Bool = false
+    var loadedSpace: Space? = nil
+    var shouldNavigateToSpace: Bool = false
 }

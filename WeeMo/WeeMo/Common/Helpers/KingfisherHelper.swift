@@ -91,9 +91,9 @@ extension KFImage {
             .resizable()
     }
 
-    /// 피드 상세 이미지 설정 (인증 + 재시도)
+    /// 상세 이미지 설정 (인증 + 재시도)
     /// - Returns: 설정이 완료된 KFImage
-    func feedDetailImageSetup() -> KFImage {
+    func detailImageSetup() -> KFImage {
         self
             .withAuthHeaders()
             .placeholder {
@@ -103,7 +103,7 @@ extension KFImage {
             }
             .retry(maxCount: 3, interval: .seconds(2))
             .onFailure { error in
-                print("피드 상세 이미지 로드 실패: \(error.localizedDescription)")
+                print("상세 이미지 로드 실패: \(error.localizedDescription)")
             }
             .resizable()
     }

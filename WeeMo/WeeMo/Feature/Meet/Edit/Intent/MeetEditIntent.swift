@@ -6,19 +6,56 @@
 //
 
 import Foundation
+import UIKit
+
+// MARK: - Meet Edit Intent
 
 enum MeetEditIntent {
-    // Space Selection
+    // MARK: - Lifecycle
+
+    case onAppear
+    case loadMeetForEdit(postId: String)
+
+    // MARK: - Form Updates
+
+    case updateTitle(String)
+    case updateContent(String)
+    case updateCapacity(Int)
+    case updateGender(Gender)
+    case updateRecruitmentStartDate(Date)
+    case updateRecruitmentEndDate(Date)
+    case updateMeetingStartDate(Date)
+    case updateMeetingEndDate(Date)
+    case updateTotalHours(Int)
+
+    // MARK: - Image
+
+    case selectImages([UIImage])
+    case removeImage(at: Int)
+    case removeExistingImage(at: Int)
+
+    // MARK: - Space Selection
+
     case loadSpaces
     case selectSpace(Space)
-    case retryLoadSpaces
+    case confirmSpaceSelection
 
-    // Meet Creation
-    case createMeet(title: String, description: String, capacity: Int, price: String, gender: String, selectedSpace: Space?, startDate: Date)
-    case retryCreateMeet
+    // MARK: - Submit
 
-    // Meet Edit
-    case loadMeetForEdit(postId: String)
-    case updateMeet(postId: String, title: String, description: String, capacity: Int, price: String, gender: String, selectedSpace: Space?, startDate: Date)
+    case createMeet
+    case updateMeet(postId: String)
     case deleteMeet(postId: String)
+
+    // MARK: - Navigation
+
+    case cancel
+
+    // MARK: - Alert
+
+    case showDeleteAlert
+    case dismissDeleteAlert
+    case showErrorAlert
+    case dismissErrorAlert
+    case showSuccessAlert
+    case dismissSuccessAlert
 }

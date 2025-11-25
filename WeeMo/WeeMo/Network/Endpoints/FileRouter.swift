@@ -53,7 +53,7 @@ extension FileRouter {
     /// - Parameter filePath: 서버에서 받은 파일 경로
     /// - Returns: 풀 URL 문자열
     static func fileURL(from filePath: String) -> String {
-        var baseURL = NetworkConstants.baseURL
+        let baseURL = NetworkConstants.baseURL
         let version = NetworkConstants.apiVersion
         return "\(baseURL)\(version)\(filePath)"
     }

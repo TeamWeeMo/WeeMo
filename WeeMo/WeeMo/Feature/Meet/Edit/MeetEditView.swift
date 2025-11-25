@@ -7,224 +7,651 @@
 
 import SwiftUI
 import PhotosUI
+import Kingfisher
+
+// MARK: - Meet Edit View
 
 struct MeetEditView: View {
-    let editingPostId: String? // 수정 모드일 때 postId
-    @State private var meetTitle = ""
-    @State private var meetDescription = ""
-    @State private var selectedSpace: Space? = nil
-    @State private var meetCapacity = 1
-    @State private var meetPrice = "0"
-    @State private var selectedGender = "누구나"
-    @State private var startDate = Date()
-    @StateObject private var store = MeetEditViewStroe()
-    @Environment(\.presentationMode) var presentationMode
-    @State private var showingDeleteAlert = false
+    // MARK: - Mode Definition
 
-    // 수정 모드인지 확인하는 computed property
-    private var isEditMode: Bool {
-        return editingPostId != nil
+    enum Mode {
+        case create
+        case edit(postId: String)
+
+        var title: String {
+            switch self {
+            case .create: return "모임 만들기"
+            case .edit: return "모임 수정"
+            }
+        }
+
+        var actionTitle: String {
+            switch self {
+            case .create: return "완료"
+            case .edit: return "수정"
+            }
+        }
+
+        var isEditMode: Bool {
+            if case .edit = self { return true }
+            return false
+        }
+
+        var postId: String? {
+            if case .edit(let postId) = self { return postId }
+            return nil
+        }
     }
 
-    init(editingPostId: String? = nil) {
-        self.editingPostId = editingPostId
+    // MARK: - Properties
+
+    let mode: Mode
+    @Environment(\.dismiss) private var dismiss
+    @State private var store: MeetEditStore
+
+    // PhotosPicker 상태
+    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+
+    // 바텀시트 상태
+    @State private var showSpaceSelection: Bool = false
+
+    // 키보드 제어
+    @FocusState private var focusedField: Field?
+
+    enum Field {
+        case title, content
     }
+
+    // MARK: - Initializer
+
+    init(
+        mode: Mode,
+        networkService: NetworkServiceProtocol = NetworkService()
+    ) {
+        self.mode = mode
+        self._store = State(initialValue: MeetEditStore(networkService: networkService))
+    }
+
+    // MARK: - Body
 
     var body: some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 0) {
-                // Custom Navigation Bar with Delete Button
-                HStack {
-                    Button("취소") {
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                    .foregroundColor(.blue)
-                    .font(.app(.content1))
+        ScrollView {
+            VStack(spacing: Spacing.base) {
+                // 1. 예약한 공간 선택
+                spaceSelectionSection
 
-                    Spacer()
+                // 2. 모임 이름 작성 영역
+                titleInputSection
 
-                    // 삭제 버튼 (수정 모드에서만 표시)
-                    if isEditMode {
-                        Button("삭제") {
-                            showingDeleteAlert = true
-                        }
-                        .foregroundColor(.red)
-                        .font(.app(.content1))
-                    }
+                // 3. 모집 인원 작성 영역
+                capacitySection
 
-                    Button("완료") {
-                        if isEditMode, let postId = editingPostId {
-                            store.handle(.updateMeet(
-                                postId: postId,
-                                title: meetTitle,
-                                description: meetDescription,
-                                capacity: meetCapacity,
-                                price: meetPrice,
-                                gender: selectedGender,
-                                selectedSpace: selectedSpace,
-                                startDate: startDate
-                            ))
-                        } else {
-                            store.handle(.createMeet(
-                                title: meetTitle,
-                                description: meetDescription,
-                                capacity: meetCapacity,
-                                price: meetPrice,
-                                gender: selectedGender,
-                                selectedSpace: selectedSpace,
-                                startDate: startDate
-                            ))
-                        }
-                    }
-                    .foregroundColor(.blue)
-                    .font(.app(.content1))
-                    .fontWeight(.semibold)
+                // 4. 참가비 표시
+                pricePerPersonSection
+
+                // 5. 이미지 추가 영역
+                imagePickerSection
+
+                // 6. 모임 소개 작성 영역
+                contentInputSection
+
+                // 7. 모집 기간 선택 영역
+                recruitmentPeriodSection
+
+                // 8. 성별 제한 선택 영역
+                genderSection
+            }
+            .padding(.horizontal, Spacing.base)
+            .padding(.vertical, Spacing.medium)
+        }
+        .background(.wmBg)
+        .onTapGesture {
+            focusedField = nil
+        }
+        .navigationTitle(mode.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarRole(.editor)
+        .tint(.wmMain)
+        .toolbar {
+            ToolbarItem(placement: .confirmationAction) {
+                Button(mode.actionTitle) {
+                    submitMeet()
                 }
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
-                .background(Color("wmBg"))
-
-                Divider()
-            }
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    ReservedSpaceSection(selectedSpace: $selectedSpace)
-
-                    MeetImageSection(store: store)
-
-                    MeetTitleSection(title: $meetTitle)
-
-                    MeetDescriptionSection(description: $meetDescription)
-
-                    MeetSchedule(startDate: $startDate)
-
-                    MeetCapacitySection(capacity: $meetCapacity)
-
-                    MeetPriceSection(price: $meetPrice)
-
-                    MeetGenderSection(selectedGender: $selectedGender)
-
-                    Spacer(minLength: 50)
-                }
-                .commonPadding()
-                .padding(.top, 24)
+                .disabled(!store.state.canSubmit)
+                .foregroundStyle(store.state.canSubmit ? .wmMain : .textSub)
             }
         }
-        .background(Color("wmBg"))
-        .navigationBarHidden(true)
-        .onChange(of: store.state.isMeetCreated) { isMeetCreated in
-            if isMeetCreated {
-                presentationMode.wrappedValue.dismiss()
+        .overlay {
+            if store.state.isLoading {
+                UploadingOverlay(message: mode.isEditMode ? "수정 중..." : "모임 생성 중...")
             }
         }
-        .onChange(of: store.selectedPhotoItems) { newItems in
-            Task {
-                var newImages: [UIImage] = []
-
-                for item in newItems {
-                    if let data = try? await item.loadTransferable(type: Data.self) {
-                        if let uiImage = UIImage(data: data) {
-                            newImages.append(uiImage)
-                        }
-                    }
-                }
-
-                await MainActor.run {
-                    store.selectedImages = newImages
-                    // 새 이미지를 선택하면 기존 이미지 사용 안 함
-                    if !newImages.isEmpty && isEditMode {
-                        store.shouldKeepExistingImages = false
-                        print("📸 새 이미지 선택: 기존 이미지 교체")
-                    }
-                }
-            }
+        .sheet(isPresented: $showSpaceSelection) {
+            ReservedSpaceListView(store: store)
+                .presentationDetents([.large])
         }
-        .onAppear {
-            if let postId = editingPostId {
-                print("수정 모드: 기존 데이터 로드 중... postId: \(postId)")
-                store.handle(.loadMeetForEdit(postId: postId))
+        .alert("오류", isPresented: .init(
+            get: { store.state.showErrorAlert },
+            set: { if !$0 { store.send(.dismissErrorAlert) } }
+        )) {
+            Button("확인", role: .cancel) {
+                store.send(.dismissErrorAlert)
             }
+        } message: {
+            Text(store.state.errorMessage ?? "알 수 없는 오류가 발생했습니다.")
         }
-        .onChange(of: store.state.originalMeetData) { meetData in
-            if let meetData = meetData, isEditMode {
-                // 기존 모임 데이터로 UI 업데이트
-                meetTitle = meetData.title
-                meetDescription = extractDescriptionFromContent(meetData.content)
-                meetCapacity = meetData.capacity
-                meetPrice = extractPriceValue(meetData.price)
-                selectedGender = meetData.gender
-
-                // 날짜 파싱
-                if let parsedDate = parseStartDate(from: meetData.content) {
-                    startDate = parsedDate
-                }
-
-                // TODO: selectedSpace 설정 (spaceInfo가 있다면)
-                if let spaceInfo = meetData.spaceInfo {
-                    print("기존 공간 정보: \(spaceInfo.title)")
-                }
-
-                print("✅ UI updated with existing data: \(meetData.title)")
+        .alert("완료", isPresented: .init(
+            get: { store.state.showSuccessAlert },
+            set: { if !$0 { store.send(.dismissSuccessAlert) } }
+        )) {
+            Button("확인", role: .cancel) {
+                store.send(.dismissSuccessAlert)
+                dismiss()
             }
+        } message: {
+            Text(mode.isEditMode ? "모임이 수정되었습니다." : "모임이 생성되었습니다.")
         }
-        .onChange(of: store.state.isMeetUpdated) { isMeetUpdated in
-            if isMeetUpdated {
-                presentationMode.wrappedValue.dismiss()
+        .alert("삭제", isPresented: .init(
+            get: { store.state.showDeleteAlert },
+            set: { if !$0 { store.send(.dismissDeleteAlert) } }
+        )) {
+            Button("취소", role: .cancel) {
+                store.send(.dismissDeleteAlert)
             }
-        }
-        .onChange(of: store.state.isMeetDeleted) { isMeetDeleted in
-            if isMeetDeleted {
-                // 삭제 완료시 루트로 돌아가기 위해 NotificationCenter 사용
-                NotificationCenter.default.post(name: NSNotification.Name("NavigateToRoot"), object: nil)
-            }
-        }
-        .alert("모임 삭제", isPresented: $showingDeleteAlert) {
-            Button("취소", role: .cancel) {}
             Button("삭제", role: .destructive) {
-                if let postId = editingPostId {
-                    store.handle(.deleteMeet(postId: postId))
+                if let postId = mode.postId {
+                    store.send(.deleteMeet(postId: postId))
                 }
             }
         } message: {
-            Text("정말 모임을 삭제하겠습니까?\n삭제된 모임은 복구할 수 없습니다.")
+            Text("정말 이 모임을 삭제하시겠습니까?")
+        }
+        .onChange(of: store.state.isCreated) { _, isCreated in
+            if isCreated {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                store.send(.showSuccessAlert)
+            }
+        }
+        .onChange(of: store.state.isUpdated) { _, isUpdated in
+            if isUpdated {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                store.send(.showSuccessAlert)
+            }
+        }
+        .onChange(of: store.state.isDeleted) { _, isDeleted in
+            if isDeleted {
+                dismiss()
+            }
+        }
+        .onAppear {
+            store.send(.onAppear)
+            if case .edit(let postId) = mode {
+                store.send(.loadMeetForEdit(postId: postId))
+            }
         }
     }
 
-    // MARK: - Helper Functions
+    // MARK: - Sections
 
-    private func extractDescriptionFromContent(_ content: String) -> String {
-        // "📍 모임 장소:" 앞까지의 내용을 추출
-        let components = content.components(separatedBy: "\n\n📍")
-        return components.first ?? content
-    }
+    /// 1. 예약한 공간 선택 섹션
+    private var spaceSelectionSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.medium) {
+            Text("예약한 공간 선택")
+                .font(.app(.subHeadline1))
+                .foregroundStyle(.textMain)
 
-    private func extractPriceValue(_ priceString: String) -> String {
-        // "10,000원" -> "10000"으로 변환
-        let cleanedPrice = priceString.replacingOccurrences(of: "원", with: "")
-            .replacingOccurrences(of: ",", with: "")
-        if cleanedPrice == "무료" {
-            return "0"
+            Button {
+                showSpaceSelection = true
+            } label: {
+                if let space = store.state.selectedSpace {
+                    selectedSpaceCard(space: space)
+                } else {
+                    emptySpaceCard
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
         }
-        return cleanedPrice
     }
 
-    private func parseStartDate(from content: String) -> Date? {
-        // "⏰ 모임 시작일: 2025.11.20 (수) 14:00" 형식에서 날짜 추출
-        let pattern = "⏰ 모임 시작일: (.+)"
-        if let regex = try? NSRegularExpression(pattern: pattern),
-           let match = regex.firstMatch(in: content, range: NSRange(content.startIndex..., in: content)),
-           let range = Range(match.range(at: 1), in: content) {
-            let dateString = String(content[range])
-            return DateFormatter.displayFormatter.date(from: dateString)
+    /// 선택된 공간 카드
+    private func selectedSpaceCard(space: Space) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.small) {
+            HStack(spacing: Spacing.medium) {
+                // 공간 이미지
+                spaceImageView(space: space)
+
+                VStack(alignment: .leading, spacing: Spacing.xSmall) {
+                    Text(space.title)
+                        .font(.app(.subHeadline2))
+                        .foregroundStyle(.textMain)
+                        .lineLimit(1)
+
+                    Text(space.address)
+                        .font(.app(.content2))
+                        .foregroundStyle(.textSub)
+                        .lineLimit(1)
+
+                    Text(space.formattedPrice)
+                        .font(.app(.content2))
+                        .foregroundStyle(.wmMain)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(.textSub)
+            }
+
+            Divider()
+
+            // 추가 정보 (예약일+시간, 최대 인원, 이용시간, 총비용)
+            VStack(alignment: .leading, spacing: Spacing.xSmall) {
+                SpaceInfoRow(title: "예약 일시", value: formattedReservationDateTime())
+                SpaceInfoRow(title: "최대 인원", value: "\(space.maxPeople)명")
+                SpaceInfoRow(title: "이용 시간", value: "\(store.state.totalHours)시간")
+                SpaceInfoRow(title: "총 비용", value: "\((space.pricePerHour * store.state.totalHours).formatted())원")
+            }
         }
-        return nil
+        .padding(Spacing.medium)
+        .background(
+            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                .fill(Color.gray.opacity(0.05))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                .stroke(Color.wmMain.opacity(0.3), lineWidth: 1)
+        )
     }
 
+    /// 공간 이미지 뷰
+    @ViewBuilder
+    private func spaceImageView(space: Space) -> some View {
+        if let imageURL = space.imageURLs.first {
+            KFImage(URL(string: FileRouter.fileURL(from: imageURL)))
+                .withAuthHeaders()
+                .placeholder {
+                    imagePlaceholder
+                }
+                .resizable()
+                .scaledToFill()
+                .frame(width: 80, height: 80)
+                .clipped()
+                .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusSmall))
+        } else {
+            imagePlaceholder
+            
+        }
+    }
+    /// 이미지 플레이스홀더
+    private var imagePlaceholder: some View {
+        RoundedRectangle(cornerRadius: Spacing.radiusSmall)
+            .fill(Color.gray.opacity(0.2))
+            .frame(width: 80, height: 80)
+            .overlay {
+                Image(systemName: "building.2")
+                    .foregroundStyle(.textSub)
+            }
+    }
+
+    /// 빈 공간 카드
+    private var emptySpaceCard: some View {
+        VStack(spacing: Spacing.small) {
+            Image(systemName: "plus.circle")
+                .font(.system(size: 32))
+                .foregroundStyle(.textSub)
+
+            Text("공간을 선택해주세요")
+                .font(.app(.content2))
+                .foregroundStyle(.textSub)
+        }
+        .frame(height: 120)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                .fill(Color.gray.opacity(0.05))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    /// 2. 모임 이름 작성 섹션
+    private var titleInputSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.medium) {
+            Text("모임 이름")
+                .font(.app(.subHeadline1))
+                .foregroundStyle(.textMain)
+
+            TextField("모임 이름을 입력해주세요", text: Binding(
+                get: { store.state.title },
+                set: { store.send(.updateTitle($0)) }
+            ))
+            .font(.app(.content2))
+            .padding(Spacing.medium)
+            .background(
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .fill(Color.gray.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+            .focused($focusedField, equals: .title)
+        }
+    }
+
+    /// 3. 모집 인원 섹션
+    private var capacitySection: some View {
+        VStack(alignment: .leading, spacing: Spacing.medium) {
+            Text("모집 인원")
+                .font(.app(.subHeadline1))
+                .foregroundStyle(.textMain)
+
+            HStack {
+                Text("\(store.state.capacity)명")
+                    .font(.app(.content1))
+                    .foregroundStyle(.textMain)
+
+                Spacer()
+
+                Stepper("", value: Binding(
+                    get: { store.state.capacity },
+                    set: { store.send(.updateCapacity($0)) }
+                ), in: 1...max(1, store.state.selectedSpace?.maxPeople ?? 100))
+                .labelsHidden()
+            }
+            .padding(Spacing.medium)
+            .background(
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .fill(Color.gray.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+
+            if let space = store.state.selectedSpace {
+                Text("최대 \(space.maxPeople)명까지 모집 가능합니다")
+                    .font(.app(.subContent2))
+                    .foregroundStyle(.textSub)
+            }
+        }
+    }
+
+    /// 4. 참가비 표시 섹션
+    private var pricePerPersonSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.medium) {
+            Text("1인당 참가비")
+                .font(.app(.subHeadline1))
+                .foregroundStyle(.textMain)
+
+            HStack {
+                Text("\(store.state.calculatedPrice.formatted())원")
+                    .font(.app(.headline2))
+                    .foregroundStyle(.wmMain)
+
+                Spacer()
+
+                if store.state.selectedSpace != nil {
+                    Text("= 총비용 ÷ \(store.state.capacity)명")
+                        .font(.app(.subContent2))
+                        .foregroundStyle(.textSub)
+                }
+            }
+            .padding(Spacing.medium)
+            .background(
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .fill(Color.wmMain.opacity(0.1))
+            )
+        }
+    }
+
+    /// 5. 이미지 추가 섹션
+    private var imagePickerSection: some View {
+        ImagePickerSection2(
+            title: "모임 이미지",
+            maxCount: 5,
+            layout: .horizontal,
+            selectedImages: Binding(
+                get: { store.state.selectedImages },
+                set: { store.send(.selectImages($0)) }
+            ),
+            selectedPhotoItems: $selectedPhotoItems,
+            existingImageURLs: Binding(
+                get: { store.state.existingImageURLs },
+                set: { _ in }
+            ),
+            shouldKeepExistingImages: Binding(
+                get: { store.state.shouldKeepExistingImages },
+                set: { _ in }
+            )
+        )
+        .onChange(of: selectedPhotoItems) { _, newItems in
+            loadPhotos(from: newItems)
+        }
+    }
+
+    /// 6. 모임 소개 섹션
+    private var contentInputSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.medium) {
+            Text("모임 소개")
+                .font(.app(.subHeadline1))
+                .foregroundStyle(.textMain)
+
+            ZStack(alignment: .topLeading) {
+                if store.state.content.isEmpty {
+                    Text("모임에 대해 소개해주세요")
+                        .font(.app(.content2))
+                        .foregroundStyle(.textSub)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 8)
+                }
+
+                TextEditor(text: Binding(
+                    get: { store.state.content },
+                    set: { store.send(.updateContent($0)) }
+                ))
+                .font(.app(.content2))
+                .foregroundStyle(.textMain)
+                .scrollContentBackground(.hidden)
+                .frame(minHeight: 150)
+                .focused($focusedField, equals: .content)
+            }
+            .padding(Spacing.medium)
+            .background(
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .fill(Color.gray.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("완료") {
+                    focusedField = nil
+                }
+                .font(.app(.content1))
+                .foregroundStyle(.wmMain)
+            }
+        }
+    }
+
+    /// 7. 모집 기간 섹션
+    private var recruitmentPeriodSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.medium) {
+            Text("모집 기간")
+                .font(.app(.subHeadline1))
+                .foregroundStyle(.textMain)
+
+            VStack(spacing: Spacing.small) {
+                // 모집 시작일
+                HStack {
+                    Text("시작일")
+                        .font(.app(.content2))
+                        .foregroundStyle(.textMain)
+
+                    Spacer()
+
+                    DatePicker(
+                        "",
+                        selection: Binding(
+                            get: { store.state.recruitmentStartDate },
+                            set: { store.send(.updateRecruitmentStartDate($0)) }
+                        ),
+                        in: Date()...,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .labelsHidden()
+                }
+
+                Divider()
+
+                // 모집 종료일
+                HStack {
+                    Text("종료일")
+                        .font(.app(.content2))
+                        .foregroundStyle(.textMain)
+
+                    Spacer()
+
+                    DatePicker(
+                        "",
+                        selection: Binding(
+                            get: { store.state.recruitmentEndDate },
+                            set: { store.send(.updateRecruitmentEndDate($0)) }
+                        ),
+                        in: recruitmentEndDateRange,
+                        displayedComponents: [.date, .hourAndMinute]
+                    )
+                    .labelsHidden()
+                }
+            }
+            .padding(Spacing.medium)
+            .background(
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .fill(Color.gray.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+            )
+
+            Text("모집 종료일은 모임 시작 시간 이전까지 설정 가능합니다")
+                .font(.app(.subContent2))
+                .foregroundStyle(.textSub)
+        }
+    }
+
+    /// 모집 종료일 선택 가능 범위 (안전한 Range 생성)
+    private var recruitmentEndDateRange: ClosedRange<Date> {
+        let startDate = store.state.recruitmentStartDate
+        let meetingDate = store.state.meetingStartDate
+
+        // meetingStartDate가 recruitmentStartDate보다 이전이면 최소 1시간 후로 설정
+        let endDate = meetingDate > startDate ? meetingDate : startDate.addingTimeInterval(3600)
+        return startDate...endDate
+    }
+
+    /// 8. 성별 제한 섹션
+    private var genderSection: some View {
+        VStack(alignment: .leading, spacing: Spacing.medium) {
+            Text("성별 제한")
+                .font(.app(.subHeadline1))
+                .foregroundStyle(.textMain)
+
+            Picker("성별 제한", selection: Binding(
+                get: { store.state.gender },
+                set: { store.send(.updateGender($0)) }
+            )) {
+                ForEach(Gender.allCases, id: \.self) { gender in
+                    Text(gender.displayText).tag(gender)
+                }
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    private func submitMeet() {
+        switch mode {
+        case .create:
+            store.send(.createMeet)
+        case .edit(let postId):
+            store.send(.updateMeet(postId: postId))
+        }
+    }
+
+    /// 예약 날짜+시간 포맷팅
+    private func formattedReservationDateTime() -> String {
+        guard let date = store.state.reservationDate,
+              let startHour = store.state.reservationStartHour,
+              let totalHours = store.state.reservationTotalHours else {
+            return "예약 정보 없음"
+        }
+
+        let endHour = startHour + totalHours
+        return ReservationFormatter.formattedDateTime(date: date, startHour: startHour, endHour: endHour)
+    }
+
+    private func loadPhotos(from items: [PhotosPickerItem]) {
+        Task {
+            var loadedImages: [UIImage] = []
+
+            for item in items {
+                do {
+                    guard let data = try await item.loadTransferable(type: Data.self),
+                          let image = UIImage(data: data) else {
+                        continue
+                    }
+                    loadedImages.append(image)
+                } catch {
+                    print("이미지 로드 실패: \(error.localizedDescription)")
+                }
+            }
+
+            await MainActor.run {
+                store.send(.selectImages(loadedImages))
+            }
+        }
+    }
 }
 
+// MARK: - Space Info Row
 
+private struct SpaceInfoRow: View {
+    let title: String
+    let value: String
 
-#Preview {
-    MeetEditView()
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.app(.content2))
+                .foregroundStyle(.textSub)
+
+            Spacer()
+
+            Text(value)
+                .font(.app(.content2))
+                .foregroundStyle(.textMain)
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview("생성 모드") {
+    NavigationStack {
+        MeetEditView(mode: .create)
+    }
+}
+
+#Preview("수정 모드") {
+    NavigationStack {
+        MeetEditView(mode: .edit(postId: "sample_post_id"))
+    }
 }

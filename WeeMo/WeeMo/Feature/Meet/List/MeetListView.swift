@@ -11,20 +11,12 @@ struct MeetListView: View {
     @State private var searchText = ""
     @State private var selectedSortOption: SortOption = .registrationDate
     @State private var showingSortOptions = false
-    @StateObject private var store = MeetListViewStore()
+    @State private var store = MeetListStore()
 
     var body: some View {
-        ScrollView {
+        ZStack(alignment: .bottomTrailing) {
+            ScrollView {
                 VStack {
-                    HStack {
-                        Text("모임")
-                            .font(.app(.headline2))
-                            .foregroundColor(Color("textMain"))
-                            .padding(.leading, 16)
-                        Spacer()
-                    }
-                    .padding(.top)
-
                     SearchBar(text: $searchText)
 
                     FilterButton(
@@ -33,43 +25,27 @@ struct MeetListView: View {
                     )
 
                     if store.state.isLoading {
-                        VStack {
-                            ProgressView("모임을 불러오는 중...")
-                                .padding()
-                            Spacer()
-                        }
+                        LoadingView(message: "모임을 불러오는 중...")
                     } else if let errorMessage = store.state.errorMessage {
-                        VStack(spacing: 16) {
-                            Text("오류가 발생했습니다")
-                                .font(.headline)
-                            Text(errorMessage)
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                            Button("다시 시도") {
-                                store.handle(.retryLoadMeets)
-                            }
-                            .buttonStyle(.bordered)
-                            Spacer()
+                        EmptyStateView(
+                            icon: "exclamationmark.triangle",
+                            title: "오류가 발생했습니다",
+                            message: errorMessage,
+                            actionTitle: "다시 시도"
+                        ) {
+                            store.send(.retryLoadMeets)
                         }
-                        .padding()
                     } else {
                         LazyVStack(spacing: 0) {
                             ForEach(Array(store.state.meets.enumerated()), id: \.element.id) { index, meet in
-                                NavigationLink(value: meet.postId) {
-                                    MeetListItemView(meet: meet)
+                                NavigationLink(value: meet.id) {
+                                    MeetCardView(meet: meet)
                                 }
                                 .onAppear {
                                     // 마지막에서 3번째 아이템이 나타날 때 더 로드
                                     if index >= store.state.meets.count - 3 && store.state.hasMoreData && !store.state.isLoadingMore {
-                                        store.handle(.loadMoreMeets)
+                                        store.send(.loadMoreMeets)
                                     }
-                                }
-
-                                // 구분선 추가 (마지막 아이템 제외)
-                                if meet.id != store.state.meets.last?.id {
-                                    Divider()
-                                        .padding(.horizontal, 16)
                                 }
                             }
 
@@ -83,63 +59,50 @@ struct MeetListView: View {
                                 }
                             }
                         }
-                        .padding(.top, 16)
+                        .padding(.top, Spacing.base)
                     }
                 }
-                .background(Color("wmBg"))
+                .background(.wmBg)
                 .onAppear {
-                    store.handle(.loadMeets)
-                }
-                .onChange(of: selectedSortOption) { sortOption in
-                    print("🔄 Sort option changed to: \(sortOption.rawValue)")
-                    store.handle(.sortMeets(option: sortOption))
-                }
-                .onChange(of: searchText) { searchQuery in
-                    print("🔍 Search text changed to: '\(searchQuery)'")
-                    store.handle(.searchMeets(query: searchQuery))
-                }
-                .overlay(
-                    VStack {
-                        Spacer()
-                        HStack {
-                            Spacer()
-                            VStack(spacing: 12) {
-                                NavigationLink(value: "map") {
-                                    HStack {
-                                        Image(systemName: "map")
-                                            .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(.black)
-                                        Text("지도보기")
-                                            .font(.app(.content2))
-                                            .foregroundColor(.black)
-                                    }
-                                    .frame(width: 130, height: 40)
-                                    .background(Color.white)
-                                    .cornerRadius(25)
-                                    .cardShadow()
-                                }
-
-                                NavigationLink(value: "edit") {
-                                    HStack {
-                                        Image(systemName: "plus")
-                                            .font(.system(size: 16, weight: .semibold))
-                                            .foregroundColor(.white)
-                                        Text("모임 만들기")
-                                            .font(.app(.content2))
-                                            .foregroundColor(.white)
-                                    }
-                                    .frame(width: 130, height: 40)
-                                    .background(Color.black)
-                                    .cornerRadius(25)
-                                }
-                            }
-                        }
-                        .padding(.trailing, 20)
-                        .padding(.bottom, 20)
+                    if store.state.meets.isEmpty {
+                        store.send(.loadMeets)
                     }
-                )
+                }
+                .onChange(of: selectedSortOption) { _, sortOption in
+                    store.send(.sortMeets(option: sortOption))
+                }
+                .onChange(of: searchText) { _, searchQuery in
+                    store.send(.searchMeets(query: searchQuery))
+                }
             }
-            .navigationBarTitleDisplayMode(.inline)
+
+            // Floating Buttons
+            VStack(spacing: Spacing.medium) {
+                NavigationLink(value: HomeRoute.meetMap) {
+                    Image(systemName: "map")
+                        .font(.system(size: 24))
+                        .foregroundColor(.black)
+                        .frame(width: 56, height: 56)
+                        .background(.white)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                }
+
+                NavigationLink(value: HomeRoute.meetEdit) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(.wmMain)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                }
+            }
+            .padding(.trailing, 20)
+            .padding(.bottom, 20)
+        }
+        .toolbarRole(.editor)
+        .tint(.wmMain)
     }
 }
 
