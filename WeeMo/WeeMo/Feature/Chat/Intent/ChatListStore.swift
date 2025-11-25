@@ -16,7 +16,7 @@ final class ChatListStore: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     init() {
-        handle(.setupSocketListeners)
+        // 소켓 리스너는 ChatListView에서 수동으로 설정
     }
 
     deinit {

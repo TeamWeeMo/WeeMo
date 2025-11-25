@@ -45,13 +45,15 @@ struct ChatListView: View {
                 }
         }
             .onAppear {
+                print("📱 ChatListView 나타남 - 소켓 연결 시작")
+                store.handle(.setupSocketListeners)
                 if store.state.chatRooms.isEmpty {
                     store.handle(.loadChatRooms)
                 }
             }
             .onDisappear {
-                print("🔌 채팅 목록에서 나감 - WebSocket 연결 유지")
-                // Socket 연결은 유지 - 실시간 업데이트를 위해
+                print("🔌 채팅 목록에서 나감 - 소켓 리스너 정리")
+                store.handle(.cleanupSocketListeners)
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
                 ChatSocketIOManager.shared.closeWebSocket()

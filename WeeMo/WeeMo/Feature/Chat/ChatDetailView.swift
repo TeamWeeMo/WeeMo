@@ -8,6 +8,8 @@
 import SwiftUI
 import Kingfisher
 import PhotosUI
+import AVKit
+import Alamofire
 
 // MARK: - 채팅 상세 화면
 
@@ -61,13 +63,13 @@ struct ChatDetailView: View {
             store.handle(.setupSocketConnection(roomId: store.state.room.id))
         }
         .onDisappear {
-            // Socket 연결은 유지하되 다른 화면 이동을 로깅
-            print("🔌 ChatDetailView onDisappear - 연결 유지")
+            print("🔌 ChatDetailView onDisappear - 특정 방 연결 해제")
+            store.handle(.closeSocketConnection)
         }
         .onChange(of: selectedPhotos) { oldValue, newValue in
-            // 선택된 사진들을 Data로 변환
+            // 선택된 미디어(사진/동영상)를 Data로 변환
             Task {
-                await loadSelectedImages()
+                await loadSelectedMedia()
             }
         }
     }
@@ -98,59 +100,103 @@ struct ChatDetailView: View {
         }
     }
 
-    /// 선택된 사진들을 Data로 변환하고 즉시 전송
-    private func loadSelectedImages() async {
+    /// 선택된 미디어(사진/동영상)를 Data로 변환하고 즉시 전송
+    private func loadSelectedMedia() async {
         // 빈 배열이면 처리하지 않음 (초기화로 인한 트리거 방지)
         guard !selectedPhotos.isEmpty else {
             return
         }
 
-        var imageDatas: [Data] = []
+        var mediaDatas: [(data: Data, isVideo: Bool)] = []
 
-        for item in selectedPhotos {
+        for (index, item) in selectedPhotos.enumerated() {
+            let isVideo = await checkIfVideo(item: item)
+            print("📋 파일 \(index): 동영상=\(isVideo), ContentTypes=\(item.supportedContentTypes.map { $0.identifier })")
+
             if let data = try? await item.loadTransferable(type: Data.self) {
-                imageDatas.append(data)
+                let sizeInMB = Double(data.count) / (1024 * 1024)
+                print("📊 파일 \(index): 크기=\(String(format: "%.2f", sizeInMB))MB")
+
+                // 현재는 동영상 업로드 미지원
+                if isVideo {
+                    print("⚠️ 파일 \(index): 동영상은 현재 지원하지 않음")
+                    continue
+                }
+
+                // 이미지 파일 크기 제한 체크 (10MB)
+                let maxSizeMB = 10.0
+                if sizeInMB > maxSizeMB {
+                    print("⚠️ 파일 \(index): 크기 초과 (\(String(format: "%.2f", sizeInMB))MB > \(maxSizeMB)MB)")
+                    continue
+                }
+
+                mediaDatas.append((data: data, isVideo: isVideo))
+            } else {
+                print("❌ 파일 \(index): Data 변환 실패")
             }
         }
 
         await MainActor.run {
-            store.state.selectedImages = imageDatas
-            store.state.showPlusMenu = false // 메뉴 닫기
-            print("📸 \(imageDatas.count)개 이미지 선택됨, 즉시 전송 시작")
+            let originalCount = selectedPhotos.count
+            let processedCount = mediaDatas.count
+            let skippedCount = originalCount - processedCount
 
-            // 이미지가 있으면 즉시 전송
-            if !imageDatas.isEmpty {
-                sendSelectedImages()
+            store.state.selectedImages = mediaDatas.map { $0.data }
+            store.state.showPlusMenu = false // 메뉴 닫기
+
+            if skippedCount > 0 {
+                store.state.errorMessage = "\(skippedCount)개 파일이 제외되었습니다. (동영상 미지원 또는 크기 초과)"
+            }
+
+            print("📸🎬 \(mediaDatas.count)개 미디어 선택됨 (\(skippedCount)개 제외), 즉시 전송 시작")
+
+            // 미디어가 있으면 즉시 전송
+            if !mediaDatas.isEmpty {
+                sendSelectedMedia(with: mediaDatas)
+            } else if skippedCount > 0 {
+                // 모든 파일이 제외된 경우
+                selectedPhotos = []
+                store.state.selectedImages = []
             }
         }
     }
 
-    /// 선택된 이미지들을 전송
-    private func sendSelectedImages() {
-        let imageDatas = store.state.selectedImages
+    /// PhotosPickerItem이 동영상인지 확인
+    private func checkIfVideo(item: PhotosPickerItem) async -> Bool {
+        // supportedContentTypes를 통해 동영상 여부 확인
+        let videoTypes = [
+            "public.movie",
+            "public.video",
+            "public.mpeg-4",
+            "com.apple.quicktime-movie",
+            "com.apple.private.photos.mail-movie-export"
+        ]
+        return item.supportedContentTypes.contains { contentType in
+            videoTypes.contains(contentType.identifier)
+        }
+    }
+
+    /// 선택된 미디어(이미지/동영상)를 전송
+    private func sendSelectedMedia(with mediaDatas: [(data: Data, isVideo: Bool)]) {
         let textContent = store.state.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        print("🔄 sendSelectedImages 시작")
-        print("📸 전송할 이미지 개수: \(imageDatas.count)")
+        print("🔄 sendSelectedMedia 시작")
+        print("📸🎬 전송할 미디어 개수: \(mediaDatas.count)")
         print("📝 함께 보낼 텍스트: '\(textContent)'")
 
-        guard !imageDatas.isEmpty else {
-            print("❌ 이미지 데이터가 비어있음")
+        guard !mediaDatas.isEmpty else {
+            print("❌ 미디어 데이터가 비어있음")
             return
         }
 
         Task {
             do {
-                print("🚀 이미지 업로드 시작...")
+                print("🚀 미디어 업로드 시작...")
 
-                // 이미지 업로드 (PostRouter의 uploadFiles 사용)
-                let fileDTO = try await NetworkService().upload(
-                    PostRouter.uploadFiles(images: imageDatas),
-                    images: imageDatas,
-                    responseType: FileDTO.self
-                )
+                // 미디어 업로드 (새로운 uploadMediaFiles 사용)
+                let fileDTO = try await uploadMediaFiles(mediaDatas)
 
-                print("✅ 이미지 업로드 성공, URLs: \(fileDTO.files)")
+                print("✅ 미디어 업로드 성공, URLs: \(fileDTO.files)")
 
                 // 업로드된 파일 URLs로 메시지 전송 (텍스트도 함께)
                 let fileURLs = fileDTO.files
@@ -158,26 +204,46 @@ struct ChatDetailView: View {
                     print("📨 메시지 전송 시작...")
                     store.handle(.sendMessage(content: textContent, files: fileURLs))
 
-                    // 선택된 이미지들과 텍스트 초기화
+                    // 선택된 미디어들과 텍스트 초기화
                     selectedPhotos = []
                     store.state.selectedImages = []
                     store.state.inputText = ""
 
-                    print("📸 \(imageDatas.count)개 이미지와 텍스트 업로드 및 전송 완료")
+                    print("📸🎬 \(mediaDatas.count)개 미디어와 텍스트 업로드 및 전송 완료")
                 }
 
             } catch {
                 await MainActor.run {
-                    store.state.errorMessage = "이미지 업로드에 실패했습니다: \(error.localizedDescription)"
+                    store.state.errorMessage = "미디어 업로드에 실패했습니다: \(error.localizedDescription)"
 
-                    // 실패시 이미지들 초기화
+                    // 실패시 미디어들 초기화
                     selectedPhotos = []
                     store.state.selectedImages = []
 
-                    print("❌ 이미지 업로드 실패: \(error)")
+                    print("❌ 미디어 업로드 실패: \(error)")
                 }
             }
         }
+    }
+
+    /// 미디어 파일들을 업로드 (기존 NetworkService 방식 사용)
+    private func uploadMediaFiles(_ mediaDatas: [(data: Data, isVideo: Bool)]) async throws -> FileDTO {
+        let allDatas = mediaDatas.map { $0.data }
+        let videoCount = mediaDatas.filter { $0.isVideo }.count
+        let imageCount = mediaDatas.filter { !$0.isVideo }.count
+
+        print("📋 업로드 상세: 이미지 \(imageCount)개, 동영상 \(videoCount)개")
+
+        guard !allDatas.isEmpty else {
+            throw NetworkError.badRequest("업로드할 파일이 없습니다.")
+        }
+
+        // 기존 NetworkService 방식 그대로 사용 (동영상도 image/jpeg로 업로드)
+        return try await NetworkService().upload(
+            PostRouter.uploadFiles(images: allDatas),
+            images: allDatas,
+            responseType: FileDTO.self
+        )
     }
 
     // MARK: - Subviews
@@ -656,112 +722,164 @@ struct ChatBubble: View {
         }
     }
 
-    /// 개별 이미지 뷰
+    /// 개별 미디어 뷰
     @ViewBuilder
     private func imageView(fileURL: String) -> some View {
         let fullURL = FileRouter.fileURL(from: fileURL)
-        let _ = print("🖼️ 이미지 로딩 시도: \(fullURL)")
+        let isVideo = isVideoFile(fileURL)
+        let _ = print("🖼️ 미디어 로딩 시도: \(fullURL), 동영상: \(isVideo)")
 
-        if let url = URL(string: fullURL) {
-            KFImage(url)
-                .withAuthHeaders()
-                .placeholder {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.gray.opacity(0.3))
-                }
-                .onSuccess { result in
-                    print("✅ 이미지 로딩 성공: \(fullURL)")
-                }
-                .onFailure { error in
-                    print("❌ 이미지 로딩 실패: \(fullURL), 에러: \(error)")
-                }
-                .retry(maxCount: 3, interval: .seconds(1))
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-                .onTapGesture {
-                    if let index = message.files.firstIndex(of: fileURL) {
-                        onImageGalleryTap?(message.files, index)
+        ZStack {
+            if let url = URL(string: fullURL) {
+                KFImage(url)
+                    .withAuthHeaders()
+                    .placeholder {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.gray.opacity(0.3))
                     }
+                    .onSuccess { result in
+                        print("✅ 미디어 로딩 성공: \(fullURL)")
+                    }
+                    .onFailure { error in
+                        print("❌ 미디어 로딩 실패: \(fullURL), 에러: \(error)")
+                    }
+                    .retry(maxCount: 3, interval: .seconds(1))
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                // 동영상일 때 재생 버튼 오버레이
+                if isVideo {
+                    Circle()
+                        .fill(Color.black.opacity(0.6))
+                        .frame(width: 40, height: 40)
+                        .overlay {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(.white)
+                        }
                 }
-        } else {
-            let _ = print("❌ 잘못된 URL 형태: \(fullURL)")
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color.gray.opacity(0.3))
+            } else {
+                let _ = print("❌ 잘못된 URL 형태: \(fullURL)")
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.gray.opacity(0.3))
+            }
+        }
+        .onTapGesture {
+            if let index = message.files.firstIndex(of: fileURL) {
+                onImageGalleryTap?(message.files, index)
+            }
         }
     }
 
-    /// 정사각형 이미지 뷰 (4개 이상일 때 사용)
+    /// 정사각형 미디어 뷰 (4개 이상일 때 사용)
     @ViewBuilder
     private func squareImageView(fileURL: String) -> some View {
         let fullURL = FileRouter.fileURL(from: fileURL)
-        let _ = print("🖼️ 정사각형 이미지 로딩 시도: \(fullURL)")
+        let isVideo = isVideoFile(fileURL)
+        let _ = print("🖼️ 정사각형 미디어 로딩 시도: \(fullURL), 동영상: \(isVideo)")
 
-        if let url = URL(string: fullURL) {
-            KFImage(url)
-                .withAuthHeaders()
-                .placeholder {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 100, height: 100)
-                }
-                .onSuccess { result in
-                    print("✅ 정사각형 이미지 로딩 성공: \(fullURL)")
-                }
-                .onFailure { error in
-                    print("❌ 정사각형 이미지 로딩 실패: \(fullURL), 에러: \(error)")
-                }
-                .retry(maxCount: 3, interval: .seconds(1))
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: 100, height: 100)
-                .clipShape(RoundedRectangle(cornerRadius: 4))
-                .onTapGesture {
-                    if let index = message.files.firstIndex(of: fileURL) {
-                        onImageGalleryTap?(message.files, index)
+        ZStack {
+            if let url = URL(string: fullURL) {
+                KFImage(url)
+                    .withAuthHeaders()
+                    .placeholder {
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 100, height: 100)
                     }
+                    .onSuccess { result in
+                        print("✅ 정사각형 미디어 로딩 성공: \(fullURL)")
+                    }
+                    .onFailure { error in
+                        print("❌ 정사각형 미디어 로딩 실패: \(fullURL), 에러: \(error)")
+                    }
+                    .retry(maxCount: 3, interval: .seconds(1))
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 100, height: 100)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                // 동영상일 때 재생 버튼 오버레이
+                if isVideo {
+                    Circle()
+                        .fill(Color.black.opacity(0.6))
+                        .frame(width: 30, height: 30)
+                        .overlay {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.white)
+                        }
                 }
-        } else {
-            let _ = print("❌ 잘못된 URL 형태: \(fullURL)")
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color.gray.opacity(0.3))
-                .frame(width: 100, height: 100)
+            } else {
+                let _ = print("❌ 잘못된 URL 형태: \(fullURL)")
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 100, height: 100)
+            }
+        }
+        .onTapGesture {
+            if let index = message.files.firstIndex(of: fileURL) {
+                onImageGalleryTap?(message.files, index)
+            }
         }
     }
 
-    /// 단일 이미지 뷰 (더 큰 크기)
+    /// 파일이 동영상인지 확인
+    private func isVideoFile(_ fileURL: String) -> Bool {
+        let videoExtensions = ["mp4", "mov", "avi", "mkv", "wmv", "flv", "webm", "m4v"]
+        let fileExtension = (fileURL as NSString).pathExtension.lowercased()
+        return videoExtensions.contains(fileExtension)
+    }
+
+    /// 단일 미디어 뷰 (더 큰 크기)
     @ViewBuilder
     private func singleImageView(fileURL: String) -> some View {
         let fullURL = FileRouter.fileURL(from: fileURL)
-        let _ = print("🖼️ 단일 이미지 로딩 시도: \(fullURL)")
+        let isVideo = isVideoFile(fileURL)
+        let _ = print("🖼️ 단일 미디어 로딩 시도: \(fullURL), 동영상: \(isVideo)")
 
-        if let url = URL(string: fullURL) {
-            KFImage(url)
-                .withAuthHeaders()
-                .placeholder {
-                    RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: 200, height: 150)
+        ZStack {
+            if let url = URL(string: fullURL) {
+                KFImage(url)
+                    .withAuthHeaders()
+                    .placeholder {
+                        RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                            .fill(Color.gray.opacity(0.3))
+                            .frame(width: 200, height: 150)
+                    }
+                    .onSuccess { result in
+                        print("✅ 단일 미디어 로딩 성공: \(fullURL)")
+                    }
+                    .onFailure { error in
+                        print("❌ 단일 미디어 로딩 실패: \(fullURL), 에러: \(error)")
+                    }
+                    .retry(maxCount: 3, interval: .seconds(1))
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(maxWidth: 200, maxHeight: 200)
+                    .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusMedium))
+
+                // 동영상일 때 재생 버튼 오버레이
+                if isVideo {
+                    Circle()
+                        .fill(Color.black.opacity(0.6))
+                        .frame(width: 50, height: 50)
+                        .overlay {
+                            Image(systemName: "play.fill")
+                                .font(.system(size: 20))
+                                .foregroundStyle(.white)
+                        }
                 }
-                .onSuccess { result in
-                    print("✅ 단일 이미지 로딩 성공: \(fullURL)")
-                }
-                .onFailure { error in
-                    print("❌ 단일 이미지 로딩 실패: \(fullURL), 에러: \(error)")
-                }
-                .retry(maxCount: 3, interval: .seconds(1))
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: 200, maxHeight: 200)
-                .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusMedium))
-                .onTapGesture {
-                    onImageGalleryTap?(message.files, 0)
-                }
-        } else {
-            let _ = print("❌ 잘못된 URL 형태: \(fullURL)")
-            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                .fill(Color.gray.opacity(0.3))
-                .frame(width: 200, height: 150)
+            } else {
+                let _ = print("❌ 잘못된 URL 형태: \(fullURL)")
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .fill(Color.gray.opacity(0.3))
+                    .frame(width: 200, height: 150)
+            }
+        }
+        .onTapGesture {
+            onImageGalleryTap?(message.files, 0)
         }
     }
 }
@@ -789,16 +907,26 @@ struct ImageGalleryView: View {
                 TabView(selection: $currentIndex) {
                     ForEach(Array(images.enumerated()), id: \.offset) { index, fileURL in
                         let fullURL = FileRouter.fileURL(from: fileURL)
+                        let isVideo = isVideoFile(fileURL)
+
                         if let url = URL(string: fullURL) {
-                            KFImage(url)
-                                .withAuthHeaders()
-                                .placeholder {
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                }
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .tag(index)
+                            if isVideo {
+                                // 동영상일 때 VideoPlayer 사용
+                                VideoPlayer(player: AVPlayer(url: url))
+                                    .aspectRatio(contentMode: .fit)
+                                    .tag(index)
+                            } else {
+                                // 이미지일 때 KFImage 사용
+                                KFImage(url)
+                                    .withAuthHeaders()
+                                    .placeholder {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                    }
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .tag(index)
+                            }
                         }
                     }
                 }
@@ -816,6 +944,13 @@ struct ImageGalleryView: View {
                 }
             }
         }
+    }
+
+    /// 파일이 동영상인지 확인
+    private func isVideoFile(_ fileURL: String) -> Bool {
+        let videoExtensions = ["mp4", "mov", "avi", "mkv", "wmv", "flv", "webm", "m4v"]
+        let fileExtension = (fileURL as NSString).pathExtension.lowercased()
+        return videoExtensions.contains(fileExtension)
     }
 }
 
