@@ -211,9 +211,11 @@ final class ChatDetailStore: ObservableObject {
     // MARK: - Message Sending
 
     private func sendMessage(content: String, files: [String]?) {
-        guard !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-
         let messageContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // 텍스트와 파일이 모두 비어있으면 전송하지 않음
+        guard !messageContent.isEmpty || (files != nil && !files!.isEmpty) else { return }
+
         state.inputText = "" // 입력창 즉시 클리어
         state.isSendingMessage = true
 

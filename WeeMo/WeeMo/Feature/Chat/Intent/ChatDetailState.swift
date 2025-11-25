@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import PhotosUI
 
 struct ChatDetailState {
     var room: ChatRoom
@@ -18,6 +19,8 @@ struct ChatDetailState {
     var isSocketConnected: Bool = false
     var shouldScrollToBottom: Bool = false
     var hasMoreMessages: Bool = true
+    var showPlusMenu: Bool = false
+    var selectedImages: [Data] = []
 
     init(room: ChatRoom) {
         self.room = room
