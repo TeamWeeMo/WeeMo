@@ -21,6 +21,9 @@ struct ChatDetailState {
     var hasMoreMessages: Bool = true
     var showPlusMenu: Bool = false
     var selectedImages: [Data] = []
+    var showImageGallery: Bool = false
+    var galleryImages: [String] = []
+    var galleryStartIndex: Int = 0
 
     init(room: ChatRoom) {
         self.room = room

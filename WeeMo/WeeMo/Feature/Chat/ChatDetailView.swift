@@ -41,6 +41,12 @@ struct ChatDetailView: View {
         .background(.wmBg)
         .navigationTitle(store.state.room.otherUser?.nickname ?? "채팅")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $store.state.showImageGallery) {
+            ImageGalleryView(
+                images: store.state.galleryImages,
+                startIndex: store.state.galleryStartIndex
+            )
+        }
         .onTapGesture {
             // 다른 곳을 탭하면 + 메뉴 닫기
             if store.state.showPlusMenu {
@@ -252,7 +258,12 @@ struct ChatDetailView: View {
                             ChatBubble(
                                 message: message,
                                 isMine: message.isMine(currentUserId: store.state.currentUserId),
-                                showTime: shouldShowTime(for: message, at: index, in: store.state.messages)
+                                showTime: shouldShowTime(for: message, at: index, in: store.state.messages),
+                                onImageGalleryTap: { images, startIndex in
+                                    store.state.galleryImages = images
+                                    store.state.galleryStartIndex = startIndex
+                                    store.state.showImageGallery = true
+                                }
                             )
                             .id(message.id)
                         }
@@ -500,6 +511,7 @@ struct ChatBubble: View {
     let message: ChatMessage
     let isMine: Bool
     let showTime: Bool
+    let onImageGalleryTap: (([String], Int) -> Void)?
 
     var body: some View {
         HStack(alignment: .bottom, spacing: Spacing.small) {
@@ -555,33 +567,7 @@ struct ChatBubble: View {
         VStack(alignment: isMine ? .trailing : .leading, spacing: Spacing.xSmall) {
             // 이미지가 있으면 표시
             if message.hasMedia {
-                ForEach(Array(message.files.enumerated()), id: \.offset) { index, fileURL in
-                    let fullURL = FileRouter.fileURL(from: fileURL)
-                    let _ = print("🖼️ 이미지 로딩 시도: 원본 URL = \(fileURL), 전체 URL = \(fullURL)")
-                    if let url = URL(string: fullURL) {
-                        KFImage(url)
-                            .withAuthHeaders()
-                            .placeholder {
-                                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                                    .fill(Color.gray.opacity(0.3))
-                                    .frame(width: 200, height: 150)
-                            }
-                            .onSuccess { result in
-                                print("✅ 이미지 로딩 성공: \(fullURL)")
-                            }
-                            .onFailure { error in
-                                print("❌ 이미지 로딩 실패: \(fullURL), 에러: \(error)")
-                            }
-                            .retry(maxCount: 3, interval: .seconds(1))
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                            .frame(maxWidth: 200, maxHeight: 200)
-                            .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusMedium))
-                    } else {
-                        let _ = print("❌ 잘못된 URL 형태: \(fullURL)")
-                        EmptyView()
-                    }
-                }
+                imageGridView
             }
 
             // 텍스트 메시지
@@ -604,6 +590,240 @@ struct ChatBubble: View {
         Text(message.createdAt.chatTimeString())
             .font(.app(.subContent2))
             .foregroundStyle(.textSub)
+    }
+
+    /// 이미지 그리드 뷰 (카카오톡 스타일)
+    @ViewBuilder
+    private var imageGridView: some View {
+        let imageCount = message.files.count
+        let maxDisplay = 4
+        let displayImages = Array(message.files.prefix(maxDisplay))
+
+        if imageCount == 1 {
+            // 1개 이미지: 단일 이미지 표시
+            singleImageView(fileURL: message.files[0])
+        } else if imageCount == 2 {
+            // 2개 이미지: 2x1 그리드
+            HStack(spacing: 2) {
+                ForEach(Array(displayImages.enumerated()), id: \.offset) { index, fileURL in
+                    imageView(fileURL: fileURL)
+                        .frame(width: 100, height: 100)
+                }
+            }
+        } else if imageCount == 3 {
+            // 3개 이미지: 첫 번째는 큰 이미지, 나머지 2개는 작은 이미지
+            HStack(spacing: 2) {
+                imageView(fileURL: displayImages[0])
+                    .frame(width: 100, height: 202)
+
+                VStack(spacing: 2) {
+                    imageView(fileURL: displayImages[1])
+                        .frame(width: 100, height: 100)
+                    imageView(fileURL: displayImages[2])
+                        .frame(width: 100, height: 100)
+                }
+            }
+        } else {
+            // 4개 이상: 2x2 그리드, 4번째에 +N 오버레이
+            VStack(spacing: 2) {
+                HStack(spacing: 2) {
+                    squareImageView(fileURL: displayImages[0])
+                    squareImageView(fileURL: displayImages[1])
+                }
+                HStack(spacing: 2) {
+                    squareImageView(fileURL: displayImages[2])
+
+                    ZStack {
+                        squareImageView(fileURL: displayImages[3])
+
+                        if imageCount > maxDisplay {
+                            Rectangle()
+                                .fill(Color.black.opacity(0.6))
+                                .frame(width: 100, height: 100)
+                                .clipShape(RoundedRectangle(cornerRadius: 4))
+                                .overlay {
+                                    Text("+\(imageCount - maxDisplay)")
+                                        .font(.app(.headline1))
+                                        .foregroundStyle(.white)
+                                }
+                        }
+                    }
+                    .onTapGesture {
+                        onImageGalleryTap?(message.files, 3)
+                    }
+                }
+            }
+        }
+    }
+
+    /// 개별 이미지 뷰
+    @ViewBuilder
+    private func imageView(fileURL: String) -> some View {
+        let fullURL = FileRouter.fileURL(from: fileURL)
+        let _ = print("🖼️ 이미지 로딩 시도: \(fullURL)")
+
+        if let url = URL(string: fullURL) {
+            KFImage(url)
+                .withAuthHeaders()
+                .placeholder {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.gray.opacity(0.3))
+                }
+                .onSuccess { result in
+                    print("✅ 이미지 로딩 성공: \(fullURL)")
+                }
+                .onFailure { error in
+                    print("❌ 이미지 로딩 실패: \(fullURL), 에러: \(error)")
+                }
+                .retry(maxCount: 3, interval: .seconds(1))
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .onTapGesture {
+                    if let index = message.files.firstIndex(of: fileURL) {
+                        onImageGalleryTap?(message.files, index)
+                    }
+                }
+        } else {
+            let _ = print("❌ 잘못된 URL 형태: \(fullURL)")
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.gray.opacity(0.3))
+        }
+    }
+
+    /// 정사각형 이미지 뷰 (4개 이상일 때 사용)
+    @ViewBuilder
+    private func squareImageView(fileURL: String) -> some View {
+        let fullURL = FileRouter.fileURL(from: fileURL)
+        let _ = print("🖼️ 정사각형 이미지 로딩 시도: \(fullURL)")
+
+        if let url = URL(string: fullURL) {
+            KFImage(url)
+                .withAuthHeaders()
+                .placeholder {
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: 100, height: 100)
+                }
+                .onSuccess { result in
+                    print("✅ 정사각형 이미지 로딩 성공: \(fullURL)")
+                }
+                .onFailure { error in
+                    print("❌ 정사각형 이미지 로딩 실패: \(fullURL), 에러: \(error)")
+                }
+                .retry(maxCount: 3, interval: .seconds(1))
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 100, height: 100)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+                .onTapGesture {
+                    if let index = message.files.firstIndex(of: fileURL) {
+                        onImageGalleryTap?(message.files, index)
+                    }
+                }
+        } else {
+            let _ = print("❌ 잘못된 URL 형태: \(fullURL)")
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.gray.opacity(0.3))
+                .frame(width: 100, height: 100)
+        }
+    }
+
+    /// 단일 이미지 뷰 (더 큰 크기)
+    @ViewBuilder
+    private func singleImageView(fileURL: String) -> some View {
+        let fullURL = FileRouter.fileURL(from: fileURL)
+        let _ = print("🖼️ 단일 이미지 로딩 시도: \(fullURL)")
+
+        if let url = URL(string: fullURL) {
+            KFImage(url)
+                .withAuthHeaders()
+                .placeholder {
+                    RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: 200, height: 150)
+                }
+                .onSuccess { result in
+                    print("✅ 단일 이미지 로딩 성공: \(fullURL)")
+                }
+                .onFailure { error in
+                    print("❌ 단일 이미지 로딩 실패: \(fullURL), 에러: \(error)")
+                }
+                .retry(maxCount: 3, interval: .seconds(1))
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: 200, maxHeight: 200)
+                .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusMedium))
+                .onTapGesture {
+                    onImageGalleryTap?(message.files, 0)
+                }
+        } else {
+            let _ = print("❌ 잘못된 URL 형태: \(fullURL)")
+            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                .fill(Color.gray.opacity(0.3))
+                .frame(width: 200, height: 150)
+        }
+    }
+}
+
+// MARK: - Image Gallery View
+
+/// 이미지 전체보기 갤러리
+struct ImageGalleryView: View {
+    let images: [String]
+    let startIndex: Int
+    @Environment(\.dismiss) private var dismiss
+    @State private var currentIndex: Int
+
+    init(images: [String], startIndex: Int) {
+        self.images = images
+        self.startIndex = startIndex
+        self._currentIndex = State(initialValue: startIndex)
+    }
+
+    var body: some View {
+        NavigationView {
+            ZStack {
+                Color.black.ignoresSafeArea()
+
+                TabView(selection: $currentIndex) {
+                    ForEach(Array(images.enumerated()), id: \.offset) { index, fileURL in
+                        let fullURL = FileRouter.fileURL(from: fileURL)
+                        if let url = URL(string: fullURL) {
+                            KFImage(url)
+                                .withAuthHeaders()
+                                .placeholder {
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                                }
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .tag(index)
+                        }
+                    }
+                }
+                .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationTitle("\(currentIndex + 1) / \(images.count)")
+            .navigationBarTitleTextColor(.white)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("완료") {
+                        dismiss()
+                    }
+                    .foregroundStyle(.white)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Navigation Bar Title Color Extension
+
+extension View {
+    func navigationBarTitleTextColor(_ color: Color) -> some View {
+        self.toolbarColorScheme(.dark, for: .navigationBar)
     }
 }
 
