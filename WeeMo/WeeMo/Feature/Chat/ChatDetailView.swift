@@ -115,26 +115,33 @@ struct ChatDetailView: View {
                             .padding()
                     }
 
-                    // 메시지 목록
-                    ForEach(Array(store.state.messages.enumerated()), id: \.element.id) { index, message in
-                        let showTime = shouldShowTime(for: index, in: store.state.messages)
-                        let isMine = message.sender.userId == store.state.currentUserId
+                    // 메시지 목록 (날짜별 구분)
+                    ForEach(groupedMessages, id: \.date) { dateGroup in
+                        // 날짜 헤더
+                        DateSeparatorView(date: dateGroup.date)
+                            .padding(.vertical, Spacing.medium)
 
-                        ChatBubble(
-                            message: message,
-                            isMine: isMine,
-                            showTime: showTime,
-                            onImageGalleryTap: { images, startIndex in
-                                store.state.galleryImages = images
-                                store.state.galleryStartIndex = startIndex
-                                store.state.showImageGallery = true
-                            },
-                            onProfileTap: { user in
-                                selectedUser = user
-                            }
-                        )
-                        .padding(.vertical, showTime ? Spacing.xSmall : 2)
-                        .id(message.id)
+                        // 해당 날짜의 메시지들
+                        ForEach(Array(dateGroup.messages.enumerated()), id: \.element.id) { index, message in
+                            let showTime = shouldShowTime(for: index, in: dateGroup.messages)
+                            let isMine = message.sender.userId == store.state.currentUserId
+
+                            ChatBubble(
+                                message: message,
+                                isMine: isMine,
+                                showTime: showTime,
+                                onImageGalleryTap: { images, startIndex in
+                                    store.state.galleryImages = images
+                                    store.state.galleryStartIndex = startIndex
+                                    store.state.showImageGallery = true
+                                },
+                                onProfileTap: { user in
+                                    selectedUser = user
+                                }
+                            )
+                            .padding(.vertical, showTime ? Spacing.xSmall : 2)
+                            .id(message.id)
+                        }
                     }
                 }
                 .padding(.top, Spacing.small)
@@ -151,6 +158,20 @@ struct ChatDetailView: View {
                 store.handle(.retryLoadMessages)
             }
         }
+    }
+
+    // MARK: - Computed Properties
+
+    private var groupedMessages: [DateMessageGroup] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: store.state.messages) { message in
+            calendar.startOfDay(for: message.createdAt)
+        }
+
+        return grouped.map { date, messages in
+            DateMessageGroup(date: date, messages: messages.sorted { $0.createdAt < $1.createdAt })
+        }
+        .sorted { $0.date < $1.date }
     }
 
     // MARK: - Helper Views
@@ -277,5 +298,61 @@ struct ChatDetailView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Supporting Types
+
+struct DateMessageGroup {
+    let date: Date
+    let messages: [ChatMessage]
+}
+
+// MARK: - Date Separator View
+
+struct DateSeparatorView: View {
+    let date: Date
+
+    private var dateString: String {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        let messageDate = calendar.startOfDay(for: date)
+
+        if calendar.isDate(messageDate, inSameDayAs: today) {
+            return "오늘"
+        } else if calendar.isDate(messageDate, equalTo: calendar.date(byAdding: .day, value: -1, to: today)!, toGranularity: .day) {
+            return "어제"
+        } else {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "ko_KR")
+
+            if calendar.isDate(messageDate, equalTo: today, toGranularity: .year) {
+                formatter.dateFormat = "M월 d일 EEEE"
+            } else {
+                formatter.dateFormat = "yyyy년 M월 d일 EEEE"
+            }
+
+            return formatter.string(from: date)
+        }
+    }
+
+    var body: some View {
+        HStack {
+            Rectangle()
+                .fill(Color.gray.opacity(0.3))
+                .frame(height: 0.5)
+
+            Text(dateString)
+                .font(.app(.subContent2))
+                .foregroundStyle(.textSub)
+                .padding(.horizontal, Spacing.medium)
+                .padding(.vertical, Spacing.xSmall)
+                .background(.wmBg)
+
+            Rectangle()
+                .fill(Color.gray.opacity(0.3))
+                .frame(height: 0.5)
+        }
+        .padding(.horizontal, Spacing.base)
     }
 }
