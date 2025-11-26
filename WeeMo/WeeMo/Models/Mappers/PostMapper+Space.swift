@@ -21,11 +21,13 @@ extension PostDTO {
         // value6: 주차 ("true" or "false")
         // value7: 화장실 여부 ("true" or "false")
         // value8: 최대인원 ("6")
+        // value9: 도로명 주소 (상세 주소)
 
         return Space(
             id: postId,
             title: title,
             address: value1 ?? "주소 없음",
+            roadAddress: value9, // 도로명 주소
             category: parseSpaceCategory(from: value2),
             imageURLs: files,
             rating: Double(value3 ?? "0.0") ?? 0.0,
@@ -39,7 +41,7 @@ extension PostDTO {
             longitude: geolocation.longitude,
             hashTags: hashTags  // 서버에서 받은 해시태그
         )
-        
+
     }
 
     // MARK: - Private Helpers

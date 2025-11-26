@@ -29,12 +29,19 @@ struct SpaceDetailState {
     // 예약 정보 표시 여부
     var showReservationInfo: Bool = false
 
+    // 예약 확인 Alert 표시 여부
+    var showReservationAlert: Bool = false
+
     // 좋아요(예약) 상태
     var isLiked: Bool = false
     var isLikeLoading: Bool = false
 
     // 예약된(블락된) 시간 - 날짜별로 관리
     var blockedHoursByDate: [Date: Set<Int>] = [:]
+
+    // 같은 위치 모임 목록
+    var sameLocationMeetings: [PostDTO] = []
+    var isMeetingsLoading: Bool = false
 
     // MARK: - Computed Properties
 

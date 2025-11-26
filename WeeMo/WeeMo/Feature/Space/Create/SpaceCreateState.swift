@@ -5,7 +5,6 @@
 //  Created by Reimos on 11/16/25.
 //
 
-import Foundation
 import UIKit
 
 // MARK: - Space Create State
@@ -15,6 +14,7 @@ struct SpaceCreateState {
     var title: String = ""
     var price: String = ""
     var address: String = ""
+    var roadAddress: String = ""  // 도로명 주소
     var latitude: Double = 37.5665   // 기본값: 서울 중심
     var longitude: Double = 126.9780  // 기본값: 서울 중심
     var rating: Double = 3.0  // Slider로 1.0 ~ 5.0, 0.5 단위

@@ -11,6 +11,7 @@ struct Space: Identifiable, Hashable {
     let id: String
     let title: String
     let address: String // 주소
+    let roadAddress: String? // 도로명 주소
     let category: SpaceCategory // 카테고리
     let imageURLs: [String]
     let rating: Double     // 평점

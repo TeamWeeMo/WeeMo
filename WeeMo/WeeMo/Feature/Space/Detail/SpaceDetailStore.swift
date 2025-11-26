@@ -17,6 +17,8 @@ final class SpaceDetailStore: ObservableObject {
     private let postService: PostService
     private let commentService: CommentService
     private let spaceId: String
+    private let latitude: Double
+    private let longitude: Double
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initializer
@@ -26,12 +28,16 @@ final class SpaceDetailStore: ObservableObject {
         postService: PostService = PostService(),
         commentService: CommentService = CommentService(),
         spaceId: String,
-        pricePerHour: Int
+        pricePerHour: Int,
+        latitude: Double,
+        longitude: Double
     ) {
         self.networkService = networkService
         self.postService = postService
         self.commentService = commentService
         self.spaceId = spaceId
+        self.latitude = latitude
+        self.longitude = longitude
         self.state.pricePerHour = pricePerHour
     }
 
@@ -65,7 +71,13 @@ final class SpaceDetailStore: ObservableObject {
             break
 
         case .reservationButtonTapped:
-            handleReservation()
+            handleReservationButtonTapped()
+
+        case .confirmReservation:
+            handleConfirmReservation()
+
+        case .dismissAlert:
+            state.showReservationAlert = false
         }
     }
 
@@ -75,6 +87,7 @@ final class SpaceDetailStore: ObservableObject {
         Task {
             await loadUserProfile()
             await loadReservationComments()
+            await loadSameLocationMeetings()
         }
     }
 
@@ -119,6 +132,36 @@ final class SpaceDetailStore: ObservableObject {
         }
     }
 
+    /// 예약하기 버튼 탭 처리 (Alert 표시)
+    private func handleReservationButtonTapped() {
+        guard state.canReserve else {
+            print("[SpaceDetailStore] 예약 불가: 날짜 또는 시간 미선택")
+            return
+        }
+
+        // Alert 표시
+        state.showReservationAlert = true
+    }
+
+    /// 예약 확인 처리
+    private func handleConfirmReservation() {
+        state.showReservationAlert = false
+
+        // 예약 정보 표시
+        state.showReservationInfo = true
+
+        print("[SpaceDetailStore] 예약 정보 표시:")
+        print("- 날짜: \(state.formattedDate)")
+        print("- 시간: \(state.formattedTimeSlot)")
+        print("- 가격: \(state.totalPrice)")
+
+        // 좋아요(예약) API 호출
+        Task {
+            await likeSpace()
+        }
+    }
+
+    @available(*, deprecated, renamed: "handleReservationButtonTapped")
     private func handleReservation() {
         guard state.canReserve else {
             print("[SpaceDetailStore] 예약 불가: 날짜 또는 시간 미선택")
@@ -329,5 +372,43 @@ final class SpaceDetailStore: ObservableObject {
         state.blockedHoursByDate[dateOnly] = blockedHours
 
         print("[SpaceDetailStore] 서버 예약 블락 추가: \(dateOnly) - \(startHour):00 ~ \(endHour):00")
+    }
+
+    /// 같은 위치의 모임 검색 (위치 기반)
+    private func loadSameLocationMeetings() async {
+        await MainActor.run {
+            state.isMeetingsLoading = true
+        }
+
+        do {
+            // 위치 기반 검색: 현재 공간과 같은 위치(±0.0001도, 약 10m 이내)의 모임만 검색
+            let response = try await networkService.request(
+                PostRouter.searchByLocation(
+                    category: .meet,
+                    longitude: longitude,
+                    latitude: latitude,
+                    maxDistance: 100, // 100m 이내
+                    orderBy: nil,
+                    sortBy: nil
+                ),
+                responseType: PostListDTO.self
+            )
+
+            await MainActor.run {
+                state.sameLocationMeetings = response.data
+                state.isMeetingsLoading = false
+            }
+
+            if response.data.isEmpty {
+                print("[SpaceDetailStore] 같은 위치의 모임이 없습니다.")
+            } else {
+                print("[SpaceDetailStore] 같은 위치 모임 \(response.data.count)개 발견")
+            }
+        } catch {
+            await MainActor.run {
+                state.isMeetingsLoading = false
+            }
+            print("[SpaceDetailStore] 같은 위치 모임 검색 실패: \(error)")
+        }
     }
 }

@@ -14,12 +14,12 @@ struct MaxCapacityInputSection: View {
         VStack(alignment: .leading, spacing: Spacing.small) {
             Text("최대 인원")
                 .font(.app(.subHeadline2))
-                .foregroundColor(Color("textMain"))
+                .foregroundColor(.textMain)
 
             HStack {
                 TextField("예) 6", text: $maxCapacity)
                     .font(.app(.content1))
-                    .foregroundColor(Color("textMain"))
+                    .foregroundColor(.textMain)
                     .keyboardType(.numberPad)
                     .padding(.horizontal, Spacing.base)
                     .padding(.vertical, Spacing.medium)
@@ -28,7 +28,7 @@ struct MaxCapacityInputSection: View {
 
                 Text("명")
                     .font(.app(.content1))
-                    .foregroundColor(Color("textMain"))
+                    .foregroundColor(.textMain)
             }
         }
     }
@@ -37,5 +37,5 @@ struct MaxCapacityInputSection: View {
 #Preview {
     MaxCapacityInputSection(maxCapacity: .constant("6"))
         .padding()
-        .background(Color("wmBg"))
+        .background(.wmBg)
 }

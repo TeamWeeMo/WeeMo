@@ -21,4 +21,10 @@ enum SpaceDetailIntent {
 
     // 예약하기 버튼 탭
     case reservationButtonTapped
+
+    // 예약 확인
+    case confirmReservation
+
+    // Alert 닫기
+    case dismissAlert
 }
