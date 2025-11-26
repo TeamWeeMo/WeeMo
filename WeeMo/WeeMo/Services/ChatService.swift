@@ -280,9 +280,27 @@ class ChatService {
 
     /// 채팅 파일 업로드
     func uploadChatFiles(roomId: String, files: [Data]) async throws -> [String] {
-        // 파일 업로드 로직 (구현 필요)
-        // 임시로 빈 배열 반환
-        return []
+        guard !files.isEmpty else {
+            print("⚠️ 업로드할 파일이 없습니다")
+            return []
+        }
+
+        print("📤 파일 업로드 시작: \(files.count)개 파일, roomId: \(roomId)")
+
+        do {
+            let response = try await networkService.upload(
+                ChatRouter.uploadChatFiles(roomId: roomId, files: files),
+                images: files,
+                responseType: FileDTO.self
+            )
+
+            print("✅ 파일 업로드 성공: \(response.files)")
+            return response.files
+
+        } catch {
+            print("❌ 파일 업로드 실패: \(error)")
+            throw error
+        }
     }
 
     // MARK: - Helper Methods

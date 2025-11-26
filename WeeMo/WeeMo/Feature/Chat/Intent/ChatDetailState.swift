@@ -24,6 +24,7 @@ struct ChatDetailState {
     var showImageGallery: Bool = false
     var galleryImages: [String] = []
     var galleryStartIndex: Int = 0
+    var isViewActive: Bool = false  // 뷰가 화면에 보이는 상태인지
 
     init(room: ChatRoom) {
         self.room = room

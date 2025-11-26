@@ -135,6 +135,21 @@ class ChatRealmService {
         return query.count
     }
 
+    /// 마지막 읽은 메시지 ID 업데이트
+    func updateLastReadMessageId(roomId: String, messageId: String) throws {
+        guard let chatRoom = realmManager.fetch(ChatRoomRealm.self, primaryKey: roomId) else { return }
+
+        try realmManager.write {
+            chatRoom.lastReadMessageId = messageId
+        }
+        print("🔖 마지막 읽은 메시지 업데이트: \(roomId) -> \(messageId)")
+    }
+
+    /// 마지막 읽은 메시지 ID 가져오기
+    func getLastReadMessageId(roomId: String) -> String? {
+        return realmManager.fetch(ChatRoomRealm.self, primaryKey: roomId)?.lastReadMessageId
+    }
+
     // MARK: - User Operations
 
     /// 유저 저장

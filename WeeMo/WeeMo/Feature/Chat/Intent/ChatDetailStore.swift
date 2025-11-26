@@ -92,6 +92,14 @@ final class ChatDetailStore: ObservableObject {
 
         print("✅ 새 메시지 추가됨: \(newMessage.content) | 총 메시지 수: \(state.messages.count)")
 
+        // 뷰가 활성 상태일 때만 자동으로 읽음 처리
+        if state.isViewActive {
+            markAsRead()
+            print("🔖 뷰가 활성 상태여서 자동 읽음 처리됨")
+        } else {
+            print("📫 뷰가 비활성 상태여서 읽지 않은 메시지로 남김")
+        }
+
         // 30일 정책에 따른 로컬 DB 저장 (백그라운드)
         Task.detached {
             await self.saveMessageToLocal(newMessage)
@@ -312,7 +320,19 @@ final class ChatDetailStore: ObservableObject {
     }
 
     private func markAsRead() {
-        // 읽음 처리 로직
+        guard let lastMessage = state.messages.last else { return }
+
+        Task {
+            do {
+                try ChatRealmService.shared.updateLastReadMessageId(
+                    roomId: state.room.id,
+                    messageId: lastMessage.id
+                )
+                print("✅ 메시지 읽음 처리 완료: \(lastMessage.id)")
+            } catch {
+                print("❌ 메시지 읽음 처리 실패: \(error)")
+            }
+        }
     }
 
     // MARK: - Cleanup Methods
