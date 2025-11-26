@@ -43,6 +43,9 @@ struct ChatListView: View {
                 .navigationDestination(for: ChatRoom.self) { room in
                     ChatDetailView(room: room)
                 }
+                .navigationDestination(for: User.self) { user in
+                    ProfileView(userId: user.userId)
+                }
         }
             .onAppear {
                 print("📱 ChatListView 나타남 - 소켓 연결 시작")

@@ -2,18 +2,19 @@
 //  ChatDetailView_New.swift
 //  WeeMo
 //
-//  Created by Claude on 11/25/25.
+//  Created by 차지용 on 11/25/25.
 //
 
 import SwiftUI
 import PhotosUI
-
+import Kingfisher
 struct ChatDetailView: View {
     // MARK: - Properties
 
     @StateObject private var store: ChatDetailStore
     @Environment(\.dismiss) private var dismiss
     @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var selectedUser: User?
 
     init(room: ChatRoom) {
         self._store = StateObject(wrappedValue: ChatDetailStore(room: room))
@@ -46,6 +47,24 @@ struct ChatDetailView: View {
             }
             .onChange(of: selectedPhotos) { oldValue, newValue in
                 handlePhotosChange()
+            }
+            .background {
+                // 숨겨진 NavigationLink로 프로필 화면 네비게이션 처리
+                if let selectedUser = selectedUser {
+                    NavigationLink(
+                        destination: ProfileView(userId: selectedUser.userId),
+                        isActive: .constant(true)
+                    ) {
+                        EmptyView()
+                    }
+                    .hidden()
+                    .onAppear {
+                        // 네비게이션이 완료되면 selectedUser 초기화
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            self.selectedUser = nil
+                        }
+                    }
+                }
             }
     }
 
@@ -109,6 +128,9 @@ struct ChatDetailView: View {
                                 store.state.galleryImages = images
                                 store.state.galleryStartIndex = startIndex
                                 store.state.showImageGallery = true
+                            },
+                            onProfileTap: { user in
+                                selectedUser = user
                             }
                         )
                         .padding(.vertical, showTime ? Spacing.xSmall : 2)

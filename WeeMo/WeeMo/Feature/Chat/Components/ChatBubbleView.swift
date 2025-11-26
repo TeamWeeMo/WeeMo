@@ -2,7 +2,7 @@
 //  ChatBubbleView.swift
 //  WeeMo
 //
-//  Created by Claude on 11/25/25.
+//  Created by 차지용 on 11/25/25.
 //
 
 import SwiftUI
@@ -16,6 +16,7 @@ struct ChatBubble: View {
     let isMine: Bool
     let showTime: Bool
     let onImageGalleryTap: (([String], Int) -> Void)?
+    let onProfileTap: ((User) -> Void)?
 
     var body: some View {
         HStack(alignment: .bottom, spacing: Spacing.small) {
@@ -26,8 +27,19 @@ struct ChatBubble: View {
                 bubbleContent
             } else {
                 // 상대방 메시지: 왼쪽 정렬
-                bubbleContent
-                timeLabel
+                profileImageView
+                VStack(alignment: .leading, spacing: 2) {
+                    // 상대방 이름
+                    Text(message.sender.nickname)
+                        .font(.app(.subContent2))
+                        .foregroundStyle(.textSub)
+                        .padding(.leading, 4)
+
+                    HStack(alignment: .bottom, spacing: Spacing.small) {
+                        bubbleContent
+                        timeLabel
+                    }
+                }
                 Spacer(minLength: 60)
             }
         }
@@ -35,6 +47,37 @@ struct ChatBubble: View {
     }
 
     // MARK: - Subviews
+
+    private var profileImageView: some View {
+        Button(action: {
+            onProfileTap?(message.sender)
+        }) {
+            Group {
+                if let profileURL = message.sender.profileImageURL,
+                   let url = URL(string: profileURL) {
+                    KFImage(url)
+                        .placeholder {
+                            Circle()
+                                .fill(Color.gray.opacity(0.3))
+                        }
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 38, height: 38)
+                        .clipShape(Circle())
+                } else {
+                    Circle()
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: 38, height: 38)
+                        .overlay {
+                            Image(systemName: "person.fill")
+                                .foregroundStyle(.gray)
+                                .font(.system(size: 20))
+                        }
+                }
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
 
     private var bubbleContent: some View {
         VStack(alignment: isMine ? .trailing : .leading, spacing: Spacing.xSmall) {

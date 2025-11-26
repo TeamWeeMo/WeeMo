@@ -2,7 +2,7 @@
 //  ChatInputBar.swift
 //  WeeMo
 //
-//  Created by Claude on 11/25/25.
+//  Created by 차지용 on 11/25/25.
 //
 
 import SwiftUI
