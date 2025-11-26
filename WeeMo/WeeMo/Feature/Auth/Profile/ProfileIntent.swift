@@ -14,6 +14,7 @@ enum ProfileIntent {
     case loadUserProfile(userId: String)  // 다른 사람 프로필 조회
     case loadUserMeetings
     case loadUserFeeds
+    case loadReservedSpaces
     case loadLikedPosts
     case loadPaidPosts
     case refreshCurrentTab

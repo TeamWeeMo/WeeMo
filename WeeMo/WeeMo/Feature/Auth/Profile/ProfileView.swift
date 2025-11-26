@@ -20,6 +20,7 @@ struct ProfileView: View {
     @EnvironmentObject var appState: AppState
     @Namespace private var underlineNS
     @State private var shouldNavigateToEdit = false
+    @State private var currentProfileImage: UIImage? = nil
 
     // 내 프로필인지 확인
     private var isMyProfile: Bool {
@@ -47,23 +48,21 @@ struct ProfileView: View {
                                 VStack(alignment: .leading, spacing: 4) {
                                     if isMyProfile {
                                         Text("반가워요,")
-                                            .font(.app(.headline3))
+                                            .font(.app(.subHeadline2))
                                             .foregroundStyle(.textMain)
 
-                                        HStack(alignment: .center) {
+                                        HStack(spacing: 4) {
                                             Text((UserManager.shared.nickname ?? "닉네임") + "님")
-                                                .font(.app(.headline2))
+                                                .font(.app(.headline3))
                                                 .foregroundStyle(.textMain)
 
-                                            Spacer()
-
-                                            // 설정 버튼 (내 프로필일 때만)
+                                            // 연필 아이콘 버튼 (내 프로필일 때만)
                                             Button {
                                                 shouldNavigateToEdit = true
                                             } label: {
-                                                Image(systemName: "gearshape")
-                                                    .font(.system(size: 20))
-                                                    .foregroundStyle(.textMain)
+                                                Image(.pencil2)
+                                                    .resizable()
+                                                    .frame(width: 26, height: 26)
                                             }
                                         }
                                     } else {
@@ -89,7 +88,6 @@ struct ProfileView: View {
                                 }
 
                                 Spacer()
-                                    .frame(width: 20)
                             }
                             .padding(.top, 40)
                             .frame(height: 100)  // 닉네임 영역 고정 높이
@@ -158,6 +156,12 @@ struct ProfileView: View {
                                let url = URL(string: FileRouter.fileURL(from: profileImageURL)) {
                                 KFImage(url)
                                     .withAuthHeaders()
+                                    .onSuccess { result in
+                                        // 이미지 로드 성공 시 UIImage로 저장
+                                        if isMyProfile {
+                                            currentProfileImage = result.image
+                                        }
+                                    }
                                     .placeholder {
                                         Circle()
                                             .fill(.white)
@@ -277,6 +281,22 @@ struct ProfileView: View {
                                 }
                             }
                             .padding(.top, 12)
+                        case .reservedSpaces:
+                            if profileStore.state.isLoadingReservedSpaces {
+                                ProgressView()
+                                    .frame(height: 400)
+                            } else if profileStore.state.reservedSpaces.isEmpty {
+                                Text("예약한 공간이 없습니다")
+                                    .font(.app(.subContent2))
+                                    .foregroundStyle(.textSub)
+                                    .frame(height: 400)
+                                    .frame(maxWidth: .infinity)
+                            } else {
+                                ProfileGridSection(columnCount: 3, items: profileStore.state.reservedSpaces.map { post in
+                                    let imageURL = post.files.first.map { FileRouter.fileURL(from: $0) }
+                                    return (title: post.title, imageURL: imageURL)
+                                })
+                            }
                         case .groups:
                             if profileStore.state.isLoadingLikedPosts {
                                 ProgressView()
@@ -416,6 +436,10 @@ struct ProfileView: View {
                 case .posts:
                     // 이미 초기 로드에서 불러왔으므로 스킵
                     break
+                case .reservedSpaces:
+                    if profileStore.state.reservedSpaces.isEmpty && !profileStore.state.isLoadingReservedSpaces {
+                        profileStore.send(.loadReservedSpaces)
+                    }
                 case .groups:
                     if profileStore.state.likedPosts.isEmpty && !profileStore.state.isLoadingLikedPosts {
                         profileStore.send(.loadLikedPosts)
@@ -427,7 +451,7 @@ struct ProfileView: View {
                 }
             }
             .navigationDestination(isPresented: $shouldNavigateToEdit) {
-                ProfileEditView(isNewProfile: false)
+                ProfileEditView(isNewProfile: false, initialImage: currentProfileImage)
             }
     }
 }
