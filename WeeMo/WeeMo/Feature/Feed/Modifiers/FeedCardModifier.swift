@@ -13,9 +13,7 @@ import SwiftUI
 private struct FeedCardStyleModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(.wmGray)
             .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusMedium))
-            .shadow(color: .black.opacity(0.08), radius: 4, x: 0, y: 2)
     }
 }
 

@@ -34,25 +34,11 @@ struct FeedCardView: View {
             // Custom Modifier 활용: 콘텐츠 텍스트 스타일
             Text(item.content)
                 .feedContentText()
-
-            // 하단 정보 (좋아요, 댓글)
-            HStack(spacing: Spacing.small) {
-                // Custom Modifier 활용: 정보 레이블 스타일
-                Label("\(item.likes.count)", systemImage: "heart")
-                    .infoLabel()
-
-                Label("\(item.commentCount)", systemImage: "bubble.right")
-                    .infoLabel()
-
-                Spacer()
-            }
-            .padding(.horizontal, Spacing.xSmall)
-            .padding(.bottom, Spacing.xSmall)
+                .padding(.bottom, Spacing.xSmall)
         }
         // Custom Modifier 활용: 카드 전체 스타일 (배경, 모서리, 그림자)
         .feedCardStyle()
     }
-
 }
 
 // MARK: - Preview
