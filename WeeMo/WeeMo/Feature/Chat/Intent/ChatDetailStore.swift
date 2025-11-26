@@ -108,28 +108,27 @@ final class ChatDetailStore: ObservableObject {
                 let calendar = Calendar.current
                 let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) ?? Date()
 
-                // 1. 30일 이후의 메시지만 로컬에서 로드
+                // 1. 30일 이전 메시지는 Realm에서 로드
                 let localOldMessages = chatService.getLocalMessages(roomId: roomId).filter {
                     $0.createdAt <= thirtyDaysAgo
                 }
 
                 await MainActor.run {
                     state.messages = localOldMessages
-                    print("📱 로컬에서 \(localOldMessages.count)개 30일+ 이전 메시지 로드")
+                    print("📱 Realm에서 30일 이전 메시지 \(localOldMessages.count)개 로드")
                 }
 
-                // 2. 서버에서 30일 이내 메시지만 조회
-                let thirtyDaysCursor = ISO8601DateFormatter().string(from: thirtyDaysAgo)
+                // 2. 30일 이후(최근) 메시지는 서버에서 조회
                 let recentServerMessages = try await chatService.fetchMessages(
                     roomId: roomId,
-                    cursorDate: thirtyDaysCursor // 30일 이내만 조회
+                    cursorDate: nil // 모든 메시지 조회 후 필터링
                 )
 
                 await MainActor.run {
-                    // 최근 30일 메시지는 서버에서만 가져옴
+                    // 30일 이후(최근) 메시지만 필터링
                     let recentMessages = recentServerMessages.filter { $0.createdAt > thirtyDaysAgo }
 
-                    // 로컬 30일+ 이전 메시지와 서버 30일 이내 메시지 병합
+                    // Realm(30일 이전) + 서버(30일 이후) 메시지 병합
                     var finalMessages = localOldMessages
                     finalMessages.append(contentsOf: recentMessages)
 
@@ -140,7 +139,7 @@ final class ChatDetailStore: ObservableObject {
                     state.shouldScrollToBottom = true
                     state.isLoading = false
 
-                    print("✅ 메시지 로드 완료: 로컬 30일+ 이전 \(localOldMessages.count)개 + 서버 30일 이내 \(recentMessages.count)개 = 총 \(finalMessages.count)개")
+                    print("✅ 메시지 로드 완료: Realm(30일 이전) \(localOldMessages.count)개 + 서버(30일 이후) \(recentMessages.count)개 = 총 \(finalMessages.count)개")
                 }
 
             } catch {
@@ -278,15 +277,8 @@ final class ChatDetailStore: ObservableObject {
     }
 
     private func saveMessageToLocal(_ message: ChatMessage) async {
-        // 30일 이후의 메시지만 Realm에 저장 (30일이 지나면 자동으로 저장)
-        let calendar = Calendar.current
-        let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-
-        // 메시지가 30일이 지났을 때만 저장
-        guard message.createdAt <= thirtyDaysAgo else {
-            print("📅 30일 이내 메시지는 Realm 저장하지 않음 (서버에서 관리): \(message.content)")
-            return
-        }
+        // 모든 새로운 메시지를 Realm에 저장
+        // (30일이 지나면 자동으로 정리됨)
 
         // ChatRealmService를 통한 저장
         do {
@@ -304,28 +296,28 @@ final class ChatDetailStore: ObservableObject {
             )
 
             try ChatRealmService.shared.saveChatMessage(messageDTO)
-            print("30일+ 이전 메시지 Realm에 저장 완료: \(message.content)")
+            print("✅ 새 메시지 Realm에 저장 완료: \(message.content)")
         } catch {
-            print("Realm 저장 실패: \(error)")
+            print("❌ Realm 저장 실패: \(error)")
         }
     }
 
 
     // MARK: - Cleanup Methods
 
-    /// 30일 이내 메시지를 Realm에서 정리 (앱 시작 시 호출)
-    /// 30일 정책: 최근 30일 메시지는 서버에서만, 30일 이후만 Realm 저장
+    /// 30일 이후(최근) 메시지를 Realm에서 정리 (앱 시작 시 호출)
+    /// 30일 정책: 30일 이전 메시지는 Realm 저장, 30일 이후(최근) 메시지는 서버에서만 관리
     func cleanupRecentMessages() {
         Task {
             let calendar = Calendar.current
             let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) ?? Date()
 
             do {
-                // 30일 이내의 메시지들을 Realm에서 삭제 (서버에서 관리하므로)
+                // 30일 이후(최근) 메시지들을 Realm에서 삭제 (서버에서 관리하므로)
                 try ChatRealmService.shared.deleteMessagesAfter(date: thirtyDaysAgo, roomId: state.room.id)
-                print("30일 이내 메시지 Realm에서 정리 완료 (서버에서 관리)")
+                print("✅ 30일 이후(최근) 메시지 Realm에서 정리 완료 (서버에서 관리)")
             } catch {
-                print("30일 이내 메시지 정리 실패: \(error)")
+                print("❌ 30일 이후 메시지 정리 실패: \(error)")
             }
         }
     }
