@@ -14,5 +14,4 @@ enum ChatDetailIntent {
     case closeSocketConnection
     case loadMoreMessages(beforeMessageId: String)
     case retryLoadMessages
-    case markAsRead
 }

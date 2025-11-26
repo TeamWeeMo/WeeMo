@@ -202,9 +202,6 @@ struct ChatDetailView: View {
 
         store.handle(.loadMessages(roomId: store.state.room.id))
         store.handle(.setupSocketConnection(roomId: store.state.room.id))
-
-        // 채팅방에 들어왔을 때 읽음 처리
-        store.handle(.markAsRead)
     }
 
     private func handleViewDisappear() {

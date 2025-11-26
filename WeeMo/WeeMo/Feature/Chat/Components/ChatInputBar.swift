@@ -47,11 +47,11 @@ struct ChatInputBar: View {
             ) {
                 VStack(spacing: 4) {
                     Circle()
-                        .fill(Color("wmMain"))
+                        .fill(.white)
                         .frame(width: 40, height: 40)
                         .overlay {
                             Image(systemName: "photo")
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.wmMain)
                                 .font(.system(size: 18))
                         }
 
@@ -75,11 +75,11 @@ struct ChatInputBar: View {
                 store.state.showPlusMenu.toggle()
             } label: {
                 Circle()
-                    .fill(store.state.showPlusMenu ? Color("wmMain") : .gray.opacity(0.3))
+                    .fill(.white)
                     .frame(width: 32, height: 32)
                     .overlay {
                         Image(systemName: store.state.showPlusMenu ? "xmark" : "plus")
-                            .foregroundStyle(store.state.showPlusMenu ? .white : .gray)
+                            .foregroundStyle(.wmMain)
                             .font(.system(size: 16, weight: .medium))
                     }
             }
@@ -94,22 +94,21 @@ struct ChatInputBar: View {
                 .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusLarge))
                 .lineLimit(1...5)
 
-            // 전송 버튼
-            if canSendContent {
-                Button {
-                    sendMessageWithContent()
-                } label: {
-                    Circle()
-                        .fill(Color("wmMain"))
-                        .frame(width: 32, height: 32)
-                        .overlay {
-                            Image(systemName: "arrow.up")
-                                .foregroundStyle(.white)
-                                .font(.system(size: 16, weight: .bold))
-                        }
-                }
-                .buttonStyle(PlainButtonStyle())
+            // 전송 버튼 (항상 표시)
+            Button {
+                sendMessageWithContent()
+            } label: {
+                Circle()
+                    .fill(.white)
+                    .frame(width: 32, height: 32)
+                    .overlay {
+                        Image(systemName: "paperplane.fill")
+                            .foregroundStyle(canSendContent ? Color("wmMain") : .gray)
+                            .font(.system(size: 16, weight: .medium))
+                    }
             }
+            .buttonStyle(PlainButtonStyle())
+            .disabled(!canSendContent)
         }
         .padding(.horizontal, Spacing.base)
         .padding(.vertical, Spacing.medium)
@@ -129,12 +128,12 @@ struct ChatInputBar: View {
     private func sendMessageWithContent() {
         let textContent = store.state.inputText.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        print("🚀 sendMessageWithContent 호출됨")
-        print("📝 텍스트: '\(textContent)'")
+        print("sendMessageWithContent 호출됨")
+        print("텍스트: '\(textContent)'")
 
         // 텍스트가 있으면 텍스트 전송 (이미지는 이미 즉시 전송됨)
         if !textContent.isEmpty {
-            print("📝 텍스트 전송")
+            print("텍스트 전송")
             store.handle(.sendMessage(content: textContent))
         }
     }

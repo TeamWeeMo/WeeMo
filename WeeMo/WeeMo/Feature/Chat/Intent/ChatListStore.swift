@@ -174,17 +174,13 @@ final class ChatListStore: ObservableObject {
                 )
             }
 
-            var chatRoom = ChatRoom(
+            let chatRoom = ChatRoom(
                 id: dto.roomId,
                 participants: participants,
                 lastChat: lastChat,
                 createdAt: ISO8601DateFormatter().date(from: dto.createdAt) ?? Date(),
                 updatedAt: ISO8601DateFormatter().date(from: dto.updatedAt) ?? Date()
             )
-
-            // Realm에서 읽지 않은 메시지 개수 계산
-            let lastReadMessageId = ChatRealmService.shared.getLastReadMessageId(roomId: dto.roomId)
-            chatRoom.unreadCount = ChatRealmService.shared.getUnreadCount(roomId: dto.roomId, lastReadMessageId: lastReadMessageId)
 
             return chatRoom
         }

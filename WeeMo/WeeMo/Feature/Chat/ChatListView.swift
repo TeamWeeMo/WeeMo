@@ -158,16 +158,9 @@ struct ChatRoomRow: View {
 
                     Spacer()
 
-                    HStack(spacing: Spacing.xSmall) {
-                        Text(room.lastChatTime)
-                            .font(.app(.subContent2))
-                            .foregroundStyle(.textSub)
-
-                        // 읽지 않은 메시지 뱃지
-                        if room.unreadCount > 0 {
-                            unreadBadge(count: room.unreadCount)
-                        }
-                    }
+                    Text(room.lastChatTime)
+                        .font(.app(.subContent2))
+                        .foregroundStyle(.textSub)
                 }
 
                 // 하단: 마지막 메시지
@@ -239,17 +232,6 @@ struct ChatRoomRow: View {
         }
     }
 
-    /// 읽지 않은 메시지 뱃지
-    private func unreadBadge(count: Int) -> some View {
-        Text(count > 99 ? "99+" : "\(count)")
-            .font(.app(.subContent3))
-            .foregroundStyle(.wmMain)
-            .padding(.horizontal, count > 99 ? 6 : 5)
-            .padding(.vertical, 2)
-            .background(.wmMain)
-            .clipShape(Capsule())
-            .frame(minWidth: 20, minHeight: 16)
-    }
 }
 
 // MARK: - Preview
