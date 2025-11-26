@@ -44,7 +44,11 @@ extension Date {
     /// 채팅방 목록에서 사용할 상대적 시간 표시 (예: "방금 전", "5분 전", "어제", "11/15")
     func chatTimeAgoString() -> String {
         let now = Date()
-        let timeInterval = now.timeIntervalSince(self)
+        let timeInterval = abs(now.timeIntervalSince(self))
+        let calendar = Calendar.current
+
+        // 디버깅 로그
+        print("🕐 시간 계산: 메시지=\(self), 현재=\(now), 간격=\(timeInterval)초")
 
         // 1분 미만
         if timeInterval < 60 {
@@ -57,38 +61,39 @@ extension Date {
             return "\(minutes)분 전"
         }
 
-        // 24시간 미만
-        if timeInterval < 86400 {
+        // 오늘인지 확인
+        if calendar.isDate(self, inSameDayAs: now) {
             let hours = Int(timeInterval / 3600)
             return "\(hours)시간 전"
         }
 
-        // 같은 연도
-        let calendar = Calendar.current
-        if calendar.component(.year, from: self) == calendar.component(.year, from: now) {
-            // 어제
-            if calendar.isDateInYesterday(self) {
-                return "어제"
-            }
-            // 이번 주
-            else if timeInterval < 604800 { // 7일
-                let formatter = DateFormatter()
-                formatter.dateFormat = "EEEE"
-                formatter.locale = Locale(identifier: "ko_KR")
-                return formatter.string(from: self)
-            }
-            // 이번 년도
-            else {
+        // 어제인지 확인
+        if calendar.isDateInYesterday(self) {
+            return "어제"
+        }
+
+        // 2일 이상 지난 경우
+        let daysSince = calendar.dateComponents([.day], from: calendar.startOfDay(for: self), to: calendar.startOfDay(for: now)).day ?? 0
+
+        if daysSince >= 2 {
+            // 같은 연도인지 확인
+            if calendar.component(.year, from: self) == calendar.component(.year, from: now) {
                 let formatter = DateFormatter()
                 formatter.dateFormat = "M/d"
+                formatter.locale = Locale(identifier: "ko_KR")
+                return formatter.string(from: self)
+            } else {
+                // 다른 연도
+                let formatter = DateFormatter()
+                formatter.dateFormat = "yyyy/M/d"
                 formatter.locale = Locale(identifier: "ko_KR")
                 return formatter.string(from: self)
             }
         }
 
-        // 다른 연도
+        // 1일 전 (어제가 아닌 경우 - 요일로 표시)
         let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy/M/d"
+        formatter.dateFormat = "EEEE"
         formatter.locale = Locale(identifier: "ko_KR")
         return formatter.string(from: self)
     }

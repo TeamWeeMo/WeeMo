@@ -204,12 +204,24 @@ struct ChatRoomRow: View {
     private var profileImage: some View {
         Group {
             if let profileURL = room.otherUser?.profileImageURL,
-               let url = URL(string: profileURL) {
+               let url = URL(string: FileRouter.fileURL(from: profileURL)) {
                 KFImage(url)
+                    .withAuthHeaders()
                     .placeholder {
                         Circle()
                             .fill(Color.gray.opacity(0.3))
+                            .overlay {
+                                ProgressView()
+                                    .tint(.gray)
+                            }
                     }
+                    .onSuccess { result in
+                        print("✅ 프로필 이미지 로딩 성공: \(url)")
+                    }
+                    .onFailure { error in
+                        print("❌ 프로필 이미지 로딩 실패: \(url), 에러: \(error)")
+                    }
+                    .retry(maxCount: 2, interval: .seconds(1))
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 52, height: 52)

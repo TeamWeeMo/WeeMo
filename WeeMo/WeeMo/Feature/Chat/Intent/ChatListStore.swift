@@ -161,11 +161,14 @@ final class ChatListStore: ObservableObject {
                     nickname: lastChatDTO.sender.nick,
                     profileImageURL: lastChatDTO.sender.profileImage
                 )
+                let parsedDate = parseDate(from: lastChatDTO.createdAt)
+                print("📅 마지막 채팅 시간 파싱: '\(lastChatDTO.createdAt)' -> \(parsedDate?.description ?? "nil")")
+
                 lastChat = ChatMessage(
                     id: lastChatDTO.chatId,
                     roomId: lastChatDTO.roomId,
                     content: lastChatDTO.content,
-                    createdAt: ISO8601DateFormatter().date(from: lastChatDTO.createdAt) ?? Date(),
+                    createdAt: parsedDate ?? Date(),
                     sender: sender,
                     files: lastChatDTO.files
                 )
@@ -185,5 +188,47 @@ final class ChatListStore: ObservableObject {
 
             return chatRoom
         }
+    }
+
+    // MARK: - Helper Methods
+
+    /// 다양한 형식의 날짜 문자열을 파싱
+    private func parseDate(from dateString: String) -> Date? {
+        // ISO8601 형식들 시도
+        let formatters = [
+            // 표준 ISO8601
+            ISO8601DateFormatter(),
+            // 커스텀 형식들
+            createDateFormatter(format: "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'"),
+            createDateFormatter(format: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"),
+            createDateFormatter(format: "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+            createDateFormatter(format: "yyyy-MM-dd HH:mm:ss"),
+            createDateFormatter(format: "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX"),
+            createDateFormatter(format: "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),
+            createDateFormatter(format: "yyyy-MM-dd'T'HH:mm:ssXXX")
+        ]
+
+        for formatter in formatters {
+            if let iso8601Formatter = formatter as? ISO8601DateFormatter {
+                if let date = iso8601Formatter.date(from: dateString) {
+                    return date
+                }
+            } else if let dateFormatter = formatter as? DateFormatter {
+                if let date = dateFormatter.date(from: dateString) {
+                    return date
+                }
+            }
+        }
+
+        print("❌ 날짜 파싱 실패: \(dateString)")
+        return nil
+    }
+
+    private func createDateFormatter(format: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = format
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
     }
 }
