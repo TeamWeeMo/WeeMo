@@ -385,11 +385,11 @@ struct ProfileView: View {
                             print("회원탈퇴")
                         } label: {
                             Text("회원탈퇴")
-                                .foregroundStyle(.textMain)
+                                .font(.app(.subContent2))
+                                .foregroundStyle(.textSub)
+                                .underline()
                         }
-                        .asMintCornerView()
-                        .frame(maxWidth: .infinity)
-                        .padding(.horizontal, 20)
+                        .padding(.top, 8)
                         .padding(.bottom, 40)
                     }
                 }
