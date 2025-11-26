@@ -56,8 +56,14 @@ struct SpaceDetailView: View {
                                 }
                             }
                         ),
-                        startHour: store.startHourBinding,
-                        endHour: store.endHourBinding,
+                        startHour: Binding(
+                            get: { store.state.startHour },
+                            set: { store.send(.startHourChanged($0)) }
+                        ),
+                        endHour: Binding(
+                            get: { store.state.endHour },
+                            set: { store.send(.endHourChanged($0)) }
+                        ),
                         pricePerHour: space.pricePerHour,
                         blockedHours: store.state.currentBlockedHours
                     )

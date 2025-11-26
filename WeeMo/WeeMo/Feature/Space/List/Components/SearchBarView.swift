@@ -13,18 +13,18 @@ struct SearchBarView: View {
     var body: some View {
         HStack(spacing: Spacing.small) {
             Image(systemName: "magnifyingglass")
-                .foregroundColor(Color("textSub"))
+                .foregroundColor(.textSub)
                 .font(.system(size: AppFontSize.s16.rawValue))
 
             TextField("", text: $searchText, prompt: Text("공간을 검색하세요")
-                .foregroundColor(Color("textSub"))
+                .foregroundColor(.textSub)
                 .font(.app(.content2)))
                 .font(.app(.content1))
-                .foregroundColor(Color("textMain"))
+                .foregroundColor(.textMain)
         }
         .padding(.horizontal, Spacing.base)
         .padding(.vertical, Spacing.medium)
-        .background(Color("wmGray"))
+        .background(.wmGray)
         .cornerRadius(Spacing.radiusSmall)
     }
 }

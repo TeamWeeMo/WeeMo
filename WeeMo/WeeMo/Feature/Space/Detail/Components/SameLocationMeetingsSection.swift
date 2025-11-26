@@ -39,11 +39,11 @@ struct SameLocationMeetingsSection: View {
                         HStack(spacing: Spacing.xSmall) {
                             Text("리뷰 전체보기")
                                 .font(.app(.subContent1))
-                                .foregroundColor(Color("textSub"))
+                                .foregroundColor(.textSub)
 
                             Image(systemName: "chevron.right")
                                 .font(.system(size: AppFontSize.s12.rawValue))
-                                .foregroundColor(Color("textSub"))
+                                .foregroundColor(.textSub)
                         }
                     }
                 }

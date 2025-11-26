@@ -190,7 +190,7 @@ struct SpaceCreateView: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 18))
-                        .foregroundColor(Color("textMain"))
+                        .foregroundColor(.textMain)
                 }
             }
         }

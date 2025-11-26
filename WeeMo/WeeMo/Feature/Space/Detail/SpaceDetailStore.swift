@@ -41,22 +41,6 @@ final class SpaceDetailStore: ObservableObject {
         self.state.pricePerHour = pricePerHour
     }
 
-    // MARK: - Bindings
-
-    var startHourBinding: Binding<Int?> {
-        Binding(
-            get: { self.state.startHour },
-            set: { self.state.startHour = $0 }
-        )
-    }
-
-    var endHourBinding: Binding<Int?> {
-        Binding(
-            get: { self.state.endHour },
-            set: { self.state.endHour = $0 }
-        )
-    }
-
     // MARK: - Intent Handler
 
     func send(_ intent: SpaceDetailIntent) {
@@ -66,6 +50,12 @@ final class SpaceDetailStore: ObservableObject {
 
         case .dateSelected(let date):
             state.selectedDate = date
+
+        case .startHourChanged(let hour):
+            state.startHour = hour
+
+        case .endHourChanged(let hour):
+            state.endHour = hour
 
         case .profileLoaded:
             break
@@ -219,9 +209,9 @@ final class SpaceDetailStore: ObservableObject {
                 state.isLiked = response.likeStatus
                 state.isLikeLoading = false
 
-                // 예약 성공 시 해당 시간 블락 처리
+                // 예약 성공 시 해당 시간 블락 처리 (선택 초기화 포함)
                 if response.likeStatus {
-                    addBlockedHours(date: selectedDate, startHour: startHour, endHour: endHour)
+                    addBlockedHours(date: selectedDate, startHour: startHour, endHour: endHour, shouldResetSelection: true)
                 }
             }
 
@@ -259,7 +249,12 @@ final class SpaceDetailStore: ObservableObject {
     }
 
     /// 예약된 시간을 블락 목록에 추가
-    private func addBlockedHours(date: Date, startHour: Int, endHour: Int) {
+    /// - Parameters:
+    ///   - date: 예약 날짜
+    ///   - startHour: 시작 시간
+    ///   - endHour: 종료 시간
+    ///   - shouldResetSelection: 선택 초기화 여부 (기본값: false)
+    private func addBlockedHours(date: Date, startHour: Int, endHour: Int, shouldResetSelection: Bool = false) {
         let calendar = Calendar.current
         let dateOnly = calendar.startOfDay(for: date)
 
@@ -273,11 +268,14 @@ final class SpaceDetailStore: ObservableObject {
 
         state.blockedHoursByDate[dateOnly] = blockedHours
 
-        // 선택 초기화
-        state.startHour = nil
-        state.endHour = nil
+        // 선택 초기화 (필요시만)
+        if shouldResetSelection {
+            state.startHour = nil
+            state.endHour = nil
+        }
 
-        print("[SpaceDetailStore] 블락된 시간 추가: \(dateOnly) - \(startHour):00 ~ \(endHour):00")
+        let source = shouldResetSelection ? "사용자 예약" : "서버 데이터"
+        print("[SpaceDetailStore] 블락된 시간 추가 (\(source)): \(dateOnly) - \(startHour):00 ~ \(endHour):00")
     }
 
     /// 서버에서 예약 댓글 조회 및 블락 시간 적용
@@ -289,9 +287,9 @@ final class SpaceDetailStore: ObservableObject {
             let reservationComments = comments.filter { $0.content.hasPrefix("#") }
 
             if reservationComments.isEmpty {
-                print("[SpaceDetailStore] 📋 저장된 예약 정보가 없습니다.")
+                print("[SpaceDetailStore] 저장된 예약 정보가 없습니다.")
             } else {
-                print("[SpaceDetailStore] 📋 저장된 예약 정보 (\(reservationComments.count)건):")
+                print("[SpaceDetailStore] 저장된 예약 정보 (\(reservationComments.count)건):")
                 print("========================================")
 
                 for (index, comment) in reservationComments.enumerated() {
@@ -309,13 +307,14 @@ final class SpaceDetailStore: ObservableObject {
                         print("    - 금액: \(price.formatted())원")
 
                         await MainActor.run {
-                            addBlockedHoursFromServer(
+                            addBlockedHours(
                                 date: reservationInfo.date,
                                 startHour: reservationInfo.startHour,
-                                endHour: endHour
+                                endHour: endHour,
+                                shouldResetSelection: false
                             )
                         }
-                        print("    ✅ 타임라인에 블락 적용됨")
+                        print("    타임라인에 블락 적용됨")
                     }
                     print("----------------------------------------")
                 }
@@ -354,24 +353,6 @@ final class SpaceDetailStore: ObservableObject {
         guard let totalHours = Int(hoursString) else { return nil }
 
         return (date: date, startHour: startHour, totalHours: totalHours)
-    }
-
-    /// 서버에서 조회한 예약 시간을 블락 목록에 추가 (선택 초기화 없음)
-    private func addBlockedHoursFromServer(date: Date, startHour: Int, endHour: Int) {
-        let calendar = Calendar.current
-        let dateOnly = calendar.startOfDay(for: date)
-
-        // 해당 날짜의 기존 블락된 시간 가져오기
-        var blockedHours = state.blockedHoursByDate[dateOnly] ?? []
-
-        // 선택된 시간 범위를 블락 목록에 추가
-        for hour in startHour..<endHour {
-            blockedHours.insert(hour)
-        }
-
-        state.blockedHoursByDate[dateOnly] = blockedHours
-
-        print("[SpaceDetailStore] 서버 예약 블락 추가: \(dateOnly) - \(startHour):00 ~ \(endHour):00")
     }
 
     /// 같은 위치의 모임 검색 (위치 기반)
