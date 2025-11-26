@@ -132,7 +132,7 @@ final class ChatDetailStore: ObservableObject {
                     var finalMessages = localOldMessages
                     finalMessages.append(contentsOf: recentMessages)
 
-                    // 시간순 정렬
+                    // 시간순 정렬 (오래된 것부터)
                     finalMessages.sort { $0.createdAt < $1.createdAt }
 
                     state.messages = finalMessages

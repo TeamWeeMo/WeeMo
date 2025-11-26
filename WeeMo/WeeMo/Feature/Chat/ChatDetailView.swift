@@ -115,40 +115,35 @@ struct ChatDetailView: View {
                             .padding()
                     }
 
-                    // 메시지 목록 (날짜별 구분)
-                    ForEach(groupedMessages, id: \.date) { dateGroup in
-                        // 날짜 헤더
-                        DateSeparatorView(date: dateGroup.date)
-                            .padding(.vertical, Spacing.medium)
-
-                        // 해당 날짜의 메시지들
-                        ForEach(Array(dateGroup.messages.enumerated()), id: \.element.id) { index, message in
-                            let showTime = shouldShowTime(for: index, in: dateGroup.messages)
-                            let isMine = message.sender.userId == store.state.currentUserId
-
-                            ChatBubble(
-                                message: message,
-                                isMine: isMine,
-                                showTime: showTime,
-                                onImageGalleryTap: { images, startIndex in
-                                    store.state.galleryImages = images
-                                    store.state.galleryStartIndex = startIndex
-                                    store.state.showImageGallery = true
-                                },
-                                onProfileTap: { user in
-                                    selectedUser = user
-                                }
-                            )
-                            .padding(.vertical, showTime ? Spacing.xSmall : 2)
-                            .id(message.id)
+                    // 메시지 목록 (시간순)
+                    messagesListView
+                }
+                .padding(.top, Spacing.small)
+                .padding(.bottom, Spacing.base)
+            }
+            .onAppear {
+                handleViewAppear()
+                // 뷰가 나타날 때 마지막 메시지로 스크롤 (충분한 지연)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    if let lastMessage = store.state.messages.last {
+                        withAnimation(.none) {
+                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
                         }
                     }
                 }
-                .padding(.top, Spacing.small)
+            }
+            .onChange(of: store.state.messages) { oldMessages, newMessages in
+                // 새 메시지가 추가되면 최신 메시지로 스크롤
+                if !newMessages.isEmpty, let lastMessage = newMessages.last,
+                   newMessages.count > oldMessages.count {
+                    withAnimation(.none) {
+                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                    }
+                }
             }
             .onChange(of: store.state.shouldScrollToBottom) { _, shouldScroll in
                 if shouldScroll, let lastMessage = store.state.messages.last {
-                    withAnimation(.easeInOut(duration: 0.3)) {
+                    withAnimation(.none) {
                         proxy.scrollTo(lastMessage.id, anchor: .bottom)
                     }
                     store.state.shouldScrollToBottom = false
@@ -172,6 +167,48 @@ struct ChatDetailView: View {
             DateMessageGroup(date: date, messages: messages.sorted { $0.createdAt < $1.createdAt })
         }
         .sorted { $0.date < $1.date }
+    }
+
+    private var messagesListView: some View {
+        ForEach(groupedMessages, id: \.date) { dateGroup in
+            DateSeparatorView(date: dateGroup.date)
+                .padding(.vertical, Spacing.medium)
+
+            ForEach(Array(dateGroup.messages.enumerated()), id: \.element.id) { index, message in
+                let showTime = shouldShowTime(for: index, in: dateGroup.messages)
+                let isMine = message.sender.userId == store.state.currentUserId
+
+                ChatBubble(
+                    message: message,
+                    isMine: isMine,
+                    showTime: showTime,
+                    onImageGalleryTap: { images, startIndex in
+                        store.state.galleryImages = images
+                        store.state.galleryStartIndex = startIndex
+                        store.state.showImageGallery = true
+                    },
+                    onProfileTap: { user in
+                        selectedUser = user
+                    }
+                )
+                .padding(.vertical, showTime ? Spacing.xSmall : 2)
+                .id(message.id)
+            }
+        }
+    }
+
+    private var reversedGroupedMessages: [DateMessageGroup] {
+        let calendar = Calendar.current
+        let grouped = Dictionary(grouping: store.state.messages) { message in
+            calendar.startOfDay(for: message.createdAt)
+        }
+
+        return grouped.map { date, messages in
+            // 각 날짜 그룹 내에서는 시간 순서대로 정렬 (오래된 것부터)
+            DateMessageGroup(date: date, messages: messages.sorted { $0.createdAt < $1.createdAt })
+        }
+        // 날짜는 최신 날짜부터 (역순)
+        .sorted { $0.date > $1.date }
     }
 
     // MARK: - Helper Views
