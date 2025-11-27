@@ -142,7 +142,7 @@ class ChatRealmService {
         try realmManager.write {
             chatRoom.lastReadMessageId = messageId
         }
-        print("🔖 마지막 읽은 메시지 업데이트: \(roomId) -> \(messageId)")
+        print("마지막 읽은 메시지 업데이트: \(roomId) -> \(messageId)")
     }
 
     /// 마지막 읽은 메시지 ID 가져오기

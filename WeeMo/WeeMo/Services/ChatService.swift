@@ -301,7 +301,7 @@ class ChatService {
             return response.files
 
         } catch {
-            print("❌ 파일 업로드 실패: \(error)")
+            print("파일 업로드 실패: \(error)")
             throw error
         }
     }

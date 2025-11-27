@@ -44,12 +44,12 @@ struct VoiceRecorderView: View {
 
                 // 녹음 버튼 (간단한 버전)
                 Button {
-                    print("🎤 녹음 버튼 탭됨 - 현재 녹음 상태: \(recorder.isRecording)")
+                    print("녹음 버튼 탭됨 - 현재 녹음 상태: \(recorder.isRecording)")
                     if recorder.isRecording {
-                        print("🎤 녹음 정지 호출")
+                        print("녹음 정지 호출")
                         stopRecording()
                     } else {
-                        print("🎤 녹음 시작 호출")
+                        print("녹음 시작 호출")
                         startRecording()
                     }
                 } label: {
@@ -173,14 +173,14 @@ class VoiceRecorder: NSObject, ObservableObject {
     }
 
     func startRecording() {
-        print("🎤 startRecording 호출됨")
+        print("startRecording 호출됨")
 
         // 권한 상태 확인
         let permission = AVAudioSession.sharedInstance().recordPermission
-        print("🎤 마이크 권한 상태: \(permission)")
+        print("마이크 권한 상태: \(permission)")
 
         guard permission == .granted else {
-            print("❌ 마이크 권한이 없습니다")
+            print("마이크 권한이 없습니다")
             return
         }
 
@@ -188,7 +188,7 @@ class VoiceRecorder: NSObject, ObservableObject {
         let audioFilename = documentsPath.appendingPathComponent("recording_\(UUID().uuidString).m4a")
         recordingURL = audioFilename
 
-        print("🎤 녹음 파일 경로: \(audioFilename)")
+        print("녹음 파일 경로: \(audioFilename)")
 
         let settings = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
@@ -205,15 +205,15 @@ class VoiceRecorder: NSObject, ObservableObject {
             audioRecorder?.delegate = self
 
             let recordStarted = audioRecorder?.record() ?? false
-            print("🎤 녹음 시작 결과: \(recordStarted)")
+            print("녹음 시작 결과: \(recordStarted)")
 
             DispatchQueue.main.async {
                 self.isRecording = recordStarted
                 self.hasRecording = false
-                print("🎤 isRecording 상태 업데이트: \(self.isRecording)")
+                print("isRecording 상태 업데이트: \(self.isRecording)")
             }
         } catch {
-            print("❌ 녹음 시작 실패: \(error)")
+            print("녹음 시작 실패: \(error)")
         }
     }
 

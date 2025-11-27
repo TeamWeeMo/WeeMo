@@ -48,21 +48,21 @@ struct ChatListView: View {
                 }
         }
             .onAppear {
-                print("📱 ChatListView 나타남 - 소켓 연결 시작")
+                print(" ChatListView 나타남 - 소켓 연결 시작")
                 store.handle(.setupSocketListeners)
                 if store.state.chatRooms.isEmpty {
                     store.handle(.loadChatRooms)
                 }
             }
             .onDisappear {
-                print("🔌 채팅 목록에서 나감 - 소켓 리스너 정리")
+                print(" 채팅 목록에서 나감 - 소켓 리스너 정리")
                 store.handle(.cleanupSocketListeners)
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
                 ChatSocketIOManager.shared.closeWebSocket()
             }
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
-                print("📱 앱이 백그라운드로 이동 - WebSocket 연결 유지")
+                print(" 앱이 백그라운드로 이동 - WebSocket 연결 유지")
             }
     }
 
@@ -209,10 +209,10 @@ struct ChatRoomRow: View {
                             }
                     }
                     .onSuccess { result in
-                        print("✅ 프로필 이미지 로딩 성공: \(url)")
+                        print("프로필 이미지 로딩 성공: \(url)")
                     }
                     .onFailure { error in
-                        print("❌ 프로필 이미지 로딩 실패: \(url), 에러: \(error)")
+                        print(" 프로필 이미지 로딩 실패: \(url), 에러: \(error)")
                     }
                     .retry(maxCount: 2, interval: .seconds(1))
                     .resizable()

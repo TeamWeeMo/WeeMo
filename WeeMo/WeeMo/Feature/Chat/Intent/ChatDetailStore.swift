@@ -74,7 +74,7 @@ final class ChatDetailStore: ObservableObject {
 
     @MainActor
     private func handleReceivedMessage(_ newMessage: ChatMessage) async {
-        print("📨 Store에서 새 메시지 수신: \(newMessage.content)")
+        print("Store에서 새 메시지 수신: \(newMessage.content)")
 
         // 현재 채팅방과 메시지 채팅방 일치 확인
         guard newMessage.roomId == state.room.id else {
@@ -96,7 +96,7 @@ final class ChatDetailStore: ObservableObject {
         // 강제 UI 업데이트
         objectWillChange.send()
 
-        print("✅ 새 메시지 추가됨: \(newMessage.content) | 총 메시지 수: \(state.messages.count)")
+        print("새 메시지 추가됨: \(newMessage.content) | 총 메시지 수: \(state.messages.count)")
 
 
         // 30일 정책에 따른 로컬 DB 저장 (백그라운드)
@@ -123,7 +123,7 @@ final class ChatDetailStore: ObservableObject {
 
                 await MainActor.run {
                     state.messages = localOldMessages
-                    print("📱 Realm에서 30일 이전 메시지 \(localOldMessages.count)개 로드")
+                    print("Realm에서 30일 이전 메시지 \(localOldMessages.count)개 로드")
                 }
 
                 // 2. 30일 이후(최근) 메시지는 서버에서 조회
@@ -147,14 +147,14 @@ final class ChatDetailStore: ObservableObject {
                     state.shouldScrollToBottom = true
                     state.isLoading = false
 
-                    print("✅ 메시지 로드 완료: Realm(30일 이전) \(localOldMessages.count)개 + 서버(30일 이후) \(recentMessages.count)개 = 총 \(finalMessages.count)개")
+                    print("메시지 로드 완료: Realm(30일 이전) \(localOldMessages.count)개 + 서버(30일 이후) \(recentMessages.count)개 = 총 \(finalMessages.count)개")
                 }
 
             } catch {
                 await MainActor.run {
                     state.errorMessage = "메시지를 불러오는데 실패했습니다: \(error.localizedDescription)"
                     state.isLoading = false
-                    print("❌ 메시지 로드 실패: \(error)")
+                    print("메시지 로드 실패: \(error)")
                 }
             }
         }
@@ -189,7 +189,7 @@ final class ChatDetailStore: ObservableObject {
                 await MainActor.run {
                     if moreMessages.isEmpty {
                         state.hasMoreMessages = false
-                        print("📭 더 이상 불러올 메시지가 없음")
+                        print("더 이상 불러올 메시지가 없음")
                     } else {
                         // 스크롤 위치 유지를 위해 현재 첫 번째 메시지 ID 저장
                         let currentFirstMessageId = state.messages.first?.id
@@ -200,7 +200,7 @@ final class ChatDetailStore: ObservableObject {
                         // 스크롤 위치 유지를 위해 shouldScrollToBottom을 false로 설정
                         state.shouldScrollToBottom = false
 
-                        print("✅ 이전 메시지 \(moreMessages.count)개 로드 (스크롤 위치 유지)")
+                        print("이전 메시지 \(moreMessages.count)개 로드 (스크롤 위치 유지)")
                     }
                     state.isLoadingMore = false
                 }
@@ -208,7 +208,7 @@ final class ChatDetailStore: ObservableObject {
             } catch {
                 await MainActor.run {
                     state.isLoadingMore = false
-                    print("❌ 이전 메시지 로드 실패: \(error)")
+                    print("이전 메시지 로드 실패: \(error)")
                 }
             }
         }
@@ -236,7 +236,7 @@ final class ChatDetailStore: ObservableObject {
 
                 await MainActor.run {
                     state.isSendingMessage = false
-                    print("✅ 메시지 전송 성공: \(sentMessage.content)")
+                    print("메시지 전송 성공: \(sentMessage.content)")
                     // 소켓에서 메시지를 받아서 화면에 표시됨
                 }
 
@@ -244,7 +244,7 @@ final class ChatDetailStore: ObservableObject {
                 await MainActor.run {
                     state.errorMessage = "메시지 전송에 실패했습니다: \(error.localizedDescription)"
                     state.isSendingMessage = false
-                    print("❌ 메시지 전송 실패: \(error)")
+                    print("메시지 전송 실패: \(error)")
                 }
             }
         }
@@ -287,9 +287,9 @@ final class ChatDetailStore: ObservableObject {
             )
 
             try ChatRealmService.shared.saveChatMessage(messageDTO)
-            print("✅ 새 메시지 Realm에 저장 완료: \(message.content)")
+            print("새 메시지 Realm에 저장 완료: \(message.content)")
         } catch {
-            print("❌ Realm 저장 실패: \(error)")
+            print("Realm 저장 실패: \(error)")
         }
     }
 
@@ -306,9 +306,9 @@ final class ChatDetailStore: ObservableObject {
             do {
                 // 30일 이후(최근) 메시지들을 Realm에서 삭제 (서버에서 관리하므로)
                 try ChatRealmService.shared.deleteMessagesAfter(date: thirtyDaysAgo, roomId: state.room.id)
-                print("✅ 30일 이후(최근) 메시지 Realm에서 정리 완료 (서버에서 관리)")
+                print("30일 이후(최근) 메시지 Realm에서 정리 완료 (서버에서 관리)")
             } catch {
-                print("❌ 30일 이후 메시지 정리 실패: \(error)")
+                print("30일 이후 메시지 정리 실패: \(error)")
             }
         }
     }

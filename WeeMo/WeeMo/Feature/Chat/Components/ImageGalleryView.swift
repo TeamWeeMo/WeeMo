@@ -71,10 +71,10 @@ struct ImageGalleryView: View {
                     .scaleEffect(1.5)
             }
             .onSuccess { result in
-                print("✅ 갤러리 이미지 로딩 성공: \(FileRouter.fileURL(from: imageURL))")
+                print("갤러리 이미지 로딩 성공: \(FileRouter.fileURL(from: imageURL))")
             }
             .onFailure { error in
-                print("❌ 갤러리 이미지 로딩 실패: \(FileRouter.fileURL(from: imageURL)), 에러: \(error)")
+                print("갤러리 이미지 로딩 실패: \(FileRouter.fileURL(from: imageURL)), 에러: \(error)")
             }
             .retry(maxCount: 3, interval: .seconds(1))
             .resizable()

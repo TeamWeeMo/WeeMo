@@ -31,7 +31,7 @@ final class MeetDetailStore: ObservableObject {
 
         Task {
             do {
-                print("🔄 Loading meet detail for postId: \(postId)")
+                print(" Loading meet detail for postId: \(postId)")
 
                 // PostRouter.fetchPost를 사용해 단일 포스트 조회
                 let postData = try await networkService.request(
@@ -39,7 +39,7 @@ final class MeetDetailStore: ObservableObject {
                     responseType: PostDTO.self
                 )
 
-                print("✅ Meet detail loaded: \(postData.title)")
+                print("Meet detail loaded: \(postData.title)")
 
                 let meetDetail = MeetDetail(
                     postId: postData.postId,
@@ -79,7 +79,7 @@ final class MeetDetailStore: ObservableObject {
                 }
 
             } catch {
-                print("❌ Error loading meet detail: \(error)")
+                print(" Error loading meet detail: \(error)")
                 await MainActor.run {
                     state.errorMessage = error.localizedDescription
                     state.isLoading = false
@@ -94,7 +94,7 @@ final class MeetDetailStore: ObservableObject {
 
         Task {
             do {
-                print("🔄 Joining meet: \(postId)")
+                print(" Joining meet: \(postId)")
 
                 // 모임 참가 API 호출 (결제 검증 API 사용)
                 let response = try await networkService.request(
@@ -102,7 +102,7 @@ final class MeetDetailStore: ObservableObject {
                     responseType: PaymentValidationDTO.self
                 )
 
-                print("✅ Successfully joined meet")
+                print("Successfully joined meet")
 
                 await MainActor.run {
                     state.isJoining = false
@@ -112,7 +112,7 @@ final class MeetDetailStore: ObservableObject {
                 }
 
             } catch {
-                print("❌ Error joining meet: \(error)")
+                print(" Error joining meet: \(error)")
                 await MainActor.run {
                     state.joinErrorMessage = error.localizedDescription
                     state.isJoining = false

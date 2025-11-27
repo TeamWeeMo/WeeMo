@@ -298,12 +298,12 @@ struct ChatDetailView: View {
 
     /// 선택된 미디어(사진/동영상) 로드 및 즉시 전송
     private func loadSelectedMedia() async {
-        print("📸 loadSelectedMedia 호출됨 - 선택된 미디어 개수: \(selectedPhotos.count)")
+        print(" loadSelectedMedia 호출됨 - 선택된 미디어 개수: \(selectedPhotos.count)")
 
         var mediaDatas: [(data: Data, isVideo: Bool)] = []
 
         for (index, item) in selectedPhotos.enumerated() {
-            print("📋 파일 \(index): ContentTypes=\(item.supportedContentTypes.map { $0.identifier })")
+            print(" 파일 \(index): ContentTypes=\(item.supportedContentTypes.map { $0.identifier })")
 
             do {
                 if let data = try await item.loadTransferable(type: Data.self) {
@@ -350,13 +350,13 @@ struct ChatDetailView: View {
                 )
 
                 await MainActor.run {
-                    print("✅ 파일 업로드 성공: \(fileURLs)")
+                    print("파일 업로드 성공: \(fileURLs)")
                     // 파일 URL들을 메시지로 전송 (내용은 빈 문자열)
                     store.handle(.sendMessage(content: "", files: fileURLs))
                 }
             } catch {
                 await MainActor.run {
-                    print("❌ 파일 업로드 실패: \(error)")
+                    print(" 파일 업로드 실패: \(error)")
                     store.state.errorMessage = "파일 업로드에 실패했습니다: \(error.localizedDescription)"
                 }
             }

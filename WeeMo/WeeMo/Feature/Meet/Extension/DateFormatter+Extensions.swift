@@ -48,7 +48,7 @@ extension Date {
         let calendar = Calendar.current
 
         // 디버깅 로그
-        print("🕐 시간 계산: 메시지=\(self), 현재=\(now), 간격=\(timeInterval)초")
+        print("시간 계산: 메시지=\(self), 현재=\(now), 간격=\(timeInterval)초")
 
         // 1분 미만
         if timeInterval < 60 {

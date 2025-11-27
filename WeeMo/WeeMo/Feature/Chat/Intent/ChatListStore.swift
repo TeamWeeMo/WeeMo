@@ -49,20 +49,20 @@ final class ChatListStore: ObservableObject {
         socketManager.chatRoomUpdateSubject
             .sink { [weak self] roomId in
                 Task { @MainActor in
-                    print("🔄 채팅방 리스트 업데이트 신호 수신: \(roomId)")
+                    print("채팅방 리스트 업데이트 신호 수신: \(roomId)")
                     self?.handle(.refreshChatRooms)
                 }
             }
             .store(in: &cancellables)
 
         state.isSocketListening = true
-        print("✅ ChatList Socket 리스너 설정 완료")
+        print("ChatList Socket 리스너 설정 완료")
     }
 
     private func cleanupSocketListeners() {
         cancellables.removeAll()
         state.isSocketListening = false
-        print("🧹 ChatList Socket 리스너 정리 완료")
+        print("ChatList Socket 리스너 정리 완료")
     }
 
     // MARK: - Chat Room Loading
@@ -83,7 +83,7 @@ final class ChatListStore: ObservableObject {
                 await MainActor.run {
                     state.chatRooms = chatRooms
                     state.isLoading = false
-                    print("✅ 전체 \(response.data.count)개 중 \(state.filteredChatRooms.count)개 채팅방 로드 완료 (나와의 채팅 제외)")
+                    print("전체 \(response.data.count)개 중 \(state.filteredChatRooms.count)개 채팅방 로드 완료 (나와의 채팅 제외)")
                 }
 
             } catch {
@@ -91,7 +91,7 @@ final class ChatListStore: ObservableObject {
                     state.errorMessage = "채팅방을 불러오는데 실패했습니다: \(error.localizedDescription)"
                     state.isLoading = false
                     state.chatRooms = []
-                    print("⚠️ 채팅방 로드 실패: \(error)")
+                    print("채팅방 로드 실패: \(error)")
                 }
             }
         }
@@ -114,13 +114,13 @@ final class ChatListStore: ObservableObject {
                 await MainActor.run {
                     state.chatRooms = chatRooms
                     state.isRefreshing = false
-                    print("🔄 새로고침 완료: 전체 \(response.data.count)개 중 \(state.filteredChatRooms.count)개 (나와의 채팅 제외)")
+                    print(" 새로고침 완료: 전체 \(response.data.count)개 중 \(state.filteredChatRooms.count)개 (나와의 채팅 제외)")
                 }
 
             } catch {
                 await MainActor.run {
                     state.isRefreshing = false
-                    print("❌ 채팅방 새로고침 실패: \(error)")
+                    print("채팅방 새로고침 실패: \(error)")
                     // 새로고침 실패시 기존 데이터 유지
                 }
             }
@@ -139,7 +139,7 @@ final class ChatListStore: ObservableObject {
 
         // 다른 채팅방으로 이동 시 Socket.IO 방 전환
         socketManager.openWebSocket(roomId: room.id)
-        print("🔌 선택된 채팅방으로 Socket 연결: \(room.id)")
+        print("선택된 채팅방으로 Socket 연결: \(room.id)")
     }
 
     // MARK: - Helper Methods
@@ -162,7 +162,7 @@ final class ChatListStore: ObservableObject {
                     profileImageURL: lastChatDTO.sender.profileImage
                 )
                 let parsedDate = parseDate(from: lastChatDTO.createdAt)
-                print("📅 마지막 채팅 시간 파싱: '\(lastChatDTO.createdAt)' -> \(parsedDate?.description ?? "nil")")
+                print(" 마지막 채팅 시간 파싱: '\(lastChatDTO.createdAt)' -> \(parsedDate?.description ?? "nil")")
 
                 lastChat = ChatMessage(
                     id: lastChatDTO.chatId,
@@ -216,7 +216,7 @@ final class ChatListStore: ObservableObject {
             }
         }
 
-        print("❌ 날짜 파싱 실패: \(dateString)")
+        print(" 날짜 파싱 실패: \(dateString)")
         return nil
     }
 
