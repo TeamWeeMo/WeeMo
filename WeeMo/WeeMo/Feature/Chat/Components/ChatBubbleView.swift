@@ -155,7 +155,9 @@ struct ChatMediaGrid: View {
             mediaURL: mediaFiles[0],
             onTap: { onImageTap?(mediaFiles, 0) }
         )
-        .frame(maxWidth: 200, maxHeight: 200)
+        .frame(width: 150, height: 150)
+        .aspectRatio(1, contentMode: .fill)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
     private var twoImagesView: some View {

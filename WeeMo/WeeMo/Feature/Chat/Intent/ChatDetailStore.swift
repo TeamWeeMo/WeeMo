@@ -225,7 +225,7 @@ final class ChatDetailStore: ObservableObject {
         state.inputText = "" // 입력창 즉시 클리어
         state.isSendingMessage = true
 
-        // 임시 메시지는 추가하지 않음 - 소켓에서만 메시지 추가
+        // 소켓에서만 메시지 추가
         Task {
             do {
                 let sentMessage = try await chatService.sendMessage(
@@ -261,23 +261,6 @@ final class ChatDetailStore: ObservableObject {
     }
 
     // MARK: - Helper Methods
-
-    private func createTempMessage(content: String, files: [String]?) -> ChatMessage {
-        let currentUser = User(
-            userId: state.currentUserId,
-            nickname: "나", // 임시로 고정값 사용
-            profileImageURL: nil
-        )
-
-        return ChatMessage(
-            id: "temp-\(UUID().uuidString)",
-            roomId: state.room.id,
-            content: content,
-            createdAt: Date(),
-            sender: currentUser,
-            files: files ?? []
-        )
-    }
 
     private func getLastMessageDate() -> String? {
         guard let lastMessage = state.messages.last else { return nil }

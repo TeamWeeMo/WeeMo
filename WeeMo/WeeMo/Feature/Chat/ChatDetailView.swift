@@ -8,6 +8,7 @@
 import SwiftUI
 import PhotosUI
 import Kingfisher
+import Combine
 struct ChatDetailView: View {
     // MARK: - Properties
 
@@ -138,7 +139,7 @@ struct ChatDetailView: View {
                             .padding()
                     }
 
-                    // 메시지 목록 (시간순)
+                    // 메시지 목록 (일반 순서)
                     messagesListView
                 }
                 .padding(.top, Spacing.small)
@@ -146,8 +147,8 @@ struct ChatDetailView: View {
             }
             .onAppear {
                 handleViewAppear()
-                // 뷰가 나타날 때 마지막 메시지로 스크롤 (충분한 지연)
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // 메시지 로딩 완료 후 바로 최신 메시지로 스크롤
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     if let lastMessage = store.state.messages.last {
                         withAnimation(.none) {
                             proxy.scrollTo(lastMessage.id, anchor: .bottom)
@@ -155,21 +156,12 @@ struct ChatDetailView: View {
                     }
                 }
             }
-            .onChange(of: store.state.messages) { oldMessages, newMessages in
-                // 새 메시지가 추가되면 최신 메시지로 스크롤
-                if !newMessages.isEmpty, let lastMessage = newMessages.last,
-                   newMessages.count > oldMessages.count {
+            .onChange(of: store.state.messages) { _, newMessages in
+                // 새 메시지 추가시 스크롤
+                if let lastMessage = newMessages.last {
                     withAnimation(.none) {
                         proxy.scrollTo(lastMessage.id, anchor: .bottom)
                     }
-                }
-            }
-            .onChange(of: store.state.shouldScrollToBottom) { _, shouldScroll in
-                if shouldScroll, let lastMessage = store.state.messages.last {
-                    withAnimation(.none) {
-                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                    }
-                    store.state.shouldScrollToBottom = false
                 }
             }
             .refreshable {
