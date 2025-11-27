@@ -42,35 +42,23 @@ struct VoiceRecorderView: View {
                     .font(.system(size: 32, weight: .light, design: .monospaced))
                     .foregroundStyle(.white)
 
-                // 녹음 상태 표시
-                VStack(spacing: 16) {
+                // 녹음 버튼 (간단한 버전)
+                Button {
+                    print("🎤 녹음 버튼 탭됨 - 현재 녹음 상태: \(recorder.isRecording)")
                     if recorder.isRecording {
-                        // 녹음 중 애니메이션
-                        Circle()
-                            .fill(Color.red)
-                            .frame(width: 100, height: 100)
-                            .scaleEffect(recorder.isRecording ? 1.2 : 1.0)
-                            .animation(.easeInOut(duration: 0.5).repeatForever(autoreverses: true), value: recorder.isRecording)
-
-                        Text("녹음 중...")
-                            .font(.app(.content1))
-                            .foregroundStyle(.white)
-                    } else {
-                        Circle()
-                            .stroke(Color.white, lineWidth: 3)
-                            .frame(width: 100, height: 100)
-
-                        Text("녹음하려면 탭하세요")
-                            .font(.app(.content1))
-                            .foregroundStyle(.white)
-                    }
-                }
-                .onTapGesture {
-                    if recorder.isRecording {
+                        print("🎤 녹음 정지 호출")
                         stopRecording()
                     } else {
+                        print("🎤 녹음 시작 호출")
                         startRecording()
                     }
+                } label: {
+                    Text(recorder.isRecording ? "녹음 중... (탭하여 정지)" : "녹음 시작")
+                        .font(.app(.content1))
+                        .foregroundStyle(.white)
+                        .padding()
+                        .background(recorder.isRecording ? Color.red : Color("wmMain"))
+                        .cornerRadius(8)
                 }
 
                 Spacer()
@@ -98,7 +86,7 @@ struct VoiceRecorderView: View {
                             .font(.system(size: 24))
                             .foregroundStyle(.white)
                             .frame(width: 60, height: 60)
-                            .background(Color.blue.opacity(0.8))
+                            .background(Color("wmMain").opacity(0.8))
                             .clipShape(Circle())
                     }
                     .disabled(!recorder.hasRecording)
@@ -185,9 +173,22 @@ class VoiceRecorder: NSObject, ObservableObject {
     }
 
     func startRecording() {
+        print("🎤 startRecording 호출됨")
+
+        // 권한 상태 확인
+        let permission = AVAudioSession.sharedInstance().recordPermission
+        print("🎤 마이크 권한 상태: \(permission)")
+
+        guard permission == .granted else {
+            print("❌ 마이크 권한이 없습니다")
+            return
+        }
+
         let documentsPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let audioFilename = documentsPath.appendingPathComponent("recording_\(UUID().uuidString).m4a")
         recordingURL = audioFilename
+
+        print("🎤 녹음 파일 경로: \(audioFilename)")
 
         let settings = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
@@ -197,16 +198,22 @@ class VoiceRecorder: NSObject, ObservableObject {
         ]
 
         do {
+            // 오디오 세션 설정
+            try AVAudioSession.sharedInstance().setActive(true)
+
             audioRecorder = try AVAudioRecorder(url: audioFilename, settings: settings)
             audioRecorder?.delegate = self
-            audioRecorder?.record()
+
+            let recordStarted = audioRecorder?.record() ?? false
+            print("🎤 녹음 시작 결과: \(recordStarted)")
 
             DispatchQueue.main.async {
-                self.isRecording = true
+                self.isRecording = recordStarted
                 self.hasRecording = false
+                print("🎤 isRecording 상태 업데이트: \(self.isRecording)")
             }
         } catch {
-            print("녹음 시작 실패: \(error)")
+            print("❌ 녹음 시작 실패: \(error)")
         }
     }
 

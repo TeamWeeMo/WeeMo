@@ -383,9 +383,11 @@ final class ChatDetailStore: ObservableObject {
 
     private func sendVoiceRecording(data: Data) {
         Task {
-            do {
+            await MainActor.run {
                 state.isSendingMessage = true
+            }
 
+            do {
                 // 음성 파일 업로드
                 let fileUrls = try await chatService.uploadChatFiles(
                     roomId: state.room.id,
