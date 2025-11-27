@@ -39,7 +39,8 @@ struct ChatInputBar: View {
     // MARK: - Subviews
 
     private var plusMenuView: some View {
-        HStack {
+        HStack(spacing: 20) {
+            // 사진 선택
             PhotosPicker(
                 selection: $selectedPhotos,
                 maxSelectionCount: 5,
@@ -56,6 +57,48 @@ struct ChatInputBar: View {
                         }
 
                     Text("사진")
+                        .font(.app(.subContent2))
+                        .foregroundStyle(.textSub)
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+
+            // 카메라 촬영
+            Button {
+                store.handle(.showCamera)
+            } label: {
+                VStack(spacing: 4) {
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 40, height: 40)
+                        .overlay {
+                            Image(systemName: "camera")
+                                .foregroundStyle(.wmMain)
+                                .font(.system(size: 18))
+                        }
+
+                    Text("카메라")
+                        .font(.app(.subContent2))
+                        .foregroundStyle(.textSub)
+                }
+            }
+            .buttonStyle(PlainButtonStyle())
+
+            // 음성 녹음
+            Button {
+                store.handle(.showVoiceRecorder)
+            } label: {
+                VStack(spacing: 4) {
+                    Circle()
+                        .fill(.white)
+                        .frame(width: 40, height: 40)
+                        .overlay {
+                            Image(systemName: "mic")
+                                .foregroundStyle(.wmMain)
+                                .font(.system(size: 18))
+                        }
+
+                    Text("음성")
                         .font(.app(.subContent2))
                         .foregroundStyle(.textSub)
                 }

@@ -25,6 +25,8 @@ struct ChatDetailState {
     var galleryImages: [String] = []
     var galleryStartIndex: Int = 0
     var isViewActive: Bool = false  // 뷰가 화면에 보이는 상태인지
+    var showCamera: Bool = false
+    var showVoiceRecorder: Bool = false
 
     init(room: ChatRoom) {
         self.room = room

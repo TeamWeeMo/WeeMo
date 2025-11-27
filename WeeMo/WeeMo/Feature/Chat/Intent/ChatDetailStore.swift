@@ -38,6 +38,14 @@ final class ChatDetailStore: ObservableObject {
             loadMoreMessages(beforeMessageId: beforeMessageId)
         case .retryLoadMessages:
             loadMessages(roomId: state.room.id)
+        case .showCamera:
+            showCamera()
+        case .sendCameraPhoto(let data):
+            sendCameraPhoto(data: data)
+        case .showVoiceRecorder:
+            showVoiceRecorder()
+        case .sendVoiceRecording(let data):
+            sendVoiceRecording(data: data)
         }
     }
 
@@ -318,6 +326,94 @@ final class ChatDetailStore: ObservableObject {
                 print("✅ 30일 이후(최근) 메시지 Realm에서 정리 완료 (서버에서 관리)")
             } catch {
                 print("❌ 30일 이후 메시지 정리 실패: \(error)")
+            }
+        }
+    }
+
+    // MARK: - Camera Methods
+
+    private func showCamera() {
+        state.showPlusMenu = false
+        state.showCamera = true
+    }
+
+    private func sendCameraPhoto(data: Data) {
+        Task {
+            do {
+                state.isSendingMessage = true
+
+                // 파일 업로드
+                let fileUrls = try await chatService.uploadChatFiles(
+                    roomId: state.room.id,
+                    files: [data]
+                )
+
+                // 메시지 전송
+                if let firstFileUrl = fileUrls.first {
+                    try await chatService.sendMessage(
+                        roomId: state.room.id,
+                        content: "",
+                        files: [firstFileUrl]
+                    )
+                }
+
+                await MainActor.run {
+                    state.isSendingMessage = false
+                    state.showCamera = false
+                    print("카메라 사진 전송 성공")
+                }
+
+            } catch {
+                await MainActor.run {
+                    state.isSendingMessage = false
+                    state.showCamera = false
+                    state.errorMessage = "사진 전송에 실패했습니다: \(error.localizedDescription)"
+                    print("카메라 사진 전송 실패: \(error)")
+                }
+            }
+        }
+    }
+
+    // MARK: - Voice Recording Methods
+
+    private func showVoiceRecorder() {
+        state.showPlusMenu = false
+        state.showVoiceRecorder = true
+    }
+
+    private func sendVoiceRecording(data: Data) {
+        Task {
+            do {
+                state.isSendingMessage = true
+
+                // 음성 파일 업로드
+                let fileUrls = try await chatService.uploadChatFiles(
+                    roomId: state.room.id,
+                    files: [data]
+                )
+
+                // 메시지 전송
+                if let firstFileUrl = fileUrls.first {
+                    try await chatService.sendMessage(
+                        roomId: state.room.id,
+                        content: "",
+                        files: [firstFileUrl]
+                    )
+                }
+
+                await MainActor.run {
+                    state.isSendingMessage = false
+                    state.showVoiceRecorder = false
+                    print("음성 메시지 전송 성공")
+                }
+
+            } catch {
+                await MainActor.run {
+                    state.isSendingMessage = false
+                    state.showVoiceRecorder = false
+                    state.errorMessage = "음성 전송에 실패했습니다: \(error.localizedDescription)"
+                    print("음성 메시지 전송 실패: \(error)")
+                }
             }
         }
     }

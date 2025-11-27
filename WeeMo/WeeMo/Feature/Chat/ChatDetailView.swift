@@ -46,6 +46,16 @@ struct ChatDetailView: View {
                     VideoPlayerView(videoURL: videoURL)
                 }
             }
+            .sheet(isPresented: $store.state.showCamera) {
+                CameraCaptureView { imageData in
+                    store.handle(.sendCameraPhoto(data: imageData))
+                }
+            }
+            .sheet(isPresented: $store.state.showVoiceRecorder) {
+                VoiceRecorderView { voiceData in
+                    store.handle(.sendVoiceRecording(data: voiceData))
+                }
+            }
             .onTapGesture {
                 // 다른 곳을 탭하면 + 메뉴 닫기
                 if store.state.showPlusMenu {

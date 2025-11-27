@@ -14,4 +14,8 @@ enum ChatDetailIntent {
     case closeSocketConnection
     case loadMoreMessages(beforeMessageId: String)
     case retryLoadMessages
+    case showCamera
+    case sendCameraPhoto(data: Data)
+    case showVoiceRecorder
+    case sendVoiceRecording(data: Data)
 }

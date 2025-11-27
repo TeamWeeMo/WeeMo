@@ -2,12 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>주변 모임을 지도에서 보기 위해 위치 권한이 필요합니다.</string>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>채팅에서 사진을 전송하기 위해 사진 라이브러리 접근 권한이 필요합니다.</string>
-	<key>NMFNcpKeyId</key>
-	<string>$(NcpId)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -26,6 +20,8 @@
 		<string>kakaokompassauth</string>
 		<string>kakaotalk</string>
 	</array>
+	<key>NMFNcpKeyId</key>
+	<string>$(NcpId)</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
