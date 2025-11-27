@@ -339,9 +339,11 @@ final class ChatDetailStore: ObservableObject {
 
     private func sendCameraPhoto(data: Data) {
         Task {
-            do {
+            await MainActor.run {
                 state.isSendingMessage = true
+            }
 
+            do {
                 // 파일 업로드
                 let fileUrls = try await chatService.uploadChatFiles(
                     roomId: state.room.id,
