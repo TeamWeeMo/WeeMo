@@ -147,20 +147,24 @@ struct ChatDetailView: View {
             }
             .onAppear {
                 handleViewAppear()
-                // 메시지 로딩 완료 후 바로 최신 메시지로 스크롤
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    if let lastMessage = store.state.messages.last {
-                        withAnimation(.none) {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                // 이미지 로딩을 위해 여러 번 스크롤 시도
+                for delay in [0.1, 0.3, 0.6, 1.0] {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                        if let lastMessage = store.state.messages.last {
+                            withAnimation(.none) {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
                         }
                     }
                 }
             }
             .onChange(of: store.state.messages) { _, newMessages in
-                // 새 메시지 추가시 스크롤
+                // 새 메시지 추가시 이미지 로딩 고려하여 스크롤
                 if let lastMessage = newMessages.last {
-                    withAnimation(.none) {
-                        proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        withAnimation(.none) {
+                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                        }
                     }
                 }
             }

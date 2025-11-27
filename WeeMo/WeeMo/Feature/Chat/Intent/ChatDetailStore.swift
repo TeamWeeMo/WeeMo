@@ -78,13 +78,13 @@ final class ChatDetailStore: ObservableObject {
 
         // 현재 채팅방과 메시지 채팅방 일치 확인
         guard newMessage.roomId == state.room.id else {
-            print("🔄 다른 채팅방 메시지 무시: \(newMessage.roomId) vs \(state.room.id)")
+            print("다른 채팅방 메시지 무시: \(newMessage.roomId) vs \(state.room.id)")
             return
         }
 
         // 중복 메시지 체크 (ID만 확인)
         guard !state.messages.contains(where: { $0.id == newMessage.id }) else {
-            print("🔄 중복 메시지 무시: \(newMessage.id)")
+            print("중복 메시지 무시: \(newMessage.id)")
             return
         }
 
