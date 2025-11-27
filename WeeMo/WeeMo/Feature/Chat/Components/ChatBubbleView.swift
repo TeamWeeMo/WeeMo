@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Kingfisher
+import AVKit
 
 // MARK: - Chat Bubble Component
 
@@ -114,8 +115,8 @@ struct ChatBubble: View {
     }
 
     private var imageContentView: some View {
-        ChatImageGrid(
-            imageFiles: message.files,
+        ChatMediaGrid(
+            mediaFiles: message.files,
             onImageTap: { images, index in
                 onImageGalleryTap?(images, index)
             }
@@ -123,15 +124,15 @@ struct ChatBubble: View {
     }
 }
 
-// MARK: - Chat Image Grid
+// MARK: - Chat Media Grid
 
-struct ChatImageGrid: View {
-    let imageFiles: [String]
+struct ChatMediaGrid: View {
+    let mediaFiles: [String]
     let onImageTap: (([String], Int) -> Void)?
 
     var body: some View {
         Group {
-            switch imageFiles.count {
+            switch mediaFiles.count {
             case 1:
                 singleImageView
             case 2:
@@ -150,19 +151,19 @@ struct ChatImageGrid: View {
     // MARK: - Image Layouts
 
     private var singleImageView: some View {
-        ChatImageItem(
-            imageURL: imageFiles[0],
-            onTap: { onImageTap?(imageFiles, 0) }
+        ChatMediaItem(
+            mediaURL: mediaFiles[0],
+            onTap: { onImageTap?(mediaFiles, 0) }
         )
         .frame(maxWidth: 200, maxHeight: 200)
     }
 
     private var twoImagesView: some View {
         HStack(spacing: 2) {
-            ForEach(Array(imageFiles.prefix(2).enumerated()), id: \.offset) { index, imageFile in
-                ChatImageItem(
-                    imageURL: imageFile,
-                    onTap: { onImageTap?(imageFiles, index) }
+            ForEach(Array(mediaFiles.prefix(2).enumerated()), id: \.offset) { index, mediaFile in
+                ChatMediaItem(
+                    mediaURL: mediaFile,
+                    onTap: { onImageTap?(mediaFiles, index) }
                 )
                 .frame(width: 100, height: 100)
                 .aspectRatio(1, contentMode: .fill)
@@ -173,26 +174,26 @@ struct ChatImageGrid: View {
 
     private var threeImagesView: some View {
         HStack(spacing: 2) {
-            ChatImageItem(
-                imageURL: imageFiles[0],
-                onTap: { onImageTap?(imageFiles, 0) }
+            ChatMediaItem(
+                mediaURL: mediaFiles[0],
+                onTap: { onImageTap?(mediaFiles, 0) }
             )
             .frame(width: 100, height: 100)
             .aspectRatio(1, contentMode: .fill)
             .clipShape(RoundedRectangle(cornerRadius: 4))
 
             VStack(spacing: 2) {
-                ChatImageItem(
-                    imageURL: imageFiles[1],
-                    onTap: { onImageTap?(imageFiles, 1) }
+                ChatMediaItem(
+                    mediaURL: mediaFiles[1],
+                    onTap: { onImageTap?(mediaFiles, 1) }
                 )
                 .frame(width: 49, height: 49)
                 .aspectRatio(1, contentMode: .fill)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
 
-                ChatImageItem(
-                    imageURL: imageFiles[2],
-                    onTap: { onImageTap?(imageFiles, 2) }
+                ChatMediaItem(
+                    mediaURL: mediaFiles[2],
+                    onTap: { onImageTap?(mediaFiles, 2) }
                 )
                 .frame(width: 49, height: 49)
                 .aspectRatio(1, contentMode: .fill)
@@ -204,17 +205,17 @@ struct ChatImageGrid: View {
     private var fourOrMoreImagesView: some View {
         VStack(spacing: 2) {
             HStack(spacing: 2) {
-                ChatImageItem(
-                    imageURL: imageFiles[0],
-                    onTap: { onImageTap?(imageFiles, 0) }
+                ChatMediaItem(
+                    mediaURL: mediaFiles[0],
+                    onTap: { onImageTap?(mediaFiles, 0) }
                 )
                 .frame(width: 75, height: 75)
                 .aspectRatio(1, contentMode: .fill)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
 
-                ChatImageItem(
-                    imageURL: imageFiles[1],
-                    onTap: { onImageTap?(imageFiles, 1) }
+                ChatMediaItem(
+                    mediaURL: mediaFiles[1],
+                    onTap: { onImageTap?(mediaFiles, 1) }
                 )
                 .frame(width: 75, height: 75)
                 .aspectRatio(1, contentMode: .fill)
@@ -222,36 +223,36 @@ struct ChatImageGrid: View {
             }
 
             HStack(spacing: 2) {
-                ChatImageItem(
-                    imageURL: imageFiles[2],
-                    onTap: { onImageTap?(imageFiles, 2) }
+                ChatMediaItem(
+                    mediaURL: mediaFiles[2],
+                    onTap: { onImageTap?(mediaFiles, 2) }
                 )
                 .frame(width: 75, height: 75)
                 .aspectRatio(1, contentMode: .fill)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
 
                 ZStack {
-                    ChatImageItem(
-                        imageURL: imageFiles[3],
-                        onTap: { onImageTap?(imageFiles, 3) }
+                    ChatMediaItem(
+                        mediaURL: mediaFiles[3],
+                        onTap: { onImageTap?(mediaFiles, 3) }
                     )
                     .frame(width: 75, height: 75)
                     .aspectRatio(1, contentMode: .fill)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
 
-                    if imageFiles.count > 4 {
+                    if mediaFiles.count > 4 {
                         Rectangle()
                             .fill(Color.black.opacity(0.6))
                             .frame(width: 75, height: 75)
                             .clipShape(RoundedRectangle(cornerRadius: 4))
 
-                        Text("+\(imageFiles.count - 4)")
+                        Text("+\(mediaFiles.count - 4)")
                             .font(.app(.subContent1))
                             .foregroundStyle(.white)
                     }
                 }
                 .onTapGesture {
-                    onImageTap?(imageFiles, 3)
+                    onImageTap?(mediaFiles, 3)
                 }
             }
         }
@@ -260,33 +261,64 @@ struct ChatImageGrid: View {
 
 // MARK: - Chat Image Item
 
-struct ChatImageItem: View {
-    let imageURL: String
+struct ChatMediaItem: View {
+    let mediaURL: String
     let onTap: () -> Void
+
+    private var isVideo: Bool {
+        mediaURL.lowercased().contains(".mp4") ||
+        mediaURL.lowercased().contains(".mov") ||
+        mediaURL.lowercased().contains("video_")
+    }
 
     var body: some View {
         Button(action: onTap) {
-            KFImage(URL(string: FileRouter.fileURL(from: imageURL)))
-                .withAuthHeaders()
-                .placeholder {
-                    RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                        .fill(Color.gray.opacity(0.3))
-                        .overlay {
-                            ProgressView()
-                                .tint(.gray)
-                        }
-                }
-                .onSuccess { result in
-                    print("✅ 이미지 로딩 성공: \(FileRouter.fileURL(from: imageURL))")
-                }
-                .onFailure { error in
-                    print("❌ 이미지 로딩 실패: \(FileRouter.fileURL(from: imageURL)), 에러: \(error)")
-                }
-                .retry(maxCount: 3, interval: .seconds(1))
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .clipped()
+            if isVideo {
+                videoView
+            } else {
+                imageView
+            }
         }
         .buttonStyle(PlainButtonStyle())
+    }
+
+    private var imageView: some View {
+        KFImage(URL(string: FileRouter.fileURL(from: mediaURL)))
+            .withAuthHeaders()
+            .placeholder {
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .fill(Color.gray.opacity(0.3))
+                    .overlay {
+                        ProgressView()
+                            .tint(.gray)
+                    }
+            }
+            .onSuccess { result in
+                print("이미지 로딩 성공: \(FileRouter.fileURL(from: mediaURL))")
+            }
+            .onFailure { error in
+                print("이미지 로딩 실패: \(FileRouter.fileURL(from: mediaURL)), 에러: \(error)")
+            }
+            .retry(maxCount: 3, interval: .seconds(1))
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .clipped()
+    }
+
+    private var videoView: some View {
+        VideoThumbnailView(videoURL: mediaURL)
+            .aspectRatio(1, contentMode: .fill)
+            .overlay {
+                // 원형 재생 버튼 오버레이
+                Circle()
+                    .fill(.black.opacity(0.7))
+                    .frame(width: 50, height: 50)
+                    .overlay {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.white)
+                            .offset(x: 2) // 플레이 아이콘을 약간 오른쪽으로 이동
+                    }
+            }
     }
 }

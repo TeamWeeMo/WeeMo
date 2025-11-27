@@ -43,7 +43,7 @@ struct ChatInputBar: View {
             PhotosPicker(
                 selection: $selectedPhotos,
                 maxSelectionCount: 5,
-                matching: .images
+                matching: .any(of: [.images, .videos])
             ) {
                 VStack(spacing: 4) {
                     Circle()

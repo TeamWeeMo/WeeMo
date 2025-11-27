@@ -15,6 +15,7 @@ struct ChatDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var selectedUser: User?
+    @State private var selectedVideoURL: String?
 
     init(room: ChatRoom) {
         self._store = StateObject(wrappedValue: ChatDetailStore(room: room))
@@ -32,6 +33,18 @@ struct ChatDetailView: View {
                     images: store.state.galleryImages,
                     startIndex: store.state.galleryStartIndex
                 )
+            }
+            .sheet(isPresented: Binding(
+                get: { selectedVideoURL != nil },
+                set: { newValue in
+                    if !newValue {
+                        selectedVideoURL = nil
+                    }
+                }
+            )) {
+                if let videoURL = selectedVideoURL {
+                    VideoPlayerView(videoURL: videoURL)
+                }
             }
             .onTapGesture {
                 // 다른 곳을 탭하면 + 메뉴 닫기
@@ -183,9 +196,18 @@ struct ChatDetailView: View {
                     isMine: isMine,
                     showTime: showTime,
                     onImageGalleryTap: { images, startIndex in
-                        store.state.galleryImages = images
-                        store.state.galleryStartIndex = startIndex
-                        store.state.showImageGallery = true
+                        let selectedFile = images[startIndex]
+                        if selectedFile.lowercased().contains(".mp4") ||
+                           selectedFile.lowercased().contains(".mov") ||
+                           selectedFile.lowercased().contains("video_") {
+                            // 영상인 경우 VideoPlayer 표시
+                            selectedVideoURL = selectedFile
+                        } else {
+                            // 이미지인 경우 기존 갤러리 표시
+                            store.state.galleryImages = images
+                            store.state.galleryStartIndex = startIndex
+                            store.state.showImageGallery = true
+                        }
                     },
                     onProfileTap: { user in
                         selectedUser = user
@@ -242,7 +264,7 @@ struct ChatDetailView: View {
     }
 
     private func handleViewDisappear() {
-        print("🔌 ChatDetailView onDisappear - 특정 방 연결 해제")
+        print("ChatDetailView onDisappear - 특정 방 연결 해제")
         store.handle(.closeSocketConnection)
     }
 
@@ -279,14 +301,17 @@ struct ChatDetailView: View {
 
             do {
                 if let data = try await item.loadTransferable(type: Data.self) {
-                    let isVideo = false // 비디오 지원 비활성화
+                    // 영상 파일 감지
+                    let isVideo = item.supportedContentTypes.contains { contentType in
+                        contentType.conforms(to: .movie) || contentType.conforms(to: .video)
+                    }
                     mediaDatas.append((data: data, isVideo: isVideo))
-                    print("✅ 파일 \(index) 로드 성공: \(data.count) bytes")
+                    print("파일 \(index) 로드 성공: \(data.count) bytes, 영상: \(isVideo)")
                 } else {
-                    print("❌ 파일 \(index) Data 변환 실패")
+                    print("파일 \(index) Data 변환 실패")
                 }
             } catch {
-                print("❌ 파일 \(index) 로드 실패: \(error)")
+                print("파일 \(index) 로드 실패: \(error)")
             }
         }
 
@@ -301,14 +326,12 @@ struct ChatDetailView: View {
 
     /// 선택된 미디어를 서버에 업로드하고 메시지 전송
     private func sendSelectedMedia(with mediaDatas: [(data: Data, isVideo: Bool)]) {
-        print("📤 미디어 전송 시작: \(mediaDatas.count)개 파일")
+        print("미디어 전송 시작: \(mediaDatas.count)개 파일")
 
-        // 영상 파일이 포함되어 있으면 알림
+        // 영상 파일도 지원
         let videoCount = mediaDatas.filter { $0.isVideo }.count
-        if videoCount > 0 {
-            print("⚠️ 영상 파일 \(videoCount)개가 포함되어 있지만 현재 지원하지 않습니다.")
-            return
-        }
+        let imageCount = mediaDatas.filter { !$0.isVideo }.count
+        print("전송할 파일: 이미지 \(imageCount)개, 영상 \(videoCount)개")
 
         let allDatas = mediaDatas.map { $0.data }
 

@@ -149,21 +149,23 @@ class ChatService {
             )
             print("서버 응답 받음: \(response.chatId)")
 
-            // 3. 임시 메시지 삭제 후 실제 메시지 저장
-            do {
-                try realmService.deleteTempMessage(tempId: tempMessageId)
-                try realmService.saveChatMessage(response)
-                print("Realm 임시 메시지 삭제 및 실제 메시지 저장 완료")
-            } catch {
-                print("Realm 업데이트 실패, 계속 진행: \(error)")
-                // Realm 오류가 있어도 UI 업데이트는 계속 진행
+            let chatMessage = response.toChatMessage()
+
+            // 3. Realm 작업을 백그라운드에서 처리
+            Task.detached(priority: .background) {
+                do {
+                    try await Task.sleep(nanoseconds: 100_000_000) // 100ms 지연
+                    try self.realmService.deleteTempMessage(tempId: tempMessageId)
+                    try self.realmService.saveChatMessage(response)
+                } catch {
+                    print("Realm 업데이트 실패: \(error)")
+                }
             }
 
             // 4. 웹소켓으로 실시간 전송 (선택적)
             webSocketManager.sendMessage(roomId: roomId, content: content, files: files)
             print("Socket.IO 전송 완료")
 
-            let chatMessage = response.toChatMessage()
             print("ChatMessage 생성 완료: \(chatMessage.id) - \(chatMessage.content)")
 
             // 5. 즉시 UI 업데이트를 위해 Socket.IO Subject에 메시지 전송
@@ -178,12 +180,13 @@ class ChatService {
             return chatMessage
 
         } catch {
-            // 5. 전송 실패시 임시 메시지 삭제 (안전하게)
-            do {
-                try realmService.deleteTempMessage(tempId: tempMessageId)
-                print("전송 실패로 인한 임시 메시지 삭제 완료")
-            } catch {
-                print("임시 메시지 삭제 실패: \(error)")
+            // 5. 전송 실패시 임시 메시지 삭제 (백그라운드에서 처리)
+            Task.detached(priority: .background) {
+                do {
+                    try self.realmService.deleteTempMessage(tempId: tempMessageId)
+                } catch {
+                    print("임시 메시지 삭제 실패: \(error)")
+                }
             }
             throw error
         }
@@ -281,20 +284,20 @@ class ChatService {
     /// 채팅 파일 업로드
     func uploadChatFiles(roomId: String, files: [Data]) async throws -> [String] {
         guard !files.isEmpty else {
-            print("⚠️ 업로드할 파일이 없습니다")
+            print("업로드할 파일이 없습니다")
             return []
         }
 
-        print("📤 파일 업로드 시작: \(files.count)개 파일, roomId: \(roomId)")
+        print("파일 업로드 시작: \(files.count)개 파일, roomId: \(roomId)")
 
         do {
-            let response = try await networkService.upload(
+            let response = try await networkService.uploadMedia(
                 ChatRouter.uploadChatFiles(roomId: roomId, files: files),
-                images: files,
+                mediaFiles: files,
                 responseType: FileDTO.self
             )
 
-            print("✅ 파일 업로드 성공: \(response.files)")
+            print("파일 업로드 성공: \(response.files)")
             return response.files
 
         } catch {
