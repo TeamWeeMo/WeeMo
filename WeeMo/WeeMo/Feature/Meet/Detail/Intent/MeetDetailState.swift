@@ -40,4 +40,10 @@ struct MeetDetailState {
     var isValidatingPayment: Bool = false
     var paymentSuccessMessage: String? = nil
     var paymentErrorMessage: String? = nil
+
+    // MARK: - Action Sheet & Delete States
+    var showActionSheet: Bool = false
+    var showDeleteAlert: Bool = false
+    var isDeleting: Bool = false
+    var isDeleted: Bool = false
 }

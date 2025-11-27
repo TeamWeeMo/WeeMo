@@ -12,12 +12,14 @@ import Kingfisher
 //TODO: - 파일분리 필요
 extension View {
     /// D-Day 배경색을 결정하는 헬퍼 함수
-    /// - Parameter days: 마감까지 남은 일수
+    /// - Parameter meet: Meet 객체
     /// - Returns: 조건에 따른 배경색
-    func dDayBackgroundColor(for days: Int) -> Color {
-        if days < 0 {
-            return .black // 이미 마감
-        } else if days == 0 {
+    func dDayBackgroundColor(for meet: Meet) -> Color {
+        if meet.isFullyBooked {
+            return .blue // 모집 완료 (인원 마감)
+        } else if meet.isRecruitmentEnded {
+            return .black // 모집 시간 종료
+        } else if meet.daysUntilDeadline == 0 {
             return .red // 오늘 마감
         } else {
             return .wmMain // 기본
@@ -114,7 +116,7 @@ struct MeetCardView: View {
                         .foregroundColor(.white)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 4)
-                        .background(dDayBackgroundColor(for: meet.daysUntilDeadline))
+                        .background(dDayBackgroundColor(for: meet))
                         .cornerRadius(4)
                 }
 

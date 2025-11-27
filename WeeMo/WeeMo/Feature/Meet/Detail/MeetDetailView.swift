@@ -33,18 +33,67 @@ struct MeetDetailView: View {
                    let currentUserId = TokenManager.shared.userId,
                    currentUserId == meet.creator.userId {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        NavigationLink(destination: MeetEditView(mode: .edit(postId: meet.id))) {
-                            Text("수정")
-                                .font(.app(.content2))
+                        Button {
+                            store.send(.showActionSheet)
+                        } label: {
+                            Image(systemName: "ellipsis")
                                 .foregroundColor(Color.wmMain)
                         }
                     }
                 }
             }
             .toolbarRole(.editor)
-            .background(Color("wmBg"))
+            .background(.wmBg)
             .onAppear {
                 store.send(.onAppear(postId: postId))
+            }
+            .confirmationDialog("", isPresented: Binding(
+                get: { store.state.showActionSheet },
+                set: { if !$0 { store.send(.dismissActionSheet) } }
+            ), titleVisibility: .hidden) {
+                if let meet = store.state.meet {
+                    NavigationLink(destination: MeetEditView(mode: .edit(postId: meet.id))) {
+                        Text("수정")
+                    }
+
+                    Button("삭제", role: .destructive) {
+                        store.send(.showDeleteAlert)
+                    }
+
+                    Button("취소", role: .cancel) {
+                        store.send(.dismissActionSheet)
+                    }
+                }
+            }
+            .alert("모임 삭제", isPresented: Binding(
+                get: { store.state.showDeleteAlert },
+                set: { if !$0 { store.send(.dismissDeleteAlert) } }
+            )) {
+                Button("취소", role: .cancel) {
+                    store.send(.dismissDeleteAlert)
+                }
+                Button("삭제", role: .destructive) {
+                    store.send(.deleteMeet)
+                }
+            } message: {
+                Text("정말 이 모임을 삭제하시겠습니까?\n삭제된 모임은 복구할 수 없습니다.")
+            }
+            .onChange(of: store.state.isDeleted) { _, isDeleted in
+                if isDeleted {
+                    dismiss()
+                }
+            }
+            .overlay {
+                if store.state.isDeleting {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                        .overlay(
+                            ProgressView("삭제 중...")
+                                .padding()
+                                .background(Color(UIColor.systemBackground))
+                                .cornerRadius(10)
+                        )
+                }
             }
             .alert("채팅 오류", isPresented: Binding(
                 get: { store.state.chatErrorMessage != nil },
@@ -170,15 +219,15 @@ struct MeetDetailView: View {
                             .fontWeight(.semibold)
                             .foregroundColor(.textMain)
                             .lineLimit(2)
-                        
+
                         Spacer()
-                        
+
                         Text(meet.dDayText)
                             .font(.app(.subContent3))
                             .foregroundColor(.white)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 4)
-                            .background(dDayBackgroundColor(for: meet.daysUntilDeadline))
+                            .background(dDayBackgroundColor(for: meet))
                             .cornerRadius(4)
                     }
                     .padding(.horizontal, Spacing.base)
@@ -425,7 +474,21 @@ struct MeetDetailView: View {
     }
 
     private func joinButton(meet: Meet) -> some View {
-        Button(action: {
+        let buttonTitle: String
+        let isDisabled: Bool
+
+        if meet.isFullyBooked {
+            buttonTitle = "모집완료"
+            isDisabled = true
+        } else if store.state.hasJoined {
+            buttonTitle = "참가완료"
+            isDisabled = true
+        } else {
+            buttonTitle = "참가하기"
+            isDisabled = false
+        }
+
+        return Button(action: {
             store.send(.showPaymentConfirmAlert)
         }) {
             if store.state.isJoining {
@@ -435,15 +498,15 @@ struct MeetDetailView: View {
                     .background(.wmMain)
                     .cornerRadius(8)
             } else {
-                Text("참가하기")
+                Text(buttonTitle)
                     .font(.app(.content1))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(store.state.hasJoined ? .gray : .wmMain)
+                    .background(isDisabled ? .gray : .wmMain)
                     .cornerRadius(8)
             }
         }
-        .disabled(store.state.isJoining || store.state.hasJoined)
+        .disabled(store.state.isJoining || store.state.hasJoined || meet.isFullyBooked)
         .padding(.horizontal, 20)
         .padding(.top, 20)
         .padding(.bottom, 34)

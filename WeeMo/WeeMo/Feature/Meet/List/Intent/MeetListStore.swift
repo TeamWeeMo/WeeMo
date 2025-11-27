@@ -34,7 +34,7 @@ final class MeetListStore {
         case .searchMeets(let query):
             searchMeets(query: query)
         case .refreshMeets:
-            Task { await loadMeets() }
+            Task { await refreshMeets() }
         case .sortMeets(let option):
             sortMeets(by: option)
         case .loadMoreMeets:
@@ -75,6 +75,38 @@ final class MeetListStore {
                 state.errorMessage = (error as? NetworkError)?.localizedDescription ?? error.localizedDescription
                 state.isLoading = false
             }
+        }
+    }
+
+    /// 새로고침 (화면 복귀 시 사용 및 Pull-to-Refresh)
+    func refreshMeets() async {
+        // 로딩 인디케이터 없이 조용히 새로고침
+        await MainActor.run {
+            state.errorMessage = nil
+            state.nextCursor = nil
+            state.hasMoreData = true
+        }
+
+        do {
+            let response = try await networkService.request(
+                PostRouter.fetchPosts(next: nil, limit: 20, category: .meet),
+                responseType: PostListDTO.self
+            )
+
+            // Mapper를 사용하여 변환
+            let meets = response.data.map { $0.toMeet() }
+
+            await MainActor.run {
+                state.allMeets = meets
+                state.filteredMeets = meets
+                state.nextCursor = response.nextCursor
+                state.hasMoreData = response.nextCursor != nil
+                applyFilterAndSort()
+            }
+
+        } catch {
+            // 새로고침 실패는 조용히 처리 (기존 데이터 유지)
+            print("[MeetListStore] 새로고침 실패: \(error)")
         }
     }
 

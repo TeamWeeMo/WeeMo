@@ -12,6 +12,7 @@ struct MeetListView: View {
     @State private var selectedSortOption: SortOption = .registrationDate
     @State private var showingSortOptions = false
     @State private var store = MeetListStore()
+    @State private var isFirstAppear = true
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -64,8 +65,13 @@ struct MeetListView: View {
                 }
                 .background(.wmBg)
                 .onAppear {
-                    if store.state.meets.isEmpty {
+                    if isFirstAppear {
+                        // 첫 번째 appear에서만 로드
+                        isFirstAppear = false
                         store.send(.loadMeets)
+                    } else {
+                        // 두 번째 이후 appear에서는 새로고침 (네비게이션 돌아올 때)
+                        store.send(.refreshMeets)
                     }
                 }
                 .onChange(of: selectedSortOption) { _, sortOption in
@@ -74,6 +80,9 @@ struct MeetListView: View {
                 .onChange(of: searchText) { _, searchQuery in
                     store.send(.searchMeets(query: searchQuery))
                 }
+            }
+            .refreshable {
+                await store.refreshMeets()
             }
 
             // Floating Buttons

@@ -73,10 +73,20 @@ struct Meet: Identifiable, Equatable, Hashable {
 
     // MARK: - Computed Properties
 
+    /// 모집 완료 여부 (인원이 다 찬 경우)
+    var isFullyBooked: Bool {
+        return participants >= capacity
+    }
+
+    /// 모집 종료 여부 (시간까지 고려)
+    var isRecruitmentEnded: Bool {
+        return Date() > recruitmentEndDate
+    }
+
     /// 모집 중 여부
     var isRecruiting: Bool {
         let now = Date()
-        return now >= recruitmentStartDate && now <= recruitmentEndDate
+        return now >= recruitmentStartDate && now <= recruitmentEndDate && !isFullyBooked
     }
 
     /// 모집 마감까지 남은 일수
@@ -86,6 +96,17 @@ struct Meet: Identifiable, Equatable, Hashable {
 
     /// D-Day 문자열
     var dDayText: String {
+        // 모집 완료 (인원 마감)
+        if isFullyBooked {
+            return "모집 완료"
+        }
+
+        // 모집 시간 종료
+        if isRecruitmentEnded {
+            return "마감"
+        }
+
+        // 남은 일수 계산
         let days = daysUntilDeadline
         if days < 0 {
             return "마감"

@@ -112,20 +112,11 @@ final class MeetEditStore {
         case .updateMeet(let postId):
             Task { await updateMeet(postId: postId) }
 
-        case .deleteMeet(let postId):
-            Task { await deleteMeet(postId: postId) }
-
         // MARK: - Navigation
         case .cancel:
             break
 
         // MARK: - Alert
-        case .showDeleteAlert:
-            state.showDeleteAlert = true
-
-        case .dismissDeleteAlert:
-            state.showDeleteAlert = false
-
         case .showErrorAlert:
             state.showErrorAlert = true
 
@@ -218,6 +209,11 @@ final class MeetEditStore {
                 populateFormFromMeet(meet)
                 state.isLoadingForEdit = false
             }
+
+            // 공간 정보 불러오기
+            if let spaceId = meet.spaceId {
+                await loadSpaceForEdit(spaceId: spaceId)
+            }
         } catch {
             await MainActor.run {
                 state.errorMessage = (error as? NetworkError)?.localizedDescription ?? "모임 정보를 불러오는데 실패했습니다."
@@ -239,6 +235,25 @@ final class MeetEditStore {
         state.pricePerPerson = meet.pricePerPerson
         state.existingImageURLs = meet.imageURLs
         state.shouldKeepExistingImages = true
+    }
+
+    /// 수정 모드에서 공간 정보 불러오기
+    private func loadSpaceForEdit(spaceId: String) async {
+        do {
+            let postDTO = try await networkService.request(
+                PostRouter.fetchPost(postId: spaceId),
+                responseType: PostDTO.self
+            )
+
+            let space = postDTO.toSpace()
+
+            await MainActor.run {
+                state.selectedSpace = space
+            }
+        } catch {
+            // 공간 불러오기 실패는 조용히 처리 (나머지 정보는 정상적으로 로드됨)
+            print("[MeetEditStore] 공간 불러오기 실패: \(error)")
+        }
     }
 
     // MARK: - Create Meet
@@ -349,32 +364,6 @@ final class MeetEditStore {
             await MainActor.run {
                 state.errorMessage = (error as? NetworkError)?.localizedDescription ?? "모임 수정에 실패했습니다."
                 state.isUpdating = false
-                state.showErrorAlert = true
-            }
-        }
-    }
-
-    // MARK: - Delete Meet
-
-    private func deleteMeet(postId: String) async {
-        await MainActor.run {
-            state.isDeleting = true
-            state.errorMessage = nil
-        }
-
-        do {
-            try await networkService.request(PostRouter.deletePost(postId: postId))
-
-            print("모임 삭제 성공: \(postId)")
-
-            await MainActor.run {
-                state.isDeleting = false
-                state.isDeleted = true
-            }
-        } catch {
-            await MainActor.run {
-                state.errorMessage = (error as? NetworkError)?.localizedDescription ?? "모임 삭제에 실패했습니다."
-                state.isDeleting = false
                 state.showErrorAlert = true
             }
         }

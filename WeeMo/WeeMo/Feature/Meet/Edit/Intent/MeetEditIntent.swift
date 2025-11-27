@@ -44,7 +44,6 @@ enum MeetEditIntent {
 
     case createMeet
     case updateMeet(postId: String)
-    case deleteMeet(postId: String)
 
     // MARK: - Navigation
 
@@ -52,8 +51,6 @@ enum MeetEditIntent {
 
     // MARK: - Alert
 
-    case showDeleteAlert
-    case dismissDeleteAlert
     case showErrorAlert
     case dismissErrorAlert
     case showSuccessAlert

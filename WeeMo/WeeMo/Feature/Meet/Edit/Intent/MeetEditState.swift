@@ -46,18 +46,15 @@ struct MeetEditState: Equatable {
 
     var isCreating: Bool = false
     var isUpdating: Bool = false
-    var isDeleting: Bool = false
     var isLoadingForEdit: Bool = false
 
     // MARK: - Result States
 
     var isCreated: Bool = false
     var isUpdated: Bool = false
-    var isDeleted: Bool = false
 
     // MARK: - Alert States
 
-    var showDeleteAlert: Bool = false
     var showErrorAlert: Bool = false
     var showSuccessAlert: Bool = false
 
@@ -94,7 +91,7 @@ struct MeetEditState: Equatable {
 
     /// 로딩 중 여부
     var isLoading: Bool {
-        isCreating || isUpdating || isDeleting || isLoadingForEdit || isLoadingSpaces
+        isCreating || isUpdating || isLoadingForEdit || isLoadingSpaces
     }
 
     /// 이미지 총 개수
@@ -125,7 +122,6 @@ struct MeetEditState: Equatable {
         lhs.isUpdating == rhs.isUpdating &&
         lhs.isCreated == rhs.isCreated &&
         lhs.isUpdated == rhs.isUpdated &&
-        lhs.showDeleteAlert == rhs.showDeleteAlert &&
         lhs.showErrorAlert == rhs.showErrorAlert &&
         lhs.showSuccessAlert == rhs.showSuccessAlert &&
         lhs.errorMessage == rhs.errorMessage &&

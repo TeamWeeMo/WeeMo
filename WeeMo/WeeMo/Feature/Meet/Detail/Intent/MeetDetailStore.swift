@@ -83,6 +83,23 @@ final class MeetDetailStore {
 
         case .dismissPaymentError:
             state.paymentErrorMessage = nil
+
+        case .showActionSheet:
+            state.showActionSheet = true
+
+        case .dismissActionSheet:
+            state.showActionSheet = false
+
+        case .showDeleteAlert:
+            state.showActionSheet = false
+            state.showDeleteAlert = true
+
+        case .dismissDeleteAlert:
+            state.showDeleteAlert = false
+
+        case .deleteMeet:
+            guard let postId = currentPostId else { return }
+            Task { await deleteMeet(postId: postId) }
         }
     }
 
@@ -236,6 +253,31 @@ final class MeetDetailStore {
                 state.isValidatingPayment = false
                 state.paymentErrorMessage = "결제 검증에 실패했습니다.\n\(errorMessage)\n\n고객센터로 문의해주세요."
                 state.shouldNavigateToPayment = false
+            }
+        }
+    }
+
+    // MARK: - Delete Meet
+
+    private func deleteMeet(postId: String) async {
+        await MainActor.run {
+            state.isDeleting = true
+            state.errorMessage = nil
+        }
+
+        do {
+            try await networkService.request(PostRouter.deletePost(postId: postId))
+
+            await MainActor.run {
+                state.isDeleting = false
+                state.isDeleted = true
+            }
+        } catch {
+            let errorMessage = (error as? NetworkError)?.localizedDescription ?? error.localizedDescription
+
+            await MainActor.run {
+                state.isDeleting = false
+                state.errorMessage = "모임 삭제에 실패했습니다.\n\(errorMessage)"
             }
         }
     }

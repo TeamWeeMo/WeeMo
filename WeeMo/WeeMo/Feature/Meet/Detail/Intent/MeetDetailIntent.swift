@@ -34,4 +34,11 @@ enum MeetDetailIntent {
     case validatePayment(impUid: String, postId: String)
     case dismissPaymentSuccess
     case dismissPaymentError
+
+    // MARK: - Action Sheet & Delete
+    case showActionSheet
+    case dismissActionSheet
+    case showDeleteAlert
+    case dismissDeleteAlert
+    case deleteMeet
 }

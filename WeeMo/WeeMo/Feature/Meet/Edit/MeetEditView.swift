@@ -407,16 +407,6 @@ struct MeetEditView: View {
                     .stroke(Color.gray.opacity(0.2), lineWidth: 1)
             )
         }
-        .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("완료") {
-                    focusedField = nil
-                }
-                .font(.app(.content1))
-                .foregroundStyle(.wmMain)
-            }
-        }
     }
 
     /// 7. 모집 기간 섹션
@@ -642,21 +632,6 @@ private struct AlertsSetupModifier: ViewModifier {
             } message: {
                 Text("모임을 작성하였습니다.\n주최자도 참가비 결제가 필요합니다.")
             }
-            .alert("삭제", isPresented: .init(
-                get: { store.state.showDeleteAlert },
-                set: { if !$0 { store.send(.dismissDeleteAlert) } }
-            )) {
-                Button("취소", role: .cancel) {
-                    store.send(.dismissDeleteAlert)
-                }
-                Button("삭제", role: .destructive) {
-                    if let postId = mode.postId {
-                        store.send(.deleteMeet(postId: postId))
-                    }
-                }
-            } message: {
-                Text("정말 이 모임을 삭제하시겠습니까?")
-            }
             .alert("완료", isPresented: .init(
                 get: { store.state.paymentSuccessMessage != nil },
                 set: { if !$0 { store.send(.dismissPaymentSuccess) } }
@@ -707,11 +682,6 @@ private struct LifecycleModifier: ViewModifier {
                 if isUpdated {
                     UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     store.send(.showSuccessAlert)
-                }
-            }
-            .onChange(of: store.state.isDeleted) { _, isDeleted in
-                if isDeleted {
-                    dismiss()
                 }
             }
             .onAppear {
