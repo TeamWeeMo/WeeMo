@@ -58,4 +58,13 @@ enum MeetEditIntent {
     case dismissErrorAlert
     case showSuccessAlert
     case dismissSuccessAlert
+
+    // MARK: - Payment (for create mode)
+
+    case showPaymentRequiredAlert
+    case dismissPaymentRequiredAlert
+    case confirmPayment
+    case clearPaymentNavigation
+    case validatePayment(impUid: String, postId: String)
+    case dismissPaymentSuccess
 }

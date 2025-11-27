@@ -61,6 +61,28 @@ final class MeetDetailStore {
         case .clearSpaceNavigation:
             state.shouldNavigateToSpace = false
             state.loadedSpace = nil
+
+        case .showPaymentConfirmAlert:
+            state.showPaymentConfirmAlert = true
+
+        case .dismissPaymentConfirmAlert:
+            state.showPaymentConfirmAlert = false
+
+        case .confirmPayment:
+            state.showPaymentConfirmAlert = false
+            state.shouldNavigateToPayment = true
+
+        case .clearPaymentNavigation:
+            state.shouldNavigateToPayment = false
+
+        case .validatePayment(let impUid, let postId):
+            Task { await validatePayment(impUid: impUid, postId: postId) }
+
+        case .dismissPaymentSuccess:
+            state.paymentSuccessMessage = nil
+
+        case .dismissPaymentError:
+            state.paymentErrorMessage = nil
         }
     }
 
@@ -79,22 +101,12 @@ final class MeetDetailStore {
             )
 
             let meet = postData.toMeet()
-            let participants = postData.buyers.map { buyer in
-                User(
-                    userId: buyer.userId,
-                    nickname: buyer.nick,
-                    profileImageURL: buyer.profileImage
-                )
-            }
 
             // 현재 사용자가 이미 참가했는지 확인
-            let hasJoined = TokenManager.shared.userId.map { userId in
-                postData.buyers.contains { $0.userId == userId }
-            } ?? false
+            let hasJoined = postData.buyers.contains(TokenManager.shared.userId ?? "")
 
             await MainActor.run {
                 state.meet = meet
-                state.participants = participants
                 state.hasJoined = hasJoined
                 state.isLoading = false
             }
@@ -188,6 +200,42 @@ final class MeetDetailStore {
             await MainActor.run {
                 state.isLoadingSpace = false
                 print("[MeetDetailStore] 공간 조회 실패: \(error)")
+            }
+        }
+    }
+
+    // MARK: - Validate Payment
+
+    private func validatePayment(impUid: String, postId: String) async {
+
+        await MainActor.run {
+            state.isValidatingPayment = true
+            state.paymentErrorMessage = nil
+        }
+
+        do {
+            let response = try await networkService.request(
+                PaymentRouter.validatePayment(impUid: impUid, postId: postId),
+                responseType: PaymentHistoryDTO.self
+            )
+
+            // 결제 완료 후 상세 정보 다시 로드
+            await loadMeetDetail(postId: postId)
+
+            await MainActor.run {
+                state.isValidatingPayment = false
+                state.paymentSuccessMessage = "모임 참가가 완료되었습니다."
+                state.shouldNavigateToPayment = false
+            }
+
+        } catch {
+
+            let errorMessage = (error as? NetworkError)?.localizedDescription ?? error.localizedDescription
+
+            await MainActor.run {
+                state.isValidatingPayment = false
+                state.paymentErrorMessage = "결제 검증에 실패했습니다.\n\(errorMessage)\n\n고객센터로 문의해주세요."
+                state.shouldNavigateToPayment = false
             }
         }
     }

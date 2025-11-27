@@ -25,4 +25,13 @@ enum MeetDetailIntent {
     // MARK: - Space Navigation
     case navigateToSpace(spaceId: String)
     case clearSpaceNavigation
+
+    // MARK: - Payment
+    case showPaymentConfirmAlert
+    case dismissPaymentConfirmAlert
+    case confirmPayment
+    case clearPaymentNavigation
+    case validatePayment(impUid: String, postId: String)
+    case dismissPaymentSuccess
+    case dismissPaymentError
 }

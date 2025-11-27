@@ -138,6 +138,26 @@ final class MeetEditStore {
 
         case .dismissSuccessAlert:
             state.showSuccessAlert = false
+
+        // MARK: - Payment
+        case .showPaymentRequiredAlert:
+            state.showPaymentRequiredAlert = true
+
+        case .dismissPaymentRequiredAlert:
+            state.showPaymentRequiredAlert = false
+
+        case .confirmPayment:
+            state.showPaymentRequiredAlert = false
+            state.shouldNavigateToPayment = true
+
+        case .clearPaymentNavigation:
+            state.shouldNavigateToPayment = false
+
+        case .validatePayment(let impUid, let postId):
+            Task { await validatePayment(impUid: impUid, postId: postId) }
+
+        case .dismissPaymentSuccess:
+            state.paymentSuccessMessage = nil
         }
     }
 
@@ -262,12 +282,13 @@ final class MeetEditStore {
                 responseType: PostDTO.self
             )
 
-            print("✅ 모임 생성 성공: \(response.postId)")
+            print("모임 생성 성공: \(response.postId)")
 
             await MainActor.run {
                 state.isCreating = false
                 state.isCreated = true
-                state.showSuccessAlert = true
+                state.createdPostId = response.postId
+                state.showPaymentRequiredAlert = true
             }
         } catch {
             await MainActor.run {
@@ -318,7 +339,7 @@ final class MeetEditStore {
                 responseType: PostDTO.self
             )
 
-            print("✅ 모임 수정 성공: \(response.postId)")
+            print("모임 수정 성공: \(response.postId)")
 
             await MainActor.run {
                 state.isUpdating = false
@@ -344,7 +365,7 @@ final class MeetEditStore {
         do {
             try await networkService.request(PostRouter.deletePost(postId: postId))
 
-            print("✅ 모임 삭제 성공: \(postId)")
+            print("모임 삭제 성공: \(postId)")
 
             await MainActor.run {
                 state.isDeleting = false
@@ -413,6 +434,40 @@ final class MeetEditStore {
         return fields
     }
 
+    // MARK: - Validate Payment
+
+    /// 결제 영수증 검증
+    private func validatePayment(impUid: String, postId: String) async {
+
+        await MainActor.run {
+            state.isValidatingPayment = true
+        }
+
+        do {
+            let response = try await networkService.request(
+                PaymentRouter.validatePayment(impUid: impUid, postId: postId),
+                responseType: PaymentHistoryDTO.self
+            )
+
+            await MainActor.run {
+                state.isValidatingPayment = false
+                state.paymentSuccessMessage = "모임 생성이 완료되었습니다."
+                state.shouldNavigateToPayment = false
+            }
+
+        } catch {
+            
+            let errorMessage = (error as? NetworkError)?.localizedDescription ?? error.localizedDescription
+
+            await MainActor.run {
+                state.isValidatingPayment = false
+                state.errorMessage = "결제 검증에 실패했습니다.\n\(errorMessage)\n\n고객센터로 문의해주세요."
+                state.shouldNavigateToPayment = false
+                state.showErrorAlert = true
+            }
+        }
+    }
+
     // MARK: - Load Reservation Info from Comments
 
     /// 선택한 공간의 예약 정보를 댓글에서 로드
@@ -426,33 +481,34 @@ final class MeetEditStore {
             // 예약 정보 댓글 필터링 (#으로 시작하는 ISO 포맷)
             let reservationComments = response.data.filter { $0.content.hasPrefix("#") }
 
-            // 내가 작성한 예약 댓글 찾기
-            if let myComment = reservationComments.first {
-                if let parsed = ReservationFormatter.parseReservationISO(myComment.content) {
-                    await MainActor.run {
-                        state.reservationDate = parsed.date
-                        state.reservationStartHour = parsed.startHour
-                        state.reservationTotalHours = parsed.totalHours
-
-                        // meetingStartDate와 totalHours도 업데이트
-                        state.meetingStartDate = parsed.date
-                        state.totalHours = parsed.totalHours
-
-                        // 종료 시간 계산
-                        if let endDate = Calendar.current.date(byAdding: .hour, value: parsed.totalHours, to: parsed.date) {
-                            state.meetingEndDate = endDate
-                        }
-
-                        // 가격 재계산
-                        state.pricePerPerson = state.calculatedPrice
+            // 내가 작성한 예약 댓글 찾기 (userID 일치)
+            guard let currentUserId = TokenManager.shared.userId else {
+                return
+            }
+            
+            if let myComment = reservationComments.first(where: { $0.creator.userId == currentUserId }),
+               let parsed = ReservationFormatter.parseReservationISO(myComment.content) {
+                await MainActor.run {
+                    state.reservationDate = parsed.date
+                    state.reservationStartHour = parsed.startHour
+                    state.reservationTotalHours = parsed.totalHours
+                    
+                    // meetingStartDate와 totalHours도 업데이트
+                    state.meetingStartDate = parsed.date
+                    state.totalHours = parsed.totalHours
+                    
+                    // 종료 시간 계산
+                    if let endDate = Calendar.current.date(byAdding: .hour, value: parsed.totalHours, to: parsed.date) {
+                        state.meetingEndDate = endDate
                     }
-
-                    print("[MeetEditStore] 예약 정보 로드 완료: \(myComment.content)")
+                    
+                    // 가격 재계산
+                    state.pricePerPerson = state.calculatedPrice
                 }
             }
         } catch {
             //TODO: - 에러처리
-            print("[MeetEditStore] 예약 정보 로드 실패: \(error)")
+            print("예약 정보 로드 실패: \(error)")
         }
     }
 }

@@ -8,6 +8,7 @@
 import SwiftUI
 import PhotosUI
 import Kingfisher
+import iamport_ios
 
 // MARK: - Meet Edit View
 
@@ -75,6 +76,16 @@ struct MeetEditView: View {
     // MARK: - Body
 
     var body: some View {
+        contentView
+            .modifier(NavigationSetupModifier(mode: mode, store: store))
+            .modifier(AlertsSetupModifier(mode: mode, store: store, dismiss: dismiss))
+            .modifier(PaymentNavigationModifier(store: store))
+            .modifier(LifecycleModifier(mode: mode, store: store))
+    }
+
+    // MARK: - Content View
+
+    private var contentView: some View {
         ScrollView {
             VStack(spacing: Spacing.base) {
                 // 1. 예약한 공간 선택
@@ -108,19 +119,6 @@ struct MeetEditView: View {
         .onTapGesture {
             focusedField = nil
         }
-        .navigationTitle(mode.title)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarRole(.editor)
-        .tint(.wmMain)
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button(mode.actionTitle) {
-                    submitMeet()
-                }
-                .disabled(!store.state.canSubmit)
-                .foregroundStyle(store.state.canSubmit ? .wmMain : .textSub)
-            }
-        }
         .overlay {
             if store.state.isLoading {
                 UploadingOverlay(message: mode.isEditMode ? "수정 중..." : "모임 생성 중...")
@@ -129,65 +127,6 @@ struct MeetEditView: View {
         .sheet(isPresented: $showSpaceSelection) {
             ReservedSpaceListView(store: store)
                 .presentationDetents([.large])
-        }
-        .alert("오류", isPresented: .init(
-            get: { store.state.showErrorAlert },
-            set: { if !$0 { store.send(.dismissErrorAlert) } }
-        )) {
-            Button("확인", role: .cancel) {
-                store.send(.dismissErrorAlert)
-            }
-        } message: {
-            Text(store.state.errorMessage ?? "알 수 없는 오류가 발생했습니다.")
-        }
-        .alert("완료", isPresented: .init(
-            get: { store.state.showSuccessAlert },
-            set: { if !$0 { store.send(.dismissSuccessAlert) } }
-        )) {
-            Button("확인", role: .cancel) {
-                store.send(.dismissSuccessAlert)
-                dismiss()
-            }
-        } message: {
-            Text(mode.isEditMode ? "모임이 수정되었습니다." : "모임이 생성되었습니다.")
-        }
-        .alert("삭제", isPresented: .init(
-            get: { store.state.showDeleteAlert },
-            set: { if !$0 { store.send(.dismissDeleteAlert) } }
-        )) {
-            Button("취소", role: .cancel) {
-                store.send(.dismissDeleteAlert)
-            }
-            Button("삭제", role: .destructive) {
-                if let postId = mode.postId {
-                    store.send(.deleteMeet(postId: postId))
-                }
-            }
-        } message: {
-            Text("정말 이 모임을 삭제하시겠습니까?")
-        }
-        .onChange(of: store.state.isCreated) { _, isCreated in
-            if isCreated {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                store.send(.showSuccessAlert)
-            }
-        }
-        .onChange(of: store.state.isUpdated) { _, isUpdated in
-            if isUpdated {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                store.send(.showSuccessAlert)
-            }
-        }
-        .onChange(of: store.state.isDeleted) { _, isDeleted in
-            if isDeleted {
-                dismiss()
-            }
-        }
-        .onAppear {
-            store.send(.onAppear)
-            if case .edit(let postId) = mode {
-                store.send(.loadMeetForEdit(postId: postId))
-            }
         }
     }
 
@@ -577,15 +516,6 @@ struct MeetEditView: View {
 
     // MARK: - Helper Methods
 
-    private func submitMeet() {
-        switch mode {
-        case .create:
-            store.send(.createMeet)
-        case .edit(let postId):
-            store.send(.updateMeet(postId: postId))
-        }
-    }
-
     /// 예약 날짜+시간 포맷팅
     private func formattedReservationDateTime() -> String {
         guard let date = store.state.reservationDate,
@@ -639,6 +569,157 @@ private struct SpaceInfoRow: View {
                 .font(.app(.content2))
                 .foregroundStyle(.textMain)
         }
+    }
+}
+
+// MARK: - View Modifiers
+
+private struct NavigationSetupModifier: ViewModifier {
+    let mode: MeetEditView.Mode
+    let store: MeetEditStore
+
+    func body(content: Content) -> some View {
+        content
+            .navigationTitle(mode.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarRole(.editor)
+            .tint(.wmMain)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(mode.actionTitle) {
+                        if case .create = mode {
+                            store.send(.createMeet)
+                        } else if case .edit(let postId) = mode {
+                            store.send(.updateMeet(postId: postId))
+                        }
+                    }
+                    .disabled(!store.state.canSubmit)
+                    .foregroundStyle(store.state.canSubmit ? .wmMain : .textSub)
+                }
+            }
+    }
+}
+
+private struct AlertsSetupModifier: ViewModifier {
+    let mode: MeetEditView.Mode
+    let store: MeetEditStore
+    let dismiss: DismissAction
+
+    func body(content: Content) -> some View {
+        content
+            .alert("오류", isPresented: .init(
+                get: { store.state.showErrorAlert },
+                set: { if !$0 { store.send(.dismissErrorAlert) } }
+            )) {
+                Button("확인", role: .cancel) {
+                    store.send(.dismissErrorAlert)
+                }
+            } message: {
+                Text(store.state.errorMessage ?? "알 수 없는 오류가 발생했습니다.")
+            }
+            .alert("완료", isPresented: .init(
+                get: { store.state.showSuccessAlert },
+                set: { if !$0 { store.send(.dismissSuccessAlert) } }
+            )) {
+                Button("확인", role: .cancel) {
+                    store.send(.dismissSuccessAlert)
+                    dismiss()
+                }
+            } message: {
+                Text("모임이 수정되었습니다.")
+            }
+            .alert("결제 필요", isPresented: .init(
+                get: { store.state.showPaymentRequiredAlert },
+                set: { if !$0 { store.send(.dismissPaymentRequiredAlert) } }
+            )) {
+                Button("취소", role: .cancel) {
+                    store.send(.dismissPaymentRequiredAlert)
+                    dismiss()
+                }
+                Button("결제하기") {
+                    store.send(.confirmPayment)
+                }
+            } message: {
+                Text("모임을 작성하였습니다.\n주최자도 참가비 결제가 필요합니다.")
+            }
+            .alert("삭제", isPresented: .init(
+                get: { store.state.showDeleteAlert },
+                set: { if !$0 { store.send(.dismissDeleteAlert) } }
+            )) {
+                Button("취소", role: .cancel) {
+                    store.send(.dismissDeleteAlert)
+                }
+                Button("삭제", role: .destructive) {
+                    if let postId = mode.postId {
+                        store.send(.deleteMeet(postId: postId))
+                    }
+                }
+            } message: {
+                Text("정말 이 모임을 삭제하시겠습니까?")
+            }
+            .alert("완료", isPresented: .init(
+                get: { store.state.paymentSuccessMessage != nil },
+                set: { if !$0 { store.send(.dismissPaymentSuccess) } }
+            )) {
+                Button("확인") {
+                    store.send(.dismissPaymentSuccess)
+                    dismiss()
+                }
+            } message: {
+                Text(store.state.paymentSuccessMessage ?? "")
+            }
+    }
+}
+
+private struct PaymentNavigationModifier: ViewModifier {
+    let store: MeetEditStore
+
+    func body(content: Content) -> some View {
+        content.navigationDestination(isPresented: .init(
+            get: { store.state.shouldNavigateToPayment },
+            set: { if !$0 { store.send(.clearPaymentNavigation) } }
+        )) {
+            if let postId = store.state.createdPostId {
+                MeetPaymentView(
+                    postId: postId,
+                    title: store.state.title,
+                    price: store.state.pricePerPerson,
+                    store: store
+                )
+            }
+        }
+    }
+}
+
+private struct LifecycleModifier: ViewModifier {
+    let mode: MeetEditView.Mode
+    let store: MeetEditStore
+    @Environment(\.dismiss) private var dismiss
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: store.state.isCreated) { _, isCreated in
+                if isCreated {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                }
+            }
+            .onChange(of: store.state.isUpdated) { _, isUpdated in
+                if isUpdated {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    store.send(.showSuccessAlert)
+                }
+            }
+            .onChange(of: store.state.isDeleted) { _, isDeleted in
+                if isDeleted {
+                    dismiss()
+                }
+            }
+            .onAppear {
+                store.send(.onAppear)
+                if case .edit(let postId) = mode {
+                    store.send(.loadMeetForEdit(postId: postId))
+                }
+            }
     }
 }
 

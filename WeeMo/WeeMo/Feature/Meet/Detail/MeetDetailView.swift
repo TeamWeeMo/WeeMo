@@ -72,6 +72,49 @@ struct MeetDetailView: View {
                     SpaceDetailView(space: space)
                 }
             }
+            .alert("결제 확인", isPresented: Binding(
+                get: { store.state.showPaymentConfirmAlert },
+                set: { if !$0 { store.send(.dismissPaymentConfirmAlert) } }
+            )) {
+                Button("취소", role: .cancel) {
+                    store.send(.dismissPaymentConfirmAlert)
+                }
+                Button("확인") {
+                    store.send(.confirmPayment)
+                }
+            } message: {
+                if let meet = store.state.meet {
+                    Text(paymentConfirmMessage(meet: meet))
+                }
+            }
+            .navigationDestination(isPresented: Binding(
+                get: { store.state.shouldNavigateToPayment },
+                set: { if !$0 { store.send(.clearPaymentNavigation) } }
+            )) {
+                if let meet = store.state.meet {
+                    MeetPaymentView(meet: meet, store: store)
+                }
+            }
+            .alert("결제 완료", isPresented: Binding(
+                get: { store.state.paymentSuccessMessage != nil },
+                set: { if !$0 { store.send(.dismissPaymentSuccess) } }
+            )) {
+                Button("확인") {
+                    store.send(.dismissPaymentSuccess)
+                }
+            } message: {
+                Text(store.state.paymentSuccessMessage ?? "")
+            }
+            .alert("결제 오류", isPresented: Binding(
+                get: { store.state.paymentErrorMessage != nil },
+                set: { if !$0 { store.send(.dismissPaymentError) } }
+            )) {
+                Button("확인") {
+                    store.send(.dismissPaymentError)
+                }
+            } message: {
+                Text(store.state.paymentErrorMessage ?? "")
+            }
     }
 
     // MARK: - Content
@@ -291,7 +334,7 @@ struct MeetDetailView: View {
 
             InfoRow(icon: "clock", title: "모집기간", content: meet.recruitmentScheduleText)
 
-            InfoRow(icon: "figure.2.arms.open", title: "참여인원", content: "\(store.state.participants.count) / \(meet.capacity)명")
+            InfoRow(icon: "figure.2.arms.open", title: "참여인원", content: "\(meet.participants) / \(meet.capacity)명")
 
             InfoRow(icon: "person.crop.square.on.square.angled", title: "참가조건", content: meet.gender.displayText)
         }
@@ -383,7 +426,7 @@ struct MeetDetailView: View {
 
     private func joinButton(meet: Meet) -> some View {
         Button(action: {
-            store.send(.joinMeet)
+            store.send(.showPaymentConfirmAlert)
         }) {
             if store.state.isJoining {
                 ProgressView()
@@ -392,7 +435,6 @@ struct MeetDetailView: View {
                     .background(.wmMain)
                     .cornerRadius(8)
             } else {
-                //TODO: - 참가하기 -> 알럿 -> 결제화면
                 Text("참가하기")
                     .font(.app(.content1))
                     .foregroundColor(.white)
@@ -415,6 +457,17 @@ struct MeetDetailView: View {
                 Image(systemName: "building.2")
                     .foregroundStyle(.textSub)
             }
+    }
+
+    /// 결제 확인 알럿 메시지 생성
+    private func paymentConfirmMessage(meet: Meet) -> String {
+        var message = ""
+        message += "모임: \(meet.title)\n\n"
+        message += "공간: \(meet.spaceName)\n"
+        message += "주소: \(meet.address)\n\n"
+        message += "예약시간: \(meet.spaceReservationScheduleText)\n\n"
+        message += "참가비용: \(meet.priceText)"
+        return message
     }
 }
 

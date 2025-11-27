@@ -10,7 +10,6 @@ import Foundation
 struct MeetDetailState {
     // MARK: - Data
     var meet: Meet? = nil
-    var participants: [User] = []
 
     // MARK: - Loading States
     var isLoading: Bool = false
@@ -34,4 +33,11 @@ struct MeetDetailState {
     var isLoadingSpace: Bool = false
     var loadedSpace: Space? = nil
     var shouldNavigateToSpace: Bool = false
+
+    // MARK: - Payment States
+    var showPaymentConfirmAlert: Bool = false
+    var shouldNavigateToPayment: Bool = false
+    var isValidatingPayment: Bool = false
+    var paymentSuccessMessage: String? = nil
+    var paymentErrorMessage: String? = nil
 }

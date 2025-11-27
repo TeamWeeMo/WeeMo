@@ -65,6 +65,14 @@ struct MeetEditState: Equatable {
 
     var errorMessage: String? = nil
 
+    // MARK: - Payment States (for create mode)
+
+    var createdPostId: String? = nil
+    var shouldNavigateToPayment: Bool = false
+    var showPaymentRequiredAlert: Bool = false
+    var isValidatingPayment: Bool = false
+    var paymentSuccessMessage: String? = nil
+
     // MARK: - Original Data (for edit mode)
 
     var originalMeet: Meet? = nil
@@ -120,6 +128,11 @@ struct MeetEditState: Equatable {
         lhs.showDeleteAlert == rhs.showDeleteAlert &&
         lhs.showErrorAlert == rhs.showErrorAlert &&
         lhs.showSuccessAlert == rhs.showSuccessAlert &&
-        lhs.errorMessage == rhs.errorMessage
+        lhs.errorMessage == rhs.errorMessage &&
+        lhs.createdPostId == rhs.createdPostId &&
+        lhs.shouldNavigateToPayment == rhs.shouldNavigateToPayment &&
+        lhs.showPaymentRequiredAlert == rhs.showPaymentRequiredAlert &&
+        lhs.isValidatingPayment == rhs.isValidatingPayment &&
+        lhs.paymentSuccessMessage == rhs.paymentSuccessMessage
     }
 }
