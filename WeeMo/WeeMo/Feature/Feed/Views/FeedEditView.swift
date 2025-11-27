@@ -50,6 +50,17 @@ struct FeedEditView: View {
     @State private var showErrorAlert: Bool = false
     @State private var showSuccessAlert: Bool = false
 
+    // 액션 시트 표시 여부
+    @State private var showMediaActionSheet: Bool = false
+
+    // PhotosPicker 표시 여부
+    @State private var showPhotoPicker: Bool = false
+    @State private var showVideoPicker: Bool = false
+
+    // 동영상 관련
+    @State private var selectedVideoItem: PhotosPickerItem?
+    @State private var selectedVideoURL: URL?
+
     // 키보드 제어
     @FocusState private var isTextEditorFocused: Bool
 
@@ -132,6 +143,37 @@ struct FeedEditView: View {
                     showSuccessAlert = true
                 }
             }
+            .confirmationDialog("미디어 선택", isPresented: $showMediaActionSheet) {
+                Button("사진 선택(최대 5장)") {
+                    showPhotoPicker = true
+                }
+                Button("동영상 선택(최대 10MB)") {
+                    showVideoPicker = true
+                }
+                Button("취소", role: .cancel) {
+                    showMediaActionSheet = false
+                }
+            }
+            .photosPicker(isPresented: $showPhotoPicker,
+                          selection: $selectedPhotos,
+                          maxSelectionCount: 5,
+                          matching: .images
+            )
+            .onChange(of: selectedPhotos) { _, newItems in
+                selectedVideoItem = nil
+                selectedVideoURL = nil
+
+                loadPhotos(from: newItems)
+            }
+            .photosPicker(isPresented: $showVideoPicker,
+                          selection: $selectedVideoItem,
+                          matching: .videos)
+            .onChange(of: selectedVideoItem) { _, newItem in
+                selectedPhotos = []
+                store.send(.selectImages([]))
+
+                loadVideo(from: newItem)
+            }
     }
 
     // MARK: - Subviews
@@ -140,33 +182,29 @@ struct FeedEditView: View {
     private var imageSelectionSection: some View {
         VStack(alignment: .leading, spacing: Spacing.medium) {
             // 섹션 타이틀
-            Text("사진")
+            Text("미디어")
                 .font(.app(.subHeadline1))
                 .foregroundStyle(.textMain)
 
-            // PhotosPicker
-            PhotosPicker(
-                selection: $selectedPhotos,
-                maxSelectionCount: 5,
-                matching: .images
-            ) {
-                if store.state.selectedImages.isEmpty {
-                    // 이미지 없을 때: 플레이스홀더
-                    imagePlaceholder
+            Button {
+                showMediaActionSheet = true
+            } label: {
+                if store.state.selectedImages.isEmpty && selectedVideoURL == nil {
+                    mediaPlaceholder
                 } else {
-                    // 이미지 있을 때: 그리드
-                    imageGridView
+                    if let videoURL = selectedVideoURL {
+                        videoPreview(url: videoURL)
+                    } else {
+                        imageGridView
+                    }
                 }
-            }
-            .onChange(of: selectedPhotos) { _, newItems in
-                loadPhotos(from: newItems)
             }
             .disabled(store.state.isUploading)
         }
     }
 
-    /// 이미지 플레이스홀더 (선택 전)
-    private var imagePlaceholder: some View {
+    /// 미디어 플레이스홀더
+    private var mediaPlaceholder: some View {
         RoundedRectangle(cornerRadius: Spacing.radiusMedium)
             .fill(Color.gray.opacity(0.1))
             .frame(height: 200)
@@ -176,7 +214,7 @@ struct FeedEditView: View {
                         .font(.system(size: 48))
                         .foregroundStyle(.textSub)
 
-                    Text("사진 선택 (최대 5장)")
+                    Text("사진 또는 동영상 추가")
                         .font(.app(.content2))
                         .foregroundStyle(.textSub)
                 }
@@ -340,6 +378,62 @@ struct FeedEditView: View {
             await MainActor.run {
                 store.send(.selectImages(loadedImages))
             }
+        }
+    }
+
+    private func loadVideo(from item: PhotosPickerItem?) {
+        guard let item else { return }
+
+        Task {
+            do {
+                guard let movie = try await item.loadTransferable(type: MovieTransferable.self) else {
+                    return
+                }
+
+                await MainActor.run {
+                    selectedVideoURL = movie.url
+                    print("[FeedEditView] 동영상 로드 완료: \(movie.url)")
+                }
+            } catch {
+                print("[FeedEditView] 동영상 로드 실패: \(error)")
+            }
+        }
+    }
+
+    private func videoPreview(url: URL) -> some View {
+        RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+            .fill(Color.gray.opacity(0.1))
+            .frame(height: 200)
+            .overlay {
+                VStack(spacing: Spacing.small) {
+                    Image(systemName: "video.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(.textSub)
+
+                    Text("동영상 선택됨")
+                        .font(.app(.content2))
+                        .foregroundStyle(.textMain)
+
+                    Button("삭제") {
+                        selectedVideoItem = nil
+                        selectedVideoURL = nil
+                    }
+                    .foregroundStyle(.red)
+                }
+            }
+    }
+}
+
+struct MovieTransferable: Transferable {
+    let url: URL
+
+    static var transferRepresentation: some TransferRepresentation {
+        FileRepresentation(contentType: .movie) { movie in
+            SentTransferredFile(movie.url)
+        } importing: { received in
+            let copy = URL.temporaryDirectory.appending(path: "movie-\(UUID().uuidString).mov")
+            try FileManager.default.copyItem(at: received.file, to: copy)
+            return Self(url: copy)
         }
     }
 }
