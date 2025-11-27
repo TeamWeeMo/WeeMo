@@ -174,6 +174,11 @@ struct FeedEditView: View {
 
                 loadVideo(from: newItem)
             }
+            .onDisappear {
+                if !store.state.isUploading {
+                    cleanupTemporaryFiles()
+                }
+            }
     }
 
     // MARK: - Subviews
@@ -390,9 +395,22 @@ struct FeedEditView: View {
                     return
                 }
 
+                // 파일 크기 검증
+                let fileSize = try FileManager.default.attributesOfItem(atPath: movie.url.path)[.size] as? Int ?? 0
+                let maxSize = 10 * 1024 * 1024 // 10MB
+
                 await MainActor.run {
-                    selectedVideoURL = movie.url
-                    print("[FeedEditView] 동영상 로드 완료: \(movie.url)")
+                    if fileSize > maxSize {
+                        let sizeMB = Double(fileSize) / (1024 * 1024)
+
+                        store.send(.setError("동영상 크기는 10MB 이하여야 합니다."))
+
+                        selectedVideoItem = nil
+                        selectedVideoURL = nil
+                    } else {
+                        selectedVideoURL = movie.url
+                        print("[FeedEditView] 동영상 로드 완료: \(movie.url)")
+                    }
                 }
             } catch {
                 print("[FeedEditView] 동영상 로드 실패: \(error)")
@@ -421,6 +439,30 @@ struct FeedEditView: View {
                     .foregroundStyle(.red)
                 }
             }
+    }
+
+    private func convertVideoToData(from url: URL) -> Data? {
+        do {
+            let data = try Data(contentsOf: url)
+            print("동영상 Data 변환 완료")
+            return data
+        } catch {
+            print("동영상 Data 변환 실패: \(error)")
+            return nil
+        }
+    }
+
+    private func cleanupTemporaryFiles() {
+        guard let videoURL = selectedVideoURL else { return }
+
+        do {
+            if FileManager.default.fileExists(atPath: videoURL.path) {
+                try FileManager.default.removeItem(at: videoURL)
+                print("임시 동영상 파일 삭제 완료")
+            }
+        } catch {
+            print("임시 동영상 파일 삭제 실패: \(error)")
+        }
     }
 }
 
