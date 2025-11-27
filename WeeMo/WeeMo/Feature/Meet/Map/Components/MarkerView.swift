@@ -58,7 +58,7 @@ struct MarkerView: View {
     /// 이미지 섹션 (작은 원형)
     private var imageSection: some View {
         Group {
-            if let firstImageURL = meet.imageURLs.first, !firstImageURL.isEmpty {
+            if let firstImageURL = meet.fileURLs.first, !firstImageURL.isEmpty {
                 let fullImageURL = FileRouter.fileURL(from: firstImageURL)
                 KFImage(URL(string: fullImageURL))
                     .withAuthHeaders()

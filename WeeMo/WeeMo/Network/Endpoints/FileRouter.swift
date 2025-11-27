@@ -25,15 +25,7 @@ enum FileRouter: APIRouter {
         let version = NetworkConstants.apiVersion
         switch self {
         case .downloadFile(let filePath):
-            // filePath가 /data/... 형태로 오면 /v1/data/... 로 변환
-            if filePath.hasPrefix("/data/") {
-                return "/\(version)\(filePath)"
-            } else if filePath.hasPrefix("data/") {
-                return "/\(version)/\(filePath)"
-            } else {
-                // 이미 /v1/data/... 형태면 그대로 반환
-                return filePath
-            }
+            return "\(version)\(filePath)"
         }
     }
 

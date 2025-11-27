@@ -6,8 +6,10 @@
 //
 
 import Foundation
+import SwiftUI
 import Combine
 import UIKit
+import PhotosUI
 
 // MARK: - Meet Edit Store
 
@@ -67,25 +69,40 @@ final class MeetEditStore {
             state.totalHours = max(1, hours)
             state.pricePerPerson = state.calculatedPrice
 
-        // MARK: - Image
-        case .selectImages(let images):
-            state.selectedImages = images
-            if !images.isEmpty {
-                state.shouldKeepExistingImages = false
+        // MARK: - Media (Image + Video)
+        case .selectMediaItems(let items):
+            state.selectedMediaItems = items
+            if !items.isEmpty {
+                state.shouldKeepExistingMedia = false
             }
 
-        case .removeImage(let index):
-            if index < state.selectedImages.count {
-                state.selectedImages.remove(at: index)
+        case .removeMediaItem(let index):
+            if index < state.selectedMediaItems.count {
+                state.selectedMediaItems.remove(at: index)
             }
 
-        case .removeExistingImage(let index):
-            if index < state.existingImageURLs.count {
-                state.existingImageURLs.remove(at: index)
-                if state.existingImageURLs.isEmpty {
-                    state.shouldKeepExistingImages = false
+        case .removeExistingMedia(let index):
+            if index < state.existingMediaURLs.count {
+                state.existingMediaURLs.remove(at: index)
+                if state.existingMediaURLs.isEmpty {
+                    state.shouldKeepExistingMedia = false
                 }
             }
+
+        case .loadMediaFromPhotos(let items):
+            Task { await loadMediaFromPhotos(items) }
+
+        case .handleSelectedImages(let images):
+            Task { await handleSelectedImages(images) }
+
+        case .autoCompressVideo(let url):
+            Task { await autoCompressVideo(url) }
+
+        case .setVideoCompressionFailed:
+            state.videoCompressionFailed = true
+
+        case .resetVideoCompressionFailed:
+            state.videoCompressionFailed = false
 
         // MARK: - Space Selection
         case .loadSpaces:
@@ -233,8 +250,8 @@ final class MeetEditStore {
         state.meetingEndDate = meet.meetingEndDate
         state.totalHours = meet.totalHours
         state.pricePerPerson = meet.pricePerPerson
-        state.existingImageURLs = meet.imageURLs
-        state.shouldKeepExistingImages = true
+        state.existingMediaURLs = meet.fileURLs
+        state.shouldKeepExistingMedia = true
     }
 
     /// 수정 모드에서 공간 정보 불러오기
@@ -273,10 +290,10 @@ final class MeetEditStore {
         }
 
         do {
-            // 이미지 업로드
+            // 미디어 업로드 (이미지 + 동영상)
             var files: [String] = []
-            if !state.selectedImages.isEmpty {
-                files = try await uploadImages(state.selectedImages)
+            if !state.selectedMediaItems.isEmpty {
+                files = try await uploadMedia(state.selectedMediaItems)
             }
 
             // additionalFields 구성
@@ -331,12 +348,12 @@ final class MeetEditStore {
         }
 
         do {
-            // 이미지 처리
+            // 미디어 처리 (이미지 + 동영상)
             var files: [String] = []
-            if !state.selectedImages.isEmpty {
-                files = try await uploadImages(state.selectedImages)
-            } else if state.shouldKeepExistingImages {
-                files = state.existingImageURLs
+            if !state.selectedMediaItems.isEmpty {
+                files = try await uploadMedia(state.selectedMediaItems)
+            } else if state.shouldKeepExistingMedia {
+                files = state.existingMediaURLs
             }
 
             // additionalFields 구성
@@ -371,16 +388,22 @@ final class MeetEditStore {
 
     // MARK: - Helper Methods
 
-    private func uploadImages(_ images: [UIImage]) async throws -> [String] {
-        let imageDatas = ImageCompressor.compress(images, maxSizeInMB: 10, maxDimension: 2048)
-
-        guard !imageDatas.isEmpty else {
+    /// 미디어 업로드 (이미지 + 동영상)
+    private func uploadMedia(_ mediaItems: [MediaItem]) async throws -> [String] {
+        guard !mediaItems.isEmpty else {
             return []
         }
 
-        let fileDTO = try await networkService.upload(
-            PostRouter.uploadFiles(images: imageDatas),
-            images: imageDatas,
+        // MediaItem에서 파일 정보 추출 (data, fileName, mimeType)
+        let files = mediaItems.enumerated().map { index, item in
+            let fileName = item.originalFileName ?? "\(item.type == .image ? "image" : "video")_\(index).\(item.fileExtension)"
+            return (data: item.data, fileName: fileName, mimeType: item.mimeType)
+        }
+
+        // 서버에 업로드 (multipart/form-data)
+        let fileDTO = try await networkService.multipartUpload(
+            PostRouter.uploadFiles(images: files.map { $0.data }),
+            files: files,
             responseType: FileDTO.self
         )
 
@@ -474,23 +497,23 @@ final class MeetEditStore {
             guard let currentUserId = TokenManager.shared.userId else {
                 return
             }
-            
+
             if let myComment = reservationComments.first(where: { $0.creator.userId == currentUserId }),
                let parsed = ReservationFormatter.parseReservationISO(myComment.content) {
                 await MainActor.run {
                     state.reservationDate = parsed.date
                     state.reservationStartHour = parsed.startHour
                     state.reservationTotalHours = parsed.totalHours
-                    
+
                     // meetingStartDate와 totalHours도 업데이트
                     state.meetingStartDate = parsed.date
                     state.totalHours = parsed.totalHours
-                    
+
                     // 종료 시간 계산
                     if let endDate = Calendar.current.date(byAdding: .hour, value: parsed.totalHours, to: parsed.date) {
                         state.meetingEndDate = endDate
                     }
-                    
+
                     // 가격 재계산
                     state.pricePerPerson = state.calculatedPrice
                 }
@@ -498,6 +521,85 @@ final class MeetEditStore {
         } catch {
             //TODO: - 에러처리
             print("예약 정보 로드 실패: \(error)")
+        }
+    }
+
+    // MARK: - Media Loading Methods
+
+    /// PhotosPickerItem에서 미디어 로드
+    private func loadMediaFromPhotos(_ items: [PhotosPickerItem]) async {
+        var loadedMediaItems: [MediaItem] = []
+        var foundVideoURL: URL? = nil
+
+        for item in items {
+            do {
+                // 동영상인지 확인
+                if let movie = try await item.loadTransferable(type: Movie.self) {
+                    // 동영상 발견
+                    foundVideoURL = movie.url
+                    break // 첫 번째 동영상만 처리
+                }
+                // 이미지 처리
+                else if let data = try await item.loadTransferable(type: Data.self),
+                        let image = UIImage(data: data) {
+                    if let mediaItem = MediaItem.fromImage(image, maxSizeInMB: 10) {
+                        loadedMediaItems.append(mediaItem)
+                    }
+                }
+            } catch {
+                // 미디어 로드 실패는 조용히 처리
+                continue
+            }
+        }
+
+        await MainActor.run {
+            // 이미지가 있으면 먼저 추가
+            if !loadedMediaItems.isEmpty {
+                state.selectedMediaItems = loadedMediaItems
+                state.shouldKeepExistingMedia = false
+            }
+
+            // 동영상이 있으면 View에서 처리할 수 있도록 별도 처리 필요
+            // (View의 pendingVideoURL과 showVideoOptionAlert는 View에서만 관리)
+        }
+    }
+
+    /// 선택된 이미지 처리 (커스텀 피커에서 호출)
+    private func handleSelectedImages(_ images: [UIImage]) async {
+        var mediaItems: [MediaItem] = []
+
+        for image in images {
+            if let mediaItem = MediaItem.fromImage(image, maxSizeInMB: 10) {
+                mediaItems.append(mediaItem)
+            }
+        }
+
+        await MainActor.run {
+            var currentItems = state.selectedMediaItems
+            currentItems.append(contentsOf: mediaItems)
+            state.selectedMediaItems = currentItems
+            state.shouldKeepExistingMedia = false
+        }
+    }
+
+    /// 동영상 자동 압축
+    private func autoCompressVideo(_ url: URL) async {
+        if let mediaItem = await MediaItem.fromVideo(url, maxSizeInMB: 10) {
+            await MainActor.run {
+                var currentItems = state.selectedMediaItems
+                currentItems.append(mediaItem)
+                state.selectedMediaItems = currentItems
+                state.shouldKeepExistingMedia = false
+
+                // 임시 파일 삭제
+                try? FileManager.default.removeItem(at: url)
+            }
+        } else {
+            await MainActor.run {
+                state.videoCompressionFailed = true
+                // 실패해도 임시 파일 삭제
+                try? FileManager.default.removeItem(at: url)
+            }
         }
     }
 }

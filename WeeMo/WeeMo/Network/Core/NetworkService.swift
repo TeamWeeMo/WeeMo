@@ -67,7 +67,41 @@ final class NetworkService: NetworkServiceProtocol {
         }
     }
 
-    /// 파일 업로드 (Multipart)
+    /// 파일 업로드 (Multipart) - 파일 메타데이터 포함
+    func multipartUpload<T: Decodable>(
+        _ router: APIRouter,
+        files: [(data: Data, fileName: String, mimeType: String)],
+        responseType: T.Type
+    ) async throws -> T {
+        return try await withCheckedThrowingContinuation { continuation in
+            session.upload(
+                multipartFormData: { multipartFormData in
+                    for file in files {
+                        multipartFormData.append(
+                            file.data,
+                            withName: "files",
+                            fileName: file.fileName,
+                            mimeType: file.mimeType
+                        )
+                    }
+                },
+                with: router
+            )
+            .validate()
+            .responseDecodable(of: T.self) { response in
+                switch response.result {
+                case .success(let data):
+                    continuation.resume(returning: data)
+
+                case .failure(let error):
+                    let networkError = self.handleError(response: response.response, error: error, data: response.data)
+                    continuation.resume(throwing: networkError)
+                }
+            }
+        }
+    }
+
+    /// 파일 업로드 (Multipart) - 레거시: Data 배열만 받는 경우
     func upload<T: Decodable>(
         _ router: APIRouter,
         images: [Data],

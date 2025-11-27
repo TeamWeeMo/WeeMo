@@ -31,7 +31,7 @@ struct MeetMapCardView: View {
     /// 이미지 섹션
     private var imageSection: some View {
         ZStack {
-            if let firstImageURL = meet.imageURLs.first, !firstImageURL.isEmpty {
+            if let firstImageURL = meet.fileURLs.first, !firstImageURL.isEmpty {
                 let fullImageURL = firstImageURL.hasPrefix("http") ? firstImageURL : FileRouter.fileURL(from: firstImageURL)
                 if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
                    let url = URL(string: encodedURL) {

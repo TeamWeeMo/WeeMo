@@ -209,7 +209,7 @@ struct MeetDetailView: View {
         ScrollView {
             VStack(spacing: 0) {
                 // 이미지 갤러리
-                MeetImageGallery(imageURLs: meet.imageURLs)
+                MeetMediaGallery(fileURLs: meet.fileURLs)
 
                 VStack(alignment: .leading, spacing: 0) {
                     // 제목과 D-day
@@ -394,82 +394,13 @@ struct MeetDetailView: View {
     /// 공간 정보 카드
     @ViewBuilder
     private func spaceCard(meet: Meet) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.small) {
-            HStack(spacing: Spacing.medium) {
-                // 공간 이미지 (Meet 모델에 저장된 URL 사용)
-                if let spaceImageURL = meet.spaceImageURL, !spaceImageURL.isEmpty {
-                    KFImage(URL(string: FileRouter.fileURL(from: spaceImageURL)))
-                        .withAuthHeaders()
-                        .placeholder {
-                            imagePlaceholder
-                        }
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 60, height: 60)
-                        .clipped()
-                        .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusSmall))
-                } else {
-                    imagePlaceholder
-                }
-
-                VStack(alignment: .leading, spacing: Spacing.small) {
-                    Text(meet.spaceName)
-                        .font(.app(.subContent1))
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.textMain)
-                        .lineLimit(1)
-
-                    Text(meet.address)
-                        .font(.app(.subContent1))
-                        .foregroundStyle(.textSub)
-                        .lineLimit(2)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(.wmMain)
-            }
-
-            Divider()
-
-            // 예약 시간 정보
-            VStack(alignment: .leading, spacing: Spacing.xSmall) {
-                HStack {
-                    Text("예약 시간")
-                        .font(.app(.subContent1))
-                        .foregroundStyle(.textSub)
-
-                    Spacer()
-
-                    Text(meet.spaceReservationScheduleText)
-                        .font(.app(.subContent1))
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.textSub)
-                }
-
-                HStack {
-                    Text("참가비용")
-                        .font(.app(.subContent1))
-                        .foregroundStyle(.textSub)
-
-                    Spacer()
-
-                    Text(meet.priceText)
-                        .font(.app(.subContent1))
-                        .fontWeight(.semibold)
-                        .foregroundStyle(.wmMain)
-                }
-            }
-        }
-        .padding(Spacing.medium)
-        .background(
-            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                .fill(Color.wmGray.opacity(0.3))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                .stroke(Color.wmMain.opacity(0.3), lineWidth: 1)
+        MeetSpaceCard(
+            spaceName: meet.spaceName,
+            address: meet.address,
+            spaceImageURL: meet.spaceImageURL,
+            reservationScheduleText: meet.spaceReservationScheduleText,
+            priceText: meet.priceText,
+            imageSize: 60
         )
     }
 
@@ -512,15 +443,6 @@ struct MeetDetailView: View {
         .padding(.bottom, 34)
     }
     
-    private var imagePlaceholder: some View {
-        RoundedRectangle(cornerRadius: Spacing.radiusSmall)
-            .fill(Color.gray.opacity(0.2))
-            .frame(width: 80, height: 80)
-            .overlay {
-                Image(systemName: "building.2")
-                    .foregroundStyle(.textSub)
-            }
-    }
 
     /// 결제 확인 알럿 메시지 생성
     private func paymentConfirmMessage(meet: Meet) -> String {
@@ -565,69 +487,6 @@ struct InfoRow: View {
     }
 }
 
-// MARK: - Meet Image Gallery
-
-struct MeetImageGallery: View {
-    let imageURLs: [String]
-    @State private var currentIndex = 0
-
-    var body: some View {
-        GeometryReader { geometry in
-            let safeAreaTop = geometry.safeAreaInsets.top
-            let imageHeight: CGFloat = 300 + safeAreaTop
-
-            ZStack(alignment: .bottomTrailing) {
-                if !imageURLs.isEmpty {
-                    TabView(selection: $currentIndex) {
-                        ForEach(Array(imageURLs.enumerated()), id: \.offset) { index, imageURL in
-                            KFImage(URL(string: FileRouter.fileURL(from: imageURL)))
-                                .withAuthHeaders()
-                                .placeholder {
-                                    Rectangle()
-                                        .fill(Color.gray.opacity(0.3))
-                                        .overlay(
-                                            ProgressView()
-                                        )
-                                }
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                                .frame(width: geometry.size.width, height: imageHeight)
-                                .clipped()
-                                .tag(index)
-                        }
-                    }
-                    .tabViewStyle(PageTabViewStyle(indexDisplayMode: .never))
-                    .frame(height: imageHeight)
-
-                    // 이미지 인디케이터
-                    if imageURLs.count > 1 {
-                        Text("\(currentIndex + 1) / \(imageURLs.count)")
-                            .font(.app(.content2))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, Spacing.medium)
-                            .padding(.vertical, Spacing.small)
-                            .background(Color.black.opacity(0.6))
-                            .cornerRadius(Spacing.radiusSmall)
-                            .padding([.trailing, .bottom], Spacing.base)
-                    }
-                } else {
-                    // 이미지가 없을 때
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                        .frame(width: geometry.size.width, height: imageHeight)
-                        .overlay(
-                            Image(systemName: "photo")
-                                .font(.system(size: 60))
-                                .foregroundColor(.gray)
-                        )
-                }
-            }
-        }
-        .frame(height: 300)
-    }
-}
-
-// MARK: - Preview
 
 #Preview {
     NavigationStack {

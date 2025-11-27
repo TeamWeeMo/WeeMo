@@ -6,7 +6,9 @@
 //
 
 import Foundation
+import SwiftUI
 import UIKit
+import PhotosUI
 
 // MARK: - Meet Edit Intent
 
@@ -28,11 +30,16 @@ enum MeetEditIntent {
     case updateMeetingEndDate(Date)
     case updateTotalHours(Int)
 
-    // MARK: - Image
+    // MARK: - Media (Image + Video)
 
-    case selectImages([UIImage])
-    case removeImage(at: Int)
-    case removeExistingImage(at: Int)
+    case selectMediaItems([MediaItem])
+    case removeMediaItem(at: Int)
+    case removeExistingMedia(at: Int)
+    case loadMediaFromPhotos([PhotosPickerItem])
+    case handleSelectedImages([UIImage])
+    case autoCompressVideo(URL)
+    case setVideoCompressionFailed
+    case resetVideoCompressionFailed
 
     // MARK: - Space Selection
 

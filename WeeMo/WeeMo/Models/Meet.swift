@@ -11,7 +11,7 @@ struct Meet: Identifiable, Equatable, Hashable {
     let id: String // post_id
     let title: String // 모임 제목
     let content: String // 모임 소개
-    let imageURLs: [String] // 이미지 URL 배열
+    let fileURLs: [String] // 파일 URL 배열
     let creator: User // 게시글 작성 유저
     let createdAt: Date
 

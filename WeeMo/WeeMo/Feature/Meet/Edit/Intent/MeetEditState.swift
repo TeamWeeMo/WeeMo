@@ -24,11 +24,12 @@ struct MeetEditState: Equatable {
     var totalHours: Int = 1
     var pricePerPerson: Int = 0
 
-    // MARK: - Image Data
+    // MARK: - Media Data (Image + Video)
 
-    var selectedImages: [UIImage] = []
-    var existingImageURLs: [String] = []
-    var shouldKeepExistingImages: Bool = true
+    var selectedMediaItems: [MediaItem] = []
+    var existingMediaURLs: [String] = []
+    var shouldKeepExistingMedia: Bool = true
+    var videoCompressionFailed: Bool = false
 
     // MARK: - Space Selection
 
@@ -94,10 +95,10 @@ struct MeetEditState: Equatable {
         isCreating || isUpdating || isLoadingForEdit || isLoadingSpaces
     }
 
-    /// 이미지 총 개수
-    var totalImageCount: Int {
-        let existingCount = shouldKeepExistingImages ? existingImageURLs.count : 0
-        return existingCount + selectedImages.count
+    /// 미디어 총 개수
+    var totalMediaCount: Int {
+        let existingCount = shouldKeepExistingMedia ? existingMediaURLs.count : 0
+        return existingCount + selectedMediaItems.count
     }
 
     /// 참가비 계산 (공간 가격 기반)
@@ -115,8 +116,8 @@ struct MeetEditState: Equatable {
         lhs.gender == rhs.gender &&
         lhs.recruitmentStartDate == rhs.recruitmentStartDate &&
         lhs.recruitmentEndDate == rhs.recruitmentEndDate &&
-        lhs.selectedImages.count == rhs.selectedImages.count &&
-        lhs.existingImageURLs == rhs.existingImageURLs &&
+        lhs.selectedMediaItems.count == rhs.selectedMediaItems.count &&
+        lhs.existingMediaURLs == rhs.existingMediaURLs &&
         lhs.selectedSpace?.id == rhs.selectedSpace?.id &&
         lhs.isCreating == rhs.isCreating &&
         lhs.isUpdating == rhs.isUpdating &&

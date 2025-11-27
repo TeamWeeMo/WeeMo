@@ -18,12 +18,15 @@ struct MeetListView: View {
         ZStack(alignment: .bottomTrailing) {
             ScrollView {
                 VStack {
-                    SearchBar(text: $searchText)
-
-                    FilterButton(
-                        selectedOption: $selectedSortOption,
-                        showingOptions: $showingSortOptions
-                    )
+                    VStack {
+                        SearchBarTextField(text: $searchText)
+                        
+                        MeetFilterButton(
+                            selectedOption: $selectedSortOption,
+                            showingOptions: $showingSortOptions
+                        )
+                    }
+                    .padding(.horizontal, Spacing.base)
 
                     if store.state.isLoading {
                         LoadingView(message: "모임을 불러오는 중...")

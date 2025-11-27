@@ -1,96 +1,14 @@
 //
-//  MeetListComponents.swift
+//  MeetCardView.swift
 //  WeeMo
 //
-//  Created by 차지용 on 11/10/25.
+//  Created by Watson22_YJ on 11/27/25.
 //
 
 import SwiftUI
 import Kingfisher
 
-// MARK: - D-Day Color Helper
-//TODO: - 파일분리 필요
-extension View {
-    /// D-Day 배경색을 결정하는 헬퍼 함수
-    /// - Parameter meet: Meet 객체
-    /// - Returns: 조건에 따른 배경색
-    func dDayBackgroundColor(for meet: Meet) -> Color {
-        if meet.isFullyBooked {
-            return .blue // 모집 완료 (인원 마감)
-        } else if meet.isRecruitmentEnded {
-            return .black // 모집 시간 종료
-        } else if meet.daysUntilDeadline == 0 {
-            return .red // 오늘 마감
-        } else {
-            return .wmMain // 기본
-        }
-    }
-}
-
-// MARK: - 검색바
-//TODO: - 검색바 버튼추가, 실시간검색 X
-struct SearchBar: View {
-    @Binding var text: String
-
-    var body: some View {
-        HStack {
-            Image(systemName: "magnifyingglass")
-                .foregroundColor(.gray)
-                .padding(.leading, 8)
-
-            TextField("모임을 검색하세요", text: $text)
-                .font(.app(.content2))
-                .padding(.vertical, 8)
-                .padding(.trailing, 8)
-
-            if !text.isEmpty {
-                Button(action: {
-                    text = ""
-                }) {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.gray)
-                }
-                .padding(.trailing, 8)
-            }
-        }
-        .background(Color(.systemGray6))
-        .cornerRadius(8)
-        .commonPadding()
-    }
-}
-
-// MARK: - 필터 버튼
-//TODO: - 파일분리, 정렬관련 수정 필요
-struct FilterButton: View {
-    @Binding var selectedOption: SortOption
-    @Binding var showingOptions: Bool
-
-    var body: some View {
-        Button(action: {
-            showingOptions.toggle()
-        }) {
-            HStack {
-                Text(selectedOption.rawValue)
-                    .font(.app(.content2))
-                Spacer()
-                Image(systemName: "chevron.down")
-                    .font(.caption)
-            }
-        }
-        .commonButtonStyle(isSelected: false)
-        .commonPadding()
-        .confirmationDialog("정렬 기준", isPresented: $showingOptions, titleVisibility: .visible) {
-            ForEach(SortOption.allCases, id: \.self) { option in
-                Button(option.rawValue) {
-                    selectedOption = option
-                }
-            }
-            Button("취소", role: .cancel) { }
-        }
-    }
-}
-
-// MARK: - 모임 리스트 카드
+/// 모임 리스트 카드 뷰
 struct MeetCardView: View {
     let meet: Meet
 
@@ -130,7 +48,6 @@ struct MeetCardView: View {
                         .foregroundColor(.textSub)
                 }
 
-                //TODO: - 주소표시 추가 필요
                 HStack(spacing: Spacing.small) {
                     Image(systemName: "mappin.square.fill")
                         .font(.system(size: 14))
@@ -165,13 +82,13 @@ struct MeetCardView: View {
                     Text("참가비")
                         .font(.app(.subContent1))
                         .foregroundColor(.textSub)
-                    
+
                     Text(meet.priceText)
                         .font(.app(.content2))
                         .foregroundColor(.wmMain)
-                    
+
                     Spacer()
-                    
+
                     Text("\(meet.participants)/\(meet.capacity)명")
                         .font(.app(.subContent1))
                         .foregroundColor(.textSub)
@@ -189,30 +106,46 @@ struct MeetCardView: View {
         .padding(.vertical, 8)
     }
 
+    // MARK: - Image Section
+
     private var imageSection: some View {
         Group {
-            if let firstImageURL = meet.imageURLs.first, !firstImageURL.isEmpty {
-                    KFImage(URL(string: FileRouter.fileURL(from: firstImageURL)))
-                        .withAuthHeaders()
-                        .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 200, height: 200)))
-                        .placeholder {
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.gray.opacity(0.2))
-                                .overlay(
-                                    ProgressView()
-                                        .progressViewStyle(CircularProgressViewStyle(tint: .gray))
-                                )
-                        }
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 100, height: 100)
-                        .clipped()
-                        .cornerRadius(8)
+            // 이미지만 필터링 (동영상 제외)
+            let imageFiles = meet.fileURLs.filter { isImageFile($0) }
+
+            if let firstImageURL = imageFiles.first, !firstImageURL.isEmpty {
+                KFImage(URL(string: FileRouter.fileURL(from: firstImageURL)))
+                    .withAuthHeaders()
+                    .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 200, height: 200)))
+                    .placeholder {
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.gray.opacity(0.2))
+                            .overlay(
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .gray))
+                            )
+                    }
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 100, height: 100)
+                    .clipped()
+                    .cornerRadius(8)
             } else {
                 imagePlaceholder
             }
         }
     }
+
+    // MARK: - Helpers
+
+    /// URL이 이미지 파일인지 확인
+    private func isImageFile(_ urlString: String) -> Bool {
+        let imageExtensions = ["jpg", "jpeg", "png", "heic", "heif", "webp", "gif"]
+        let lowercased = urlString.lowercased()
+        return imageExtensions.contains { lowercased.hasSuffix(".\($0)") }
+    }
+
+    // MARK: - Placeholders
 
     private var imagePlaceholder: some View {
         RoundedRectangle(cornerRadius: 8)
@@ -228,7 +161,7 @@ struct MeetCardView: View {
     private var profilePlaceholder: some View {
         Circle()
             .fill(Color.gray.opacity(0.3))
-            .frame(width: 20, height: 20)
+            .frame(width: 16, height: 16)
             .overlay(
                 Image(systemName: "person.fill")
                     .font(.system(size: 10))

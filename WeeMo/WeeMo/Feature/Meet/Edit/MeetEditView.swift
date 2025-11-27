@@ -50,11 +50,14 @@ struct MeetEditView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var store: MeetEditStore
 
-    // PhotosPicker 상태
-    @State private var selectedPhotoItems: [PhotosPickerItem] = []
-
     // 바텀시트 상태
     @State private var showSpaceSelection: Bool = false
+    @State private var showCustomMediaPicker: Bool = false
+
+    // 동영상 편집
+    @State private var pendingVideoURL: URL? = nil
+    @State private var showVideoOptionAlert: Bool = false
+    @State private var showVideoEditor: Bool = false
 
     // 키보드 제어
     @FocusState private var focusedField: Field?
@@ -81,6 +84,76 @@ struct MeetEditView: View {
             .modifier(AlertsSetupModifier(mode: mode, store: store, dismiss: dismiss))
             .modifier(PaymentNavigationModifier(store: store))
             .modifier(LifecycleModifier(mode: mode, store: store))
+            .alert("동영상 처리 방법", isPresented: $showVideoOptionAlert) {
+                Button("직접 편집") {
+                    showVideoEditor = true
+                }
+                Button("자동 압축") {
+                    if let url = pendingVideoURL {
+                        store.send(.autoCompressVideo(url))
+                        pendingVideoURL = nil
+                    }
+                }
+                Button("취소", role: .cancel) {
+                    pendingVideoURL = nil
+                }
+            } message: {
+                Text("동영상을 직접 편집하시겠습니까, 아니면 자동으로 압축하시겠습니까?")
+            }
+            .alert("압축 실패", isPresented: .init(
+                get: { store.state.videoCompressionFailed },
+                set: { if !$0 { store.send(.resetVideoCompressionFailed) } }
+            )) {
+                Button("확인", role: .cancel) {
+                    pendingVideoURL = nil
+                    store.send(.resetVideoCompressionFailed)
+                }
+            } message: {
+                Text("동영상을 10MB 이하로 압축할 수 없습니다.\n동영상의 길이가 너무 길거나 화질이 높습니다.\n직접 편집을 통해 길이를 줄이거나 화질을 낮춰주세요.")
+            }
+            .sheet(isPresented: $showVideoEditor) {
+                if let videoURL = pendingVideoURL {
+                    VideoEditorView(
+                        videoURL: videoURL,
+                        onComplete: { mediaItem in
+                            if let mediaItem = mediaItem {
+                                var currentItems = store.state.selectedMediaItems
+                                currentItems.append(mediaItem)
+                                store.send(.selectMediaItems(currentItems))
+                            }
+                            // 임시 파일 삭제
+                            try? FileManager.default.removeItem(at: videoURL)
+                            pendingVideoURL = nil
+                            showVideoEditor = false
+                        },
+                        onCancel: {
+                            // 취소 시에도 임시 파일 삭제
+                            try? FileManager.default.removeItem(at: videoURL)
+                            pendingVideoURL = nil
+                            showVideoEditor = false
+                        }
+                    )
+                }
+            }
+            .sheet(isPresented: $showCustomMediaPicker) {
+                CustomMediaPickerView(
+                    maxSelectionCount: 5 - store.state.selectedMediaItems.count,
+                    onImageSelected: { images in
+                        store.send(.handleSelectedImages(images))
+                        showCustomMediaPicker = false
+                    },
+                    onVideoSelected: { videoURL in
+                        // 동영상 선택 시 즉시 옵션 Alert
+                        pendingVideoURL = videoURL
+                        showCustomMediaPicker = false
+                        showVideoOptionAlert = true
+                    },
+                    onDismiss: {
+                        showCustomMediaPicker = false
+                    }
+                )
+                .presentationDetents([.large])
+            }
     }
 
     // MARK: - Content View
@@ -100,8 +173,8 @@ struct MeetEditView: View {
                 // 4. 참가비 표시
                 pricePerPersonSection
 
-                // 5. 이미지 추가 영역
-                imagePickerSection
+                // 5. 미디어 추가 영역 (이미지 + 동영상)
+                mediaPickerSection
 
                 // 6. 모임 소개 작성 영역
                 contentInputSection
@@ -154,104 +227,21 @@ struct MeetEditView: View {
 
     /// 선택된 공간 카드
     private func selectedSpaceCard(space: Space) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.small) {
-            HStack(spacing: Spacing.medium) {
-                // 공간 이미지
-                spaceImageView(space: space)
-
-                VStack(alignment: .leading, spacing: Spacing.xSmall) {
-                    Text(space.title)
-                        .font(.app(.subHeadline2))
-                        .foregroundStyle(.textMain)
-                        .lineLimit(1)
-
-                    Text(space.address)
-                        .font(.app(.content2))
-                        .foregroundStyle(.textSub)
-                        .lineLimit(1)
-
-                    Text(space.formattedPrice)
-                        .font(.app(.content2))
-                        .foregroundStyle(.wmMain)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .foregroundStyle(.textSub)
-            }
-
-            Divider()
-
-            // 추가 정보 (예약일+시간, 최대 인원, 이용시간, 총비용)
-            VStack(alignment: .leading, spacing: Spacing.xSmall) {
-                SpaceInfoRow(title: "예약 일시", value: formattedReservationDateTime())
-                SpaceInfoRow(title: "최대 인원", value: "\(space.maxPeople)명")
-                SpaceInfoRow(title: "이용 시간", value: "\(store.state.totalHours)시간")
-                SpaceInfoRow(title: "총 비용", value: "\((space.pricePerHour * store.state.totalHours).formatted())원")
-            }
-        }
-        .padding(Spacing.medium)
-        .background(
-            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                .fill(Color.gray.opacity(0.05))
+        SelectedSpaceCard(
+            space: space,
+            reservationDate: store.state.reservationDate,
+            reservationStartHour: store.state.reservationStartHour,
+            reservationTotalHours: store.state.reservationTotalHours ?? store.state.totalHours,
+            totalHours: store.state.totalHours
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                .stroke(Color.wmMain.opacity(0.3), lineWidth: 1)
-        )
-    }
-
-    /// 공간 이미지 뷰
-    @ViewBuilder
-    private func spaceImageView(space: Space) -> some View {
-        if let imageURL = space.imageURLs.first {
-            KFImage(URL(string: FileRouter.fileURL(from: imageURL)))
-                .withAuthHeaders()
-                .placeholder {
-                    imagePlaceholder
-                }
-                .resizable()
-                .scaledToFill()
-                .frame(width: 80, height: 80)
-                .clipped()
-                .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusSmall))
-        } else {
-            imagePlaceholder
-            
-        }
-    }
-    /// 이미지 플레이스홀더
-    private var imagePlaceholder: some View {
-        RoundedRectangle(cornerRadius: Spacing.radiusSmall)
-            .fill(Color.gray.opacity(0.2))
-            .frame(width: 80, height: 80)
-            .overlay {
-                Image(systemName: "building.2")
-                    .foregroundStyle(.textSub)
-            }
     }
 
     /// 빈 공간 카드
     private var emptySpaceCard: some View {
-        VStack(spacing: Spacing.small) {
-            Image(systemName: "plus.circle")
-                .font(.system(size: 32))
-                .foregroundStyle(.textSub)
-
-            Text("공간을 선택해주세요")
-                .font(.app(.content2))
-                .foregroundStyle(.textSub)
-        }
-        .frame(height: 120)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                .fill(Color.gray.opacity(0.05))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-                .stroke(Color.gray.opacity(0.2), lineWidth: 1)
+        EmptyStatePlaceholder(
+            systemImage: "plus.circle",
+            message: "공간을 선택해주세요",
+            height: 120
         )
     }
 
@@ -346,29 +336,21 @@ struct MeetEditView: View {
         }
     }
 
-    /// 5. 이미지 추가 섹션
-    private var imagePickerSection: some View {
-        ImagePickerSection2(
-            title: "모임 이미지",
+    /// 5. 미디어 추가 섹션 (이미지 + 동영상)
+    private var mediaPickerSection: some View {
+        SimpleMediaPickerSection(
+            title: "모임 미디어 (최대 5개)",
             maxCount: 5,
-            layout: .horizontal,
-            selectedImages: Binding(
-                get: { store.state.selectedImages },
-                set: { store.send(.selectImages($0)) }
-            ),
-            selectedPhotoItems: $selectedPhotoItems,
-            existingImageURLs: Binding(
-                get: { store.state.existingImageURLs },
-                set: { _ in }
-            ),
-            shouldKeepExistingImages: Binding(
-                get: { store.state.shouldKeepExistingImages },
-                set: { _ in }
-            )
+            selectedMediaItems: store.state.selectedMediaItems,
+            onAddTapped: {
+                showCustomMediaPicker = true
+            },
+            onRemoveItem: { index in
+                var items = store.state.selectedMediaItems
+                items.remove(at: index)
+                store.send(.selectMediaItems(items))
+            }
         )
-        .onChange(of: selectedPhotoItems) { _, newItems in
-            loadPhotos(from: newItems)
-        }
     }
 
     /// 6. 모임 소개 섹션
@@ -504,205 +486,136 @@ struct MeetEditView: View {
         }
     }
 
-    // MARK: - Helper Methods
+    // MARK: - View Modifiers
 
-    /// 예약 날짜+시간 포맷팅
-    private func formattedReservationDateTime() -> String {
-        guard let date = store.state.reservationDate,
-              let startHour = store.state.reservationStartHour,
-              let totalHours = store.state.reservationTotalHours else {
-            return "예약 정보 없음"
-        }
+    private struct NavigationSetupModifier: ViewModifier {
+        let mode: MeetEditView.Mode
+        let store: MeetEditStore
 
-        let endHour = startHour + totalHours
-        return ReservationFormatter.formattedDateTime(date: date, startHour: startHour, endHour: endHour)
-    }
-
-    private func loadPhotos(from items: [PhotosPickerItem]) {
-        Task {
-            var loadedImages: [UIImage] = []
-
-            for item in items {
-                do {
-                    guard let data = try await item.loadTransferable(type: Data.self),
-                          let image = UIImage(data: data) else {
-                        continue
-                    }
-                    loadedImages.append(image)
-                } catch {
-                    print("이미지 로드 실패: \(error.localizedDescription)")
-                }
-            }
-
-            await MainActor.run {
-                store.send(.selectImages(loadedImages))
-            }
-        }
-    }
-}
-
-// MARK: - Space Info Row
-
-private struct SpaceInfoRow: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.app(.content2))
-                .foregroundStyle(.textSub)
-
-            Spacer()
-
-            Text(value)
-                .font(.app(.content2))
-                .foregroundStyle(.textMain)
-        }
-    }
-}
-
-// MARK: - View Modifiers
-
-private struct NavigationSetupModifier: ViewModifier {
-    let mode: MeetEditView.Mode
-    let store: MeetEditStore
-
-    func body(content: Content) -> some View {
-        content
-            .navigationTitle(mode.title)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarRole(.editor)
-            .tint(.wmMain)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(mode.actionTitle) {
-                        if case .create = mode {
-                            store.send(.createMeet)
-                        } else if case .edit(let postId) = mode {
-                            store.send(.updateMeet(postId: postId))
+        func body(content: Content) -> some View {
+            content
+                .navigationTitle(mode.title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarRole(.editor)
+                .tint(.wmMain)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button(mode.actionTitle) {
+                            if case .create = mode {
+                                store.send(.createMeet)
+                            } else if case .edit(let postId) = mode {
+                                store.send(.updateMeet(postId: postId))
+                            }
                         }
+                        .disabled(!store.state.canSubmit)
+                        .foregroundStyle(store.state.canSubmit ? .wmMain : .textSub)
                     }
-                    .disabled(!store.state.canSubmit)
-                    .foregroundStyle(store.state.canSubmit ? .wmMain : .textSub)
                 }
-            }
+        }
     }
-}
 
-private struct AlertsSetupModifier: ViewModifier {
-    let mode: MeetEditView.Mode
-    let store: MeetEditStore
-    let dismiss: DismissAction
+    private struct AlertsSetupModifier: ViewModifier {
+        let mode: MeetEditView.Mode
+        let store: MeetEditStore
+        let dismiss: DismissAction
 
-    func body(content: Content) -> some View {
-        content
-            .alert("오류", isPresented: .init(
-                get: { store.state.showErrorAlert },
-                set: { if !$0 { store.send(.dismissErrorAlert) } }
-            )) {
-                Button("확인", role: .cancel) {
-                    store.send(.dismissErrorAlert)
+        func body(content: Content) -> some View {
+            content
+                .alert("오류", isPresented: .init(
+                    get: { store.state.showErrorAlert },
+                    set: { if !$0 { store.send(.dismissErrorAlert) } }
+                )) {
+                    Button("확인", role: .cancel) {
+                        store.send(.dismissErrorAlert)
+                    }
+                } message: {
+                    Text(store.state.errorMessage ?? "알 수 없는 오류가 발생했습니다.")
                 }
-            } message: {
-                Text(store.state.errorMessage ?? "알 수 없는 오류가 발생했습니다.")
-            }
-            .alert("완료", isPresented: .init(
-                get: { store.state.showSuccessAlert },
-                set: { if !$0 { store.send(.dismissSuccessAlert) } }
-            )) {
-                Button("확인", role: .cancel) {
-                    store.send(.dismissSuccessAlert)
-                    dismiss()
+                .alert("완료", isPresented: .init(
+                    get: { store.state.showSuccessAlert },
+                    set: { if !$0 { store.send(.dismissSuccessAlert) } }
+                )) {
+                    Button("확인", role: .cancel) {
+                        store.send(.dismissSuccessAlert)
+                        dismiss()
+                    }
+                } message: {
+                    Text("모임이 수정되었습니다.")
                 }
-            } message: {
-                Text("모임이 수정되었습니다.")
-            }
-            .alert("결제 필요", isPresented: .init(
-                get: { store.state.showPaymentRequiredAlert },
-                set: { if !$0 { store.send(.dismissPaymentRequiredAlert) } }
-            )) {
-                Button("취소", role: .cancel) {
-                    store.send(.dismissPaymentRequiredAlert)
-                    dismiss()
+                .alert("결제 필요", isPresented: .init(
+                    get: { store.state.showPaymentRequiredAlert },
+                    set: { if !$0 { store.send(.dismissPaymentRequiredAlert) } }
+                )) {
+                    Button("취소", role: .cancel) {
+                        store.send(.dismissPaymentRequiredAlert)
+                        dismiss()
+                    }
+                    Button("결제하기") {
+                        store.send(.confirmPayment)
+                    }
+                } message: {
+                    Text("모임을 작성하였습니다.\n주최자도 참가비 결제가 필요합니다.")
                 }
-                Button("결제하기") {
-                    store.send(.confirmPayment)
+                .alert("완료", isPresented: .init(
+                    get: { store.state.paymentSuccessMessage != nil },
+                    set: { if !$0 { store.send(.dismissPaymentSuccess) } }
+                )) {
+                    Button("확인") {
+                        store.send(.dismissPaymentSuccess)
+                        dismiss()
+                    }
+                } message: {
+                    Text(store.state.paymentSuccessMessage ?? "")
                 }
-            } message: {
-                Text("모임을 작성하였습니다.\n주최자도 참가비 결제가 필요합니다.")
-            }
-            .alert("완료", isPresented: .init(
-                get: { store.state.paymentSuccessMessage != nil },
-                set: { if !$0 { store.send(.dismissPaymentSuccess) } }
-            )) {
-                Button("확인") {
-                    store.send(.dismissPaymentSuccess)
-                    dismiss()
-                }
-            } message: {
-                Text(store.state.paymentSuccessMessage ?? "")
-            }
+        }
     }
-}
 
-private struct PaymentNavigationModifier: ViewModifier {
-    let store: MeetEditStore
+    private struct PaymentNavigationModifier: ViewModifier {
+        let store: MeetEditStore
 
-    func body(content: Content) -> some View {
-        content.navigationDestination(isPresented: .init(
-            get: { store.state.shouldNavigateToPayment },
-            set: { if !$0 { store.send(.clearPaymentNavigation) } }
-        )) {
-            if let postId = store.state.createdPostId {
-                MeetPaymentView(
-                    postId: postId,
-                    title: store.state.title,
-                    price: store.state.pricePerPerson,
-                    store: store
-                )
+        func body(content: Content) -> some View {
+            content.navigationDestination(isPresented: .init(
+                get: { store.state.shouldNavigateToPayment },
+                set: { if !$0 { store.send(.clearPaymentNavigation) } }
+            )) {
+                if let postId = store.state.createdPostId {
+                    MeetPaymentView(
+                        postId: postId,
+                        title: store.state.title,
+                        price: store.state.pricePerPerson,
+                        store: store
+                    )
+                }
             }
         }
     }
-}
 
-private struct LifecycleModifier: ViewModifier {
-    let mode: MeetEditView.Mode
-    let store: MeetEditStore
-    @Environment(\.dismiss) private var dismiss
+    private struct LifecycleModifier: ViewModifier {
+        let mode: MeetEditView.Mode
+        let store: MeetEditStore
+        @Environment(\.dismiss) private var dismiss
 
-    func body(content: Content) -> some View {
-        content
-            .onChange(of: store.state.isCreated) { _, isCreated in
-                if isCreated {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        func body(content: Content) -> some View {
+            content
+                .onChange(of: store.state.isCreated) { _, isCreated in
+                    if isCreated {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    }
                 }
-            }
-            .onChange(of: store.state.isUpdated) { _, isUpdated in
-                if isUpdated {
-                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                    store.send(.showSuccessAlert)
+                .onChange(of: store.state.isUpdated) { _, isUpdated in
+                    if isUpdated {
+                        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                        store.send(.showSuccessAlert)
+                    }
                 }
-            }
-            .onAppear {
-                store.send(.onAppear)
-                if case .edit(let postId) = mode {
-                    store.send(.loadMeetForEdit(postId: postId))
+                .onAppear {
+                    store.send(.onAppear)
+                    if case .edit(let postId) = mode {
+                        store.send(.loadMeetForEdit(postId: postId))
+                    }
                 }
-            }
+        }
     }
+
 }
 
-// MARK: - Preview
-
-#Preview("생성 모드") {
-    NavigationStack {
-        MeetEditView(mode: .create)
-    }
-}
-
-#Preview("수정 모드") {
-    NavigationStack {
-        MeetEditView(mode: .edit(postId: "sample_post_id"))
-    }
-}

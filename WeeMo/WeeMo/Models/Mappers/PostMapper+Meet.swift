@@ -48,7 +48,7 @@ extension PostDTO {
             id: postId,
             title: title,
             content: content,
-            imageURLs: files,
+            fileURLs: files,
             creator: creator.toDomain(),
             createdAt: createdAt.toDate() ?? Date(),
             capacity: capacity,
