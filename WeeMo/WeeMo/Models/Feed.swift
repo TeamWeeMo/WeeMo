@@ -26,6 +26,11 @@ struct Feed: Identifiable, Hashable {
         imageURLs.first ?? ""
     }
 
+    var isVideo: Bool {
+        let url = thumbnailURL.lowercased()
+        return url.contains(".mp4") || url.contains(".mov") || url.contains(".m4v")
+    }
+
     /// Pinterest Layout을 위한 계산된 높이 비율
     /// - Note: 실제 이미지 비율은 FeedCardView에서 동적으로 계산
     /// - 기본값: 1.0 (정사각형)

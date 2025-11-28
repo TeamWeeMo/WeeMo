@@ -152,6 +152,7 @@ struct HomeView: View {
                 }
             }
         }
+        .tint(.wmMain)
     }
 
     // MARK: - Home Content
@@ -254,6 +255,7 @@ struct HomeView: View {
                 Spacer(minLength: 40)
             }
         }
+        .navigationTitle("")
         .background(.wmBg)
     }
 }

@@ -8,6 +8,7 @@
 import Foundation
 import Kingfisher
 import SwiftUI
+import AVFoundation
 
 // MARK: - Kingfisher Helper
 
@@ -30,6 +31,7 @@ extension KFImage {
             // 3. Authorization (AccessToken) 추가 - Keychain에서 가져오기
             if let token = TokenManager.shared.accessToken {
                 modifiedRequest.setValue(token, forHTTPHeaderField: HTTPHeaderKey.authorization)
+                print(token)
             }
 
             return modifiedRequest
@@ -106,5 +108,174 @@ extension KFImage {
                 print("피드 상세 이미지 로드 실패: \(error.localizedDescription)")
             }
             .resizable()
+    }
+}
+
+// MARK: - Video Resource Loader Delegate
+
+/// 비디오 스트리밍 시 인증 헤더를 추가하는 Resource Loader Delegate
+class VideoResourceLoaderDelegate: NSObject, AVAssetResourceLoaderDelegate {
+    private let originalURL: URL
+
+    init(originalURL: URL) {
+        self.originalURL = originalURL
+        super.init()
+    }
+
+    func resourceLoader(
+        _ resourceLoader: AVAssetResourceLoader,
+        shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest
+    ) -> Bool {
+        print("[VideoLoader] Delegate 호출됨")
+
+        guard let url = loadingRequest.request.url else {
+            print("[VideoLoader] URL 없음")
+            return false
+        }
+
+        print("[VideoLoader] 요청 URL: \(url)")
+
+        // Custom scheme을 원래 https로 변경
+        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+            print("[VideoLoader] URLComponents 생성 실패")
+            return false
+        }
+        components.scheme = originalURL.scheme
+
+        guard let actualURL = components.url else {
+            print("[VideoLoader] 실제 URL 변환 실패")
+            return false
+        }
+
+        print("[VideoLoader] 실제 URL: \(actualURL)")
+
+        // 인증 헤더를 포함한 URLRequest 생성
+        var request = URLRequest(url: actualURL)
+
+        // 1. SeSACKey 추가
+        if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
+            request.setValue(sesacKey, forHTTPHeaderField: HTTPHeaderKey.sesacKey)
+        }
+
+        // 2. ProductId 추가
+        request.setValue(NetworkConstants.productId, forHTTPHeaderField: HTTPHeaderKey.productId)
+
+        // 3. Authorization (AccessToken) 추가
+        if let token = TokenManager.shared.accessToken {
+            request.setValue(token, forHTTPHeaderField: HTTPHeaderKey.authorization)
+        }
+
+        // Range 헤더 추가 (스트리밍용)
+        if let rangeValue = loadingRequest.request.value(forHTTPHeaderField: "Range") {
+            request.setValue(rangeValue, forHTTPHeaderField: "Range")
+            print("[VideoLoader] Range: \(rangeValue)")
+        }
+
+        print("[VideoLoader] 네트워크 요청 시작...")
+
+        // 네트워크 요청 실행
+        let session = URLSession.shared
+        let task = session.dataTask(with: request) { data, response, error in
+
+            if let error = error {
+                print("[VideoLoader] 네트워크 에러: \(error.localizedDescription)")
+                loadingRequest.finishLoading(with: error)
+                return
+            }
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("[VideoLoader] HTTP 응답 없음")
+                loadingRequest.finishLoading()
+                return
+            }
+
+            print("[VideoLoader] 응답 상태코드: \(httpResponse.statusCode)")
+
+            // Content Information 설정
+            if let contentInformationRequest = loadingRequest.contentInformationRequest {
+                // Content-Type 설정
+                if let contentType = httpResponse.mimeType {
+                    contentInformationRequest.contentType = contentType
+                    print("[VideoLoader] Content-Type: \(contentType)")
+                }
+
+                // Content-Length 설정 (전체 파일 크기)
+                // Range 응답인 경우 Content-Range 헤더에서 전체 크기 추출
+                if let contentRange = httpResponse.allHeaderFields["Content-Range"] as? String {
+                    // Content-Range: bytes 0-1/2285656 형식에서 총 크기 추출
+                    if let totalSize = contentRange.split(separator: "/").last,
+                       let totalBytes = Int64(totalSize) {
+                        contentInformationRequest.contentLength = totalBytes
+                        print("[VideoLoader] 전체 Content-Length (from Range): \(totalBytes)")
+                    }
+                } else if let contentLengthString = httpResponse.allHeaderFields["Content-Length"] as? String,
+                          let contentLength = Int64(contentLengthString) {
+                    contentInformationRequest.contentLength = contentLength
+                    print("[VideoLoader] Content-Length: \(contentLength)")
+                } else if httpResponse.expectedContentLength > 0 {
+                    contentInformationRequest.contentLength = httpResponse.expectedContentLength
+                    print("[VideoLoader] Expected Content-Length: \(httpResponse.expectedContentLength)")
+                }
+
+                // Range 요청 지원
+                contentInformationRequest.isByteRangeAccessSupported = true
+            }
+
+            // 데이터 전달
+            if let data = data, let dataRequest = loadingRequest.dataRequest {
+                print("[VideoLoader] 데이터 수신: \(data.count) bytes")
+                dataRequest.respond(with: data)
+            } else {
+                print("[VideoLoader] 데이터 없음")
+            }
+
+            loadingRequest.finishLoading()
+            print("[VideoLoader] 로딩 완료")
+        }
+
+        task.resume()
+        return true
+    }
+}
+
+// MARK: - Video Helper
+
+/// 비디오 스트리밍을 위한 헬퍼 클래스
+class VideoHelper {
+    static let shared = VideoHelper()
+
+    private init() {}
+
+    /// 인증 헤더를 포함한 비디오 스트리밍을 위한 AVAsset과 Delegate 반환
+    /// - Parameter urlString: 비디오 URL 문자열
+    /// - Returns: (AVAsset, ResourceLoaderDelegate) 튜플
+    func createStreamingAsset(from urlString: String) -> (AVURLAsset, VideoResourceLoaderDelegate)? {
+        print("[VideoHelper] Asset 생성 시작: \(urlString)")
+
+        guard let originalURL = URL(string: urlString) else {
+            print("[VideoHelper] URL 생성 실패")
+            return nil
+        }
+
+        // Custom URL scheme으로 변경
+        guard var components = URLComponents(url: originalURL, resolvingAgainstBaseURL: false) else {
+            print("[VideoHelper] URLComponents 생성 실패")
+            return nil
+        }
+        components.scheme = "custom-streaming"
+
+        guard let customURL = components.url else {
+            print("[VideoHelper] Custom URL 생성 실패")
+            return nil
+        }
+
+        print("[VideoHelper] Custom URL: \(customURL)")
+
+        // Asset 및 Delegate 생성
+        let asset = AVURLAsset(url: customURL)
+        let delegate = VideoResourceLoaderDelegate(originalURL: originalURL)
+
+        print("[VideoHelper] Asset과 Delegate 생성 완료")
+        return (asset, delegate)
     }
 }

@@ -76,12 +76,14 @@ final class NetworkService: NetworkServiceProtocol {
         return try await withCheckedThrowingContinuation { continuation in
             session.upload(
                 multipartFormData: { multipartFormData in
-                    for (index, imageData) in images.enumerated() {
+                    for (index, fileData) in images.enumerated() {
+                        let fileInfo = self.detectFileType(from: fileData)
+
                         multipartFormData.append(
-                            imageData,
+                            fileData,
                             withName: "files",
-                            fileName: "image_\(index).jpg",
-                            mimeType: "image/jpeg"
+                            fileName: "file_\(index)\(fileInfo.extension)",
+                            mimeType: fileInfo.mimeType
                         )
                     }
                 },
@@ -180,6 +182,37 @@ final class NetworkService: NetworkServiceProtocol {
                     }
                 }
         }
+    }
+
+    // MARK: - Helper(파일 타입 감지)
+    private func detectFileType(from data: Data) -> (extension: String, mimeType: String) {
+        guard data.count >= 12 else {
+            return ("jpg", "image/jpeg")
+        }
+
+        let bytes = [UInt8](data.prefix(12))
+
+        // MP4 체크
+        if bytes.count >= 12,
+           bytes[4] == 0x66, bytes[5] == 0x74, bytes[6] == 0x79, bytes[7] == 0x70 {
+            // "ftyp" signature (MP4/MOV)
+            return (".mp4", "video/mp4")
+        }
+
+        // JPEG 체크
+        if bytes.count >= 2,
+           bytes[0] == 0xFF, bytes[1] == 0xD8 {
+            return (".jpg", "image/jpeg")
+        }
+
+        // PNG 체크
+        if bytes.count >= 8,
+           bytes[0] == 0x89, bytes[1] == 0x50, bytes[2] == 0x4E, bytes[3] == 0x47 {
+            return (".png", "image/png")
+        }
+
+        // 기본값 (JPEG)
+        return (".jpg", "image/jpeg")
     }
 
     // MARK: - Error Handling

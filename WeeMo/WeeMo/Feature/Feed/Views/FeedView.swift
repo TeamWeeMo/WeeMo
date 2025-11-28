@@ -51,8 +51,6 @@ struct FeedView: View {
                 }
             }
             .background(.wmBg)
-            .navigationTitle("피드")
-            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Image(systemName: "plus")
@@ -87,7 +85,6 @@ struct FeedView: View {
             )) {
                 FeedEditView(mode: .create)
             }
-            .navigationBarTitleDisplayMode(.inline)
             .onAppear {
                 store.send(.onAppear)
             }
