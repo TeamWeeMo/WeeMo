@@ -161,7 +161,7 @@ struct SignView: View {
         }
         .onChange(of: signStore.state.isSignUpSucceeded) { oldValue, newValue in
             if newValue {
-                print("✅ [SignView] 회원가입 성공 - AppState 업데이트")
+                print("[SignView] 회원가입 성공 - AppState 업데이트")
                 appState.login()
             }
         }

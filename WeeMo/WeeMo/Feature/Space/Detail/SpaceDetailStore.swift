@@ -95,12 +95,12 @@ final class SpaceDetailStore: ObservableObject {
                 state.userNickname = profileDTO.nick
 
                 // 이미지 URL 처리: 상대 경로면 전체 URL로 변환
-                if !profileDTO.profileImage.isEmpty {
-                    if profileDTO.profileImage.hasPrefix("http") {
-                        state.userProfileImage = profileDTO.profileImage
+                if let profileImage = profileDTO.profileImage, !profileImage.isEmpty {
+                    if profileImage.hasPrefix("http") {
+                        state.userProfileImage = profileImage
                     } else {
                         // 상대 경로를 전체 URL로 변환
-                        state.userProfileImage = NetworkConstants.baseURL + profileDTO.profileImage
+                        state.userProfileImage = NetworkConstants.baseURL + profileImage
                     }
                 } else {
                     state.userProfileImage = nil
@@ -246,9 +246,9 @@ final class SpaceDetailStore: ObservableObject {
             let reservationComments = comments.filter { $0.content.hasPrefix("#") }
 
             if reservationComments.isEmpty {
-                print("[SpaceDetailStore] 📋 저장된 예약 정보가 없습니다.")
+                print("[SpaceDetailStore] 저장된 예약 정보가 없습니다.")
             } else {
-                print("[SpaceDetailStore] 📋 저장된 예약 정보 (\(reservationComments.count)건):")
+                print("[SpaceDetailStore] 저장된 예약 정보 (\(reservationComments.count)건):")
                 print("========================================")
 
                 for (index, comment) in reservationComments.enumerated() {
@@ -272,7 +272,7 @@ final class SpaceDetailStore: ObservableObject {
                                 endHour: endHour
                             )
                         }
-                        print("    ✅ 타임라인에 블락 적용됨")
+                        print("    타임라인에 블락 적용됨")
                     }
                     print("----------------------------------------")
                 }
