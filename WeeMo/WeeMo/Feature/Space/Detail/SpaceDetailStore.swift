@@ -98,12 +98,12 @@ final class SpaceDetailStore: ObservableObject {
                 state.userNickname = profileDTO.nick
 
                 // 이미지 URL 처리: 상대 경로면 전체 URL로 변환
-                if !profileDTO.profileImage.isEmpty {
-                    if profileDTO.profileImage.hasPrefix("http") {
-                        state.userProfileImage = profileDTO.profileImage
+                if let profileImage = profileDTO.profileImage, !profileImage.isEmpty {
+                    if profileImage.hasPrefix("http") {
+                        state.userProfileImage = profileImage
                     } else {
                         // 상대 경로를 전체 URL로 변환
-                        state.userProfileImage = NetworkConstants.baseURL + profileDTO.profileImage
+                        state.userProfileImage = NetworkConstants.baseURL + profileImage
                     }
                 } else {
                     state.userProfileImage = nil

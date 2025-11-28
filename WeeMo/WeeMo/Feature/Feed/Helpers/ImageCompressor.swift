@@ -68,7 +68,7 @@ enum ImageCompressor {
 
             // 4. 최종 검증 (용량 초과 시 경고 로그)
             if imageData.count > maxSizeInBytes {
-                print("⚠️ [ImageCompressor] 이미지 압축 실패: \(imageData.count / 1024 / 1024)MB (최대 \(maxSizeInMB)MB)")
+                print("[ImageCompressor] 이미지 압축 실패: \(imageData.count / 1024 / 1024)MB (최대 \(maxSizeInMB)MB)")
             }
 
             return imageData

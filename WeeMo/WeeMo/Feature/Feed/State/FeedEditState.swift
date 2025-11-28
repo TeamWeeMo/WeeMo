@@ -14,6 +14,7 @@ struct FeedEditState: Equatable {
     // UI 데이터
     var content: String = ""
     var selectedImages: [UIImage] = []
+    var selectedVideoURL: URL? = nil
 
     // 로딩 상태
     var isUploading: Bool = false
@@ -22,16 +23,16 @@ struct FeedEditState: Equatable {
     // 에러
     var errorMessage: String?
 
+    /// 폼 유효성 검사
+    var isFormValid: Bool {
+        !content.isEmpty && content.count <= 500 && (!selectedImages.isEmpty || selectedVideoURL != nil)
+    }
+
     // 성공 여부
     var isSubmitted: Bool = false
     var createdFeed: Feed?
 
     // MARK: - Computed Properties
-
-    /// 폼 유효성 검사
-    var isFormValid: Bool {
-        !content.isEmpty && content.count <= 500 && !selectedImages.isEmpty
-    }
 
     /// 제출 가능 여부
     var canSubmit: Bool {
@@ -53,6 +54,7 @@ struct FeedEditState: Equatable {
     static func == (lhs: FeedEditState, rhs: FeedEditState) -> Bool {
         lhs.content == rhs.content &&
         lhs.selectedImages.count == rhs.selectedImages.count &&
+        lhs.selectedVideoURL == rhs.selectedVideoURL &&
         lhs.isUploading == rhs.isUploading &&
         lhs.uploadProgress == rhs.uploadProgress &&
         lhs.errorMessage == rhs.errorMessage &&

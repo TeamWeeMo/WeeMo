@@ -77,9 +77,9 @@ struct MeetCardView: View {
         VStack(alignment: .leading, spacing: 0) {
             ZStack {
                 if !meet.imageName.isEmpty {
-                    let _ = print("🖼️ Original image URL: \(meet.imageName)")
+                    let _ = print("Original image URL: \(meet.imageName)")
                     let fullImageURL = meet.imageName.hasPrefix("http") ? meet.imageName : FileRouter.fileURL(from: meet.imageName)
-                    let _ = print("🖼️ Full image URL with FileRouter: \(fullImageURL)")
+                    let _ = print("Full image URL with FileRouter: \(fullImageURL)")
                     if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
                        let url = URL(string: encodedURL) {
                         KFImage(url)
@@ -95,11 +95,11 @@ struct MeetCardView: View {
                                     )
                             }
                             .onFailure { error in
-                                let _ = print("❌ Image loading failed for URL: \(url.absoluteString)")
-                                let _ = print("❌ Error: \(error.localizedDescription)")
+                                let _ = print(" Image loading failed for URL: \(url.absoluteString)")
+                                let _ = print(" Error: \(error.localizedDescription)")
                             }
                             .onSuccess { result in
-                                let _ = print("✅ Image loaded successfully from: \(url.absoluteString)")
+                                let _ = print("Image loaded successfully from: \(url.absoluteString)")
                             }
                             .resizable()
                             .aspectRatio(contentMode: .fill)

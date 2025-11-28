@@ -16,6 +16,7 @@ struct ChatRoom: Identifiable, Hashable {
     let lastChat: ChatMessage?
     let createdAt: Date
     let updatedAt: Date
+    var unreadCount: Int = 0  // 읽지 않은 메시지 개수
 
     /// 상대방 정보 (1:1 채팅 기준)
     var otherUser: User? {
