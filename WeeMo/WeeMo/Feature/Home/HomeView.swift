@@ -141,6 +141,9 @@ struct HomeView: View {
             .navigationDestination(for: ChatRoom.self) { room in
                 ChatDetailView(room: room)
             }
+            .navigationDestination(for: User.self) { user in
+                ProfileView(userId: user.userId)
+            }
             .navigationDestination(for: String.self) { value in
                 if value == "map" {
                     MeetMapView()
