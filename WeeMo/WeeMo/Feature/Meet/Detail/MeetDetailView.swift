@@ -82,7 +82,7 @@ struct MeetDetailView: View {
 
         Task {
             do {
-                print("🔄 채팅방 생성 시작. 상대방 ID: \(opponentUserId)")
+                print(" 채팅방 생성 시작. 상대방 ID: \(opponentUserId)")
 
                 let networkService = NetworkService()
 
@@ -94,13 +94,13 @@ struct MeetDetailView: View {
                     .value
 
                 if let jsonString = String(data: dataResponse, encoding: .utf8) {
-                    print("🔍 서버 응답 원본: \(jsonString)")
+                    print(" 서버 응답 원본: \(jsonString)")
                 }
 
                 // 일단 ChatRoomDTO로 시도해보기
                 let response = try JSONDecoder().decode(ChatRoomDTO.self, from: dataResponse)
 
-                print("✅ 채팅방 생성 API 성공. 응답: \(response)")
+                print("채팅방 생성 API 성공. 응답: \(response)")
 
                 await MainActor.run {
                     // 서버에서 받은 실제 데이터로 ChatRoom 생성
@@ -139,12 +139,12 @@ struct MeetDetailView: View {
 
                     navigateToChatRoom = chatRoom
 
-                    print("✅ 채팅방 생성 완료. 방 ID: \(response.roomId)")
+                    print("채팅방 생성 완료. 방 ID: \(response.roomId)")
                 }
             } catch {
-                print("❌ 채팅방 생성 실패: \(error)")
+                print(" 채팅방 생성 실패: \(error)")
                 if let afError = error as? AFError {
-                    print("❌ AFError details: \(afError)")
+                    print(" AFError details: \(afError)")
                 }
 
                 await MainActor.run {
