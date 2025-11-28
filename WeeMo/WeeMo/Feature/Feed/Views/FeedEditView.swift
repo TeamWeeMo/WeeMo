@@ -7,6 +7,7 @@
 
 import SwiftUI
 import PhotosUI
+import AVFoundation
 
 // MARK: - Feed 작성/수정 화면
 
@@ -60,6 +61,9 @@ struct FeedEditView: View {
     // 동영상 관련
     @State private var selectedVideoItem: PhotosPickerItem?
     @State private var selectedVideoURL: URL?
+    @State private var videoThumbnail: UIImage?
+    @State private var videoDuration: Double?
+    @State private var videoFileSize: Int?
 
     // 키보드 제어
     @FocusState private var isTextEditorFocused: Bool
@@ -173,6 +177,9 @@ struct FeedEditView: View {
                 store.send(.selectImages([]))
 
                 loadVideo(from: newItem)
+            }
+            .onChange(of: selectedVideoURL) { _, newURL in
+                store.send(.selectVideo(newURL))
             }
             .onDisappear {
                 if !store.state.isUploading {
@@ -399,17 +406,35 @@ struct FeedEditView: View {
                 let fileSize = try FileManager.default.attributesOfItem(atPath: movie.url.path)[.size] as? Int ?? 0
                 let maxSize = 10 * 1024 * 1024 // 10MB
 
-                await MainActor.run {
-                    if fileSize > maxSize {
+                if fileSize > maxSize {
+                    await MainActor.run {
                         let sizeMB = Double(fileSize) / (1024 * 1024)
 
                         store.send(.setError("동영상 크기는 10MB 이하여야 합니다."))
 
                         selectedVideoItem = nil
                         selectedVideoURL = nil
-                    } else {
+                        videoThumbnail = nil
+                        videoDuration = nil
+                        videoFileSize = nil
+                    }
+                } else {
+                    let thumbnail = generateThumbnail(from: movie.url)
+                    let info = await getVideoInfo(from: movie.url)
+
+                    await MainActor.run {
                         selectedVideoURL = movie.url
-                        print("[FeedEditView] 동영상 로드 완료: \(movie.url)")
+                        videoThumbnail = thumbnail
+
+                        if let info = info {
+                            videoDuration = info.duration
+                            videoFileSize = info.fileSize
+                        }
+
+                        if let duration = videoDuration, let size = videoFileSize {
+                            print("\(Double(size) / (1024 * 1024)) ")
+                            print("\(duration)초")
+                        }
                     }
                 }
             } catch {
@@ -419,36 +444,81 @@ struct FeedEditView: View {
     }
 
     private func videoPreview(url: URL) -> some View {
-        RoundedRectangle(cornerRadius: Spacing.radiusMedium)
-            .fill(Color.gray.opacity(0.1))
-            .frame(height: 200)
-            .overlay {
-                VStack(spacing: Spacing.small) {
-                    Image(systemName: "video.fill")
-                        .font(.system(size: 48))
-                        .foregroundStyle(.textSub)
+        VStack(spacing: Spacing.medium) {
+            if let thumbnail = videoThumbnail {
+                ZStack(alignment: .bottomTrailing) {
+                    Image(uiImage: thumbnail)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(height: 200)
+                        .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusMedium))
 
-                    Text("동영상 선택됨")
-                        .font(.app(.content2))
-                        .foregroundStyle(.textMain)
+                    ZStack {
+                        Circle()
+                            .fill(Color.black.opacity(0.6))
+                            .frame(width: 60, height: 60)
 
-                    Button("삭제") {
-                        selectedVideoItem = nil
-                        selectedVideoURL = nil
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(.white)
+                    }
+                    .padding(Spacing.medium)
+                }
+            } else {
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .fill(Color.gray.opacity(0.1))
+                    .frame(height: 200)
+                    .overlay {
+                        Image(systemName: "video.fill")
+                            .font(.system(size: 48))
+                            .foregroundStyle(.wmMain)
+                    }
+            }
+
+            HStack(spacing: Spacing.medium) {
+                if let fileSize = videoFileSize {
+                    HStack(spacing: Spacing.xSmall) {
+                        Image(systemName: "doc.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.textSub)
+
+                        Text(formatFileSize(fileSize))
+                            .font(.app(.subContent2))
+                            .foregroundStyle(.textSub)
+                    }
+                }
+
+                if let duration = videoDuration {
+                    HStack(spacing: Spacing.xSmall) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.textSub)
+
+                        Text(formatDuration(duration))
+                            .font(.app(.subContent2))
+                            .foregroundStyle(.textSub)
+                    }
+                }
+
+                Spacer()
+
+                Button {
+                    selectedVideoItem = nil
+                    selectedVideoURL = nil
+                    videoThumbnail = nil
+                    videoDuration = nil
+                    videoFileSize = nil
+                } label: {
+                    HStack(spacing: Spacing.xSmall) {
+                        Image(systemName: "trash.fill")
+                            .font(.system(size: 14))
+                        Text("삭제")
+                            .font(.app(.subContent2))
                     }
                     .foregroundStyle(.red)
                 }
+                .padding(.horizontal, Spacing.small)
             }
-    }
-
-    private func convertVideoToData(from url: URL) -> Data? {
-        do {
-            let data = try Data(contentsOf: url)
-            print("동영상 Data 변환 완료")
-            return data
-        } catch {
-            print("동영상 Data 변환 실패: \(error)")
-            return nil
         }
     }
 
@@ -464,7 +534,58 @@ struct FeedEditView: View {
             print("임시 동영상 파일 삭제 실패: \(error)")
         }
     }
+
+    private func formatFileSize(_ bytes: Int) -> String {
+        let mb = Double(bytes) / (1024 * 1024)
+        return String(format: "%.1fMB", mb)
+    }
+
+    private func formatDuration(_ seconds: Double) -> String {
+        let minutes = Int(seconds) / 60
+        let secs = Int(seconds) % 60
+        return String(format: "%d:%02d", minutes, secs)
+    }
 }
+
+//MARK: - Video Thumbnail Generator
+extension FeedEditView {
+    // 동영상에서 썸네일 이미지 생성
+    func generateThumbnail(from url: URL) -> UIImage? {
+        let asset = AVAsset(url: url)
+        let imageGenerator = AVAssetImageGenerator(asset: asset)
+        imageGenerator.appliesPreferredTrackTransform = true
+
+        let time = CMTime(seconds: 0, preferredTimescale: 600)
+
+        do {
+            let cgImage = try imageGenerator.copyCGImage(at: time, actualTime: nil)
+            return UIImage(cgImage: cgImage)
+        } catch {
+            print("썸네일 생성 실패: \(error)")
+            return nil
+        }
+    }
+
+    func getVideoInfo(from url: URL) async -> (duration: Double, fileSize: Int)? {
+        let asset = AVAsset(url: url)
+
+        // 동영상 길이
+        do {
+            let duration = try await asset.load(.duration)
+            let durationSeconds = CMTimeGetSeconds(duration)
+
+            guard let fileSize = try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int else {
+                return nil
+            }
+
+            return (duration: durationSeconds, fileSize: fileSize)
+        } catch {
+            print("동영상 가져오기 실패: \(error)")
+            return nil
+        }
+    }
+}
+
 
 struct MovieTransferable: Transferable {
     let url: URL
