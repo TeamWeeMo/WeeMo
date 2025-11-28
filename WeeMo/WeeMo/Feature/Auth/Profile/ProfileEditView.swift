@@ -8,9 +8,11 @@
 import SwiftUI
 import FSCalendar
 import PhotosUI
+import Kingfisher
 
 struct ProfileEditView: View {
     let isNewProfile: Bool  // true: 프로필 작성, false: 프로필 편집
+    let initialImage: UIImage?  // 기존 프로필 이미지
 
     @Environment(\.dismiss) private var dismiss
 
@@ -26,6 +28,11 @@ struct ProfileEditView: View {
 
     // 로딩 상태
     @State private var isLoading: Bool = false
+
+    init(isNewProfile: Bool, initialImage: UIImage? = nil) {
+        self.isNewProfile = isNewProfile
+        self.initialImage = initialImage
+    }
 
     var body: some View {
         ZStack {
@@ -223,9 +230,18 @@ struct ProfileEditView: View {
             }
         }
         .onAppear {
-            if !isNewProfile, let savedNickname = UserManager.shared.nickname {
-                nickname = savedNickname
-                print("[ProfileEditView] 기존 닉네임 로드: \(savedNickname)")
+            if !isNewProfile {
+                // 기존 닉네임 로드
+                if let savedNickname = UserManager.shared.nickname {
+                    nickname = savedNickname
+                    print("[ProfileEditView] 기존 닉네임 로드: \(savedNickname)")
+                }
+
+                // 전달받은 프로필 이미지 설정
+                if let initialImage = initialImage {
+                    selectedImage = initialImage
+                    print("[ProfileEditView] 기존 프로필 이미지 로드 완료")
+                }
             }
         }
     }
@@ -296,5 +312,5 @@ struct ProfileEditView: View {
 }
 
 #Preview {
-    ProfileEditView(isNewProfile: true)
+    ProfileEditView(isNewProfile: true, initialImage: nil)
 }
