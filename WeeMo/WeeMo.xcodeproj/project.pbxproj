@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		178DEDE12EC5E0CA0014C227 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 178DEDE02EC5E0CA0014C227 /* KeychainAccess */; };
 		179C3FF82ECDD98300EDAE31 /* NMapsMap in Frameworks */ = {isa = PBXBuildFile; productRef = 179C3FF72ECDD98300EDAE31 /* NMapsMap */; };
+		17BE83682ED6DC2900C7D841 /* iamport-ios in Frameworks */ = {isa = PBXBuildFile; productRef = 17BE83672ED6DC2900C7D841 /* iamport-ios */; };
 		17C580F22EBDE1440055A18E /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F12EBDE1440055A18E /* Alamofire */; };
 		17C580F52EBDE16D0055A18E /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F42EBDE16D0055A18E /* Kingfisher */; };
 		17C580F82EBDE1B60055A18E /* FSCalendar in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F72EBDE1B60055A18E /* FSCalendar */; };
@@ -68,6 +69,7 @@
 				178DEDE12EC5E0CA0014C227 /* KeychainAccess in Frameworks */,
 				9B8882002ECAE43400211811 /* KakaoSDKCommon in Frameworks */,
 				9B8881FC2ECAE43400211811 /* KakaoSDK in Frameworks */,
+				17BE83682ED6DC2900C7D841 /* iamport-ios in Frameworks */,
 				3B5C4E6A2ED3560000BA6325 /* SocketIO in Frameworks */,
 				3B5C4AAB2ECEE7AD00BA6325 /* RealmSwift in Frameworks */,
 				17C580F52EBDE16D0055A18E /* Kingfisher in Frameworks */,
@@ -130,6 +132,7 @@
 				179C3FF72ECDD98300EDAE31 /* NMapsMap */,
 				3B5C4AAA2ECEE7AD00BA6325 /* RealmSwift */,
 				3B5C4E692ED3560000BA6325 /* SocketIO */,
+				17BE83672ED6DC2900C7D841 /* iamport-ios */,
 			);
 			productName = WeeMo;
 			productReference = 17C57DF12EBDCC0B0055A18E /* WeeMo.app */;
@@ -168,6 +171,7 @@
 				179C3FF62ECDD98300EDAE31 /* XCRemoteSwiftPackageReference "SPM-NMapsMap" */,
 				3B5C4AA92ECEE7AD00BA6325 /* XCRemoteSwiftPackageReference "realm-swift" */,
 				3B5C4E682ED3560000BA6325 /* XCRemoteSwiftPackageReference "socket" */,
+				17BE83662ED6DC2900C7D841 /* XCRemoteSwiftPackageReference "iamport-ios" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 17C57DF22EBDCC0B0055A18E /* Products */;
@@ -445,6 +449,14 @@
 				minimumVersion = 3.23.0;
 			};
 		};
+		17BE83662ED6DC2900C7D841 /* XCRemoteSwiftPackageReference "iamport-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/iamport/iamport-ios";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.4.7;
+			};
+		};
 		17C580F02EBDE1440055A18E /* XCRemoteSwiftPackageReference "Alamofire" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Alamofire/Alamofire";
@@ -505,6 +517,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 179C3FF62ECDD98300EDAE31 /* XCRemoteSwiftPackageReference "SPM-NMapsMap" */;
 			productName = NMapsMap;
+		};
+		17BE83672ED6DC2900C7D841 /* iamport-ios */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 17BE83662ED6DC2900C7D841 /* XCRemoteSwiftPackageReference "iamport-ios" */;
+			productName = "iamport-ios";
 		};
 		17C580F12EBDE1440055A18E /* Alamofire */ = {
 			isa = XCSwiftPackageProductDependency;

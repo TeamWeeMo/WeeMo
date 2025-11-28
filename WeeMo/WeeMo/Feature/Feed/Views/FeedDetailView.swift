@@ -134,7 +134,7 @@ struct FeedDetailView: View {
                 } else {
                     // 이미지 표시
                     KFImage(URL(string: imageURL))
-                        .feedDetailImageSetup()
+                        .detailImageSetup()
                         .scaledToFit()
                         .feedDetailImage()
                         .tag(index)

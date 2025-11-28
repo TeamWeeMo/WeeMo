@@ -2,13 +2,28 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSPrefPaneIconFile</key>
+	<string></string>
+	<key>IAMPORT_USER_CODE</key>
+	<string>$(IAMPORT_USER_CODE)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>주변 모임을 지도에서 보기 위해 위치 권한이 필요합니다.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>사진 및 동영상을 업로드하기 위해 사진 라이브러리 접근 권한이 필요합니다.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>사진을 저장하기 위해 사진 라이브러리 접근 권한이 필요합니다.</string>
+	<key>NMFNcpKeyId</key>
+	<string>$(NcpId)</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
+			<key>CFBundleURLName</key>
+			<string>weemo</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
+				<string>weemo</string>
 				<string>kakao$(KakaoKey)</string>
 			</array>
 		</dict>
@@ -17,7 +32,16 @@
 	<string>$(KakaoKey)</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
+		<string>itms-apps</string>
+		<string>smshinhanansimclick</string>
+		<string>shinhan-sr-ansimclick</string>
+		<string>smhyundaiansimclick</string>
+		<string>hdcardappcardansimclick</string>
+		<string>supertoss</string>
+		<string>payco</string>
 		<string>kakaokompassauth</string>
+		<string>kftc-bankpay</string>
+		<string>kakaobank</string>
 		<string>kakaotalk</string>
 	</array>
 	<key>NMFNcpKeyId</key>

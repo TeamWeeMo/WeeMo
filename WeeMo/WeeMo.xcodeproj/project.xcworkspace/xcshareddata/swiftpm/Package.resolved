@@ -1,5 +1,5 @@
 {
-  "originHash" : "2289637ff8b27971fabca0bb9a6389809ca9541e98fccd50096e7848b2655818",
+  "originHash" : "f5139ef0f44a31459e6276d85786de1ebb80f6d73cc813feae3d02d1f5ff7d73",
   "pins" : [
     {
       "identity" : "alamofire",
@@ -17,6 +17,15 @@
       "state" : {
         "revision" : "0fbdec5172fccb90f707472eeaea4ffe095278f6",
         "version" : "2.8.4"
+      }
+    },
+    {
+      "identity" : "iamport-ios",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/iamport/iamport-ios",
+      "state" : {
+        "revision" : "cfa5ca2bb0f2be4e51981f14fd20d32d6c9d3636",
+        "version" : "1.4.7"
       }
     },
     {
@@ -65,6 +74,15 @@
       }
     },
     {
+      "identity" : "rxswift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ReactiveX/RxSwift.git",
+      "state" : {
+        "revision" : "5004a18539bd68905c5939aa893075f578f4f03d",
+        "version" : "6.9.1"
+      }
+    },
+    {
       "identity" : "socket.io-client-swift",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/socketio/socket.io-client-swift",
@@ -98,6 +116,15 @@
       "state" : {
         "revision" : "c6bfd1af48efcc9a9ad203665db12375ba6b145a",
         "version" : "4.0.8"
+      }
+    },
+    {
+      "identity" : "then",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/devxoul/Then.git",
+      "state" : {
+        "revision" : "e421a7b3440a271834337694e6050133a3958bc7",
+        "version" : "2.7.0"
       }
     }
   ],

@@ -8,7 +8,37 @@
 import Foundation
 
 enum MeetDetailIntent {
-    case loadMeetDetail(postId: String)
-    case retryLoadMeetDetail
-    case joinMeet(postId: String)
+    // MARK: - Lifecycle
+    case onAppear(postId: String)
+    case retryLoad
+
+    // MARK: - Actions
+    case joinMeet
+    case createChatRoom(opponentUserId: String)
+
+    // MARK: - Navigation
+    case navigateToEdit
+    case dismissError
+    case dismissChatError
+    case clearChatNavigation
+
+    // MARK: - Space Navigation
+    case navigateToSpace(spaceId: String)
+    case clearSpaceNavigation
+
+    // MARK: - Payment
+    case showPaymentConfirmAlert
+    case dismissPaymentConfirmAlert
+    case confirmPayment
+    case clearPaymentNavigation
+    case validatePayment(impUid: String, postId: String)
+    case dismissPaymentSuccess
+    case dismissPaymentError
+
+    // MARK: - Action Sheet & Delete
+    case showActionSheet
+    case dismissActionSheet
+    case showDeleteAlert
+    case dismissDeleteAlert
+    case deleteMeet
 }

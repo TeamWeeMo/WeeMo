@@ -15,39 +15,30 @@ struct ChatListView: View {
     // MARK: - Properties
 
     @StateObject private var store = ChatListStore()
-    @State private var navigationPath = NavigationPath()
 
     // MARK: - Body
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
-            ZStack {
-                    // 전체 배경색
-                    Color.wmBg
-                        .ignoresSafeArea(.all)
+        ZStack {
+            // 전체 배경색
+            Color.wmBg
+                .ignoresSafeArea(.all)
 
-                    VStack {
-                        if store.state.isLoading {
-                            loadingView
-                        } else if let errorMessage = store.state.errorMessage {
-                            errorView(errorMessage)
-                        } else if store.state.isEmpty {
-                            emptyView
-                        } else {
-                            chatRoomListView
-                        }
-                    }
+            VStack {
+                if store.state.isLoading {
+                    loadingView
+                } else if let errorMessage = store.state.errorMessage {
+                    errorView(errorMessage)
+                } else if store.state.isEmpty {
+                    emptyView
+                } else {
+                    chatRoomListView
                 }
-                .navigationTitle("채팅")
-                .navigationBarTitleDisplayMode(.large)
-                .navigationDestination(for: ChatRoom.self) { room in
-                    ChatDetailView(room: room)
-                }
-                .navigationDestination(for: User.self) { user in
-                    ProfileView(userId: user.userId)
-                }
+            }
         }
-            .onAppear {
+        .navigationTitle("채팅")
+        .navigationBarTitleDisplayMode(.large)
+        .onAppear {
                 print(" ChatListView 나타남 - 소켓 연결 시작")
                 store.handle(.setupSocketListeners)
                 if store.state.chatRooms.isEmpty {
@@ -114,10 +105,10 @@ struct ChatListView: View {
         ScrollView {
             LazyVStack(spacing: 0) {
                 ForEach(store.state.filteredChatRooms) { room in
-                    ChatRoomRow(room: room)
-                        .buttonWrapper {
-                            navigationPath.append(room)
-                        }
+                    NavigationLink(value: room) {
+                        ChatRoomRow(room: room)
+                    }
+                    .buttonStyle(PlainButtonStyle())
 
                     // 구분선
                     if room.id != store.state.filteredChatRooms.last?.id {

@@ -10,6 +10,7 @@ import SwiftUI
 enum HomeRoute: Hashable {
     case meetList
     case meetEdit
+    case meetMap
     case spaceList
     case feed
 }
@@ -125,7 +126,9 @@ struct HomeView: View {
                 case .meetList:
                     MeetListView()
                 case .meetEdit:
-                    MeetEditView()
+                    MeetEditView(mode: .create)
+                case .meetMap:
+                    MeetMapView()
                 case .spaceList:
                     SpaceListView()
                 case .feed:
@@ -138,19 +141,23 @@ struct HomeView: View {
             .navigationDestination(for: ChatRoom.self) { room in
                 ChatDetailView(room: room)
             }
+            .navigationDestination(for: User.self) { user in
+                ProfileView(userId: user.userId)
+            }
             .navigationDestination(for: String.self) { value in
                 if value == "map" {
                     MeetMapView()
                 } else if value == "edit" {
-                    MeetEditView()
+                    MeetEditView(mode: .create)
                 } else if value.hasPrefix("edit:") {
                     // "edit:postId" 형식으로 전달된 경우
                     let postId = String(value.dropFirst(5))
-                    MeetEditView(editingPostId: postId)
+                    MeetEditView(mode: .edit(postId: postId))
                 } else {
                     MeetDetailView(postId: value)
                 }
             }
+            .tint(.wmMain)
         }
         .tint(.wmMain)
     }

@@ -18,8 +18,7 @@ struct SearchModalView: View {
             return meets
         } else {
             return meets.filter { meet in
-                meet.title.localizedCaseInsensitiveContains(searchText) ||
-                meet.location.localizedCaseInsensitiveContains(searchText)
+                meet.title.localizedCaseInsensitiveContains(searchText)
             }
         }
     }
@@ -69,9 +68,9 @@ struct SearchModalView: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 16) {
-                            ForEach(filteredMeets) { meet in
+                            ForEach(filteredMeets, id: \.id) { meet in
                                 Button(action: {
-                                    navigationPath.append(meet.postId)
+                                    navigationPath.append(meet.id)
                                     presentationMode.wrappedValue.dismiss()
                                 }) {
                                     MeetCardView(meet: meet)

@@ -58,15 +58,19 @@ struct MarkerView: View {
     /// 이미지 섹션 (작은 원형)
     private var imageSection: some View {
         Group {
-            let fullImageURL = FileRouter.fileURL(from: meet.imageName)
-            KFImage(URL(string: fullImageURL))
-                .withAuthHeaders()
-                .placeholder {
-                    placeholderImage
-                }
-                .retry(maxCount: 2, interval: .seconds(1))
-                .resizable()
-                .aspectRatio(contentMode: .fill)
+            if let firstImageURL = meet.fileURLs.first, !firstImageURL.isEmpty {
+                let fullImageURL = FileRouter.fileURL(from: firstImageURL)
+                KFImage(URL(string: fullImageURL))
+                    .withAuthHeaders()
+                    .placeholder {
+                        placeholderImage
+                    }
+                    .retry(maxCount: 2, interval: .seconds(1))
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                placeholderImage
+            }
         }
     }
 
@@ -108,46 +112,4 @@ private struct Triangle: Shape {
         path.closeSubpath()
         return path
     }
-}
-
-// MARK: - Preview
-
-#Preview {
-    VStack(spacing: 20) {
-        MarkerView(
-            meet: Meet(
-                postId: "1",
-                title: "주말 독서 모임",
-                date: "2025.11.15",
-                location: "강남",
-                address: "서울 강남구",
-                price: "15,000원",
-                participants: "4/8명",
-                imageName: "",
-                daysLeft: "D-3",
-                latitude: 37.5,
-                longitude: 127.0
-            ),
-            count: 1
-        )
-
-        MarkerView(
-            meet: Meet(
-                postId: "2",
-                title: "긴 제목의 모임입니다 테스트",
-                date: "2025.11.20",
-                location: "홍대",
-                address: "서울 마포구",
-                price: "무료",
-                participants: "6/10명",
-                imageName: "",
-                daysLeft: "D-8",
-                latitude: 37.5,
-                longitude: 127.0
-            ),
-            count: 3
-        )
-    }
-    .padding()
-    .background(Color.gray.opacity(0.1))
 }
