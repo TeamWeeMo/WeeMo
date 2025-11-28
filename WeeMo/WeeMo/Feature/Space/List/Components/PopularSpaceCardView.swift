@@ -55,22 +55,9 @@ struct PopularSpaceCardView: View {
                 Text("2025년 인기 파티룸")
                     .font(.app(.subHeadline1))
                     .foregroundColor(.white)
-                Text("소중한 사람과 함께하는 특별한 연말 파티 🎉")
+                Text("소중한 사람과 함께하는 특별한 연말 파티")
                     .font(.app(.subContent1))
                     .foregroundColor(.white)
-//                Text(space.title)
-//                    .font(.app(.headline2))
-//                    .foregroundColor(.white)
-
-//                HStack(spacing: Spacing.xSmall) {
-//                    Image(systemName: "star.fill")
-//                        .font(.system(size: AppFontSize.s12.rawValue))
-//                        .foregroundColor(.yellow)
-//
-//                    Text(space.formattedRating)
-//                        .font(.app(.content2))
-//                        .foregroundColor(.white)
-//                }
             }
             .padding(Spacing.base)
         }

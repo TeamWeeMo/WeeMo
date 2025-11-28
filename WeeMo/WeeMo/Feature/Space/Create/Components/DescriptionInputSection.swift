@@ -14,7 +14,7 @@ struct DescriptionInputSection: View {
         VStack(alignment: .leading, spacing: Spacing.small) {
             Text("공간 설명")
                 .font(.app(.subHeadline2))
-                .foregroundColor(Color("textMain"))
+                .foregroundColor(.textMain)
 
             TextEditor(text: $description)
                 .font(.app(.content1))

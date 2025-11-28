@@ -23,7 +23,7 @@ struct CreateSpaceButton: View {
             }
             .padding(.horizontal, Spacing.base)
             .padding(.vertical, Spacing.medium)
-            .background(Color("wmMain"))
+            .background(.wmMain)
             .cornerRadius(Spacing.radiusLarge)
             .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 4)
         }

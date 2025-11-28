@@ -19,7 +19,7 @@ struct InputFieldSection: View {
         VStack(alignment: .leading, spacing: Spacing.small) {
             Text(title)
                 .font(.app(.subHeadline2))
-                .foregroundColor(Color("textMain"))
+                .foregroundColor(.textMain)
 
             TextField(placeholder, text: $text)
                 .font(.app(.content1))

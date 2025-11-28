@@ -47,7 +47,7 @@ struct TimelineBarView: View {
                         ForEach(0...24, id: \.self) { hour in
                             Text("\(hour)")
                                 .font(.app(.subContent1))
-                                .foregroundColor(Color("textSub"))
+                                .foregroundColor(.textSub)
                                 .frame(width: 50, alignment: .center)
                         }
                     }
@@ -147,12 +147,12 @@ struct TimelineBarView: View {
 
                     HStack(spacing: Spacing.xSmall) {
                         Image(systemName: "wonsign.circle")
-                            .font(.system(size: AppFontSize.s16.rawValue))
-                            .foregroundColor(Color("wmMain"))
+                            .font(.app(.headline3))
+                            .foregroundColor(.wmMain)
 
                         Text("\(totalPrice.formatted())원")
                             .font(.app(.headline3))
-                            .foregroundColor(Color("wmMain"))
+                            .foregroundColor(.wmMain)
                     }
                 }
                 .padding(Spacing.medium)

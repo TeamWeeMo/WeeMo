@@ -77,11 +77,11 @@ struct DatePickerCalendarView: View {
             HStack(spacing: Spacing.small) {
                 Image(systemName: "calendar")
                     .font(.system(size: AppFontSize.s18.rawValue))
-                    .foregroundColor(Color("textMain"))
+                    .foregroundColor(.textMain)
 
                 Text("날짜 선택")
                     .font(.app(.content1))
-                    .foregroundColor(Color("textMain"))
+                    .foregroundColor(.textMain)
 
                 Spacer()
             }
@@ -91,21 +91,21 @@ struct DatePickerCalendarView: View {
                 Button(action: previousMonth) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: AppFontSize.s14.rawValue))
-                        .foregroundColor(Color("textMain"))
+                        .foregroundColor(.textMain)
                 }
 
                 Spacer()
 
                 Text(monthYearString)
                     .font(.app(.subHeadline2))
-                    .foregroundColor(Color("textMain"))
+                    .foregroundColor(.textMain)
 
                 Spacer()
 
                 Button(action: nextMonth) {
                     Image(systemName: "chevron.right")
                         .font(.system(size: AppFontSize.s16.rawValue))
-                        .foregroundColor(Color("textMain"))
+                        .foregroundColor(.textMain)
                 }
             }
             .padding(.vertical, Spacing.small)
@@ -115,7 +115,7 @@ struct DatePickerCalendarView: View {
                 ForEach(daysOfWeek, id: \.self) { day in
                     Text(day)
                         .font(.app(.subContent2))
-                        .foregroundColor(Color("textSub"))
+                        .foregroundColor(.textSub)
                         .frame(maxWidth: .infinity)
                 }
             }

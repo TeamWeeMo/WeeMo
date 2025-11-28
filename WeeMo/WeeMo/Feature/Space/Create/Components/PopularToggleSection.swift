@@ -14,12 +14,13 @@ struct PopularToggleSection: View {
         VStack(alignment: .leading, spacing: Spacing.small) {
             Text("인기 공간 여부")
                 .font(.app(.subHeadline2))
-                .foregroundColor(Color("textMain"))
+                .foregroundColor(.textMain)
 
             HStack(spacing: Spacing.medium) {
-                Button(action: {
+                
+                Button {
                     isPopular = false
-                }) {
+                } label: {
                     Text("일반")
                         .font(.app(.content1))
                         .foregroundColor(isPopular ? Color("textSub") : .white)
@@ -28,10 +29,10 @@ struct PopularToggleSection: View {
                         .background(isPopular ? Color.gray.opacity(0.2) : Color("wmMain"))
                         .cornerRadius(Spacing.radiusSmall)
                 }
-
-                Button(action: {
+                
+                Button {
                     isPopular = true
-                }) {
+                } label: {
                     Text("인기")
                         .font(.app(.content1))
                         .foregroundColor(isPopular ? .white : Color("textSub"))

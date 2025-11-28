@@ -20,9 +20,6 @@ enum SpaceListIntent {
     // 카테고리 필터링
     case categoryChanged(SpaceCategory)
 
-    // 공간 선택
-    case spaceSelected(Space)
-
     // 새로고침
     case refresh
 }

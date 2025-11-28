@@ -59,9 +59,10 @@ struct SpaceCreateView: View {
                         get: { store.state.address },
                         set: { store.send(.addressChanged($0)) }
                     ),
-                    onAddressSelected: { address, latitude, longitude in
+                    onAddressSelected: { address, roadAddress, latitude, longitude in
                         store.send(.addressSelected(
                             address: address,
+                            roadAddress: roadAddress,
                             latitude: latitude,
                             longitude: longitude
                         ))
@@ -189,7 +190,7 @@ struct SpaceCreateView: View {
                 }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 18))
-                        .foregroundColor(Color("textMain"))
+                        .foregroundColor(.textMain)
                 }
             }
         }

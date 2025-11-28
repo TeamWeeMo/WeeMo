@@ -15,7 +15,7 @@ enum SpaceCreateIntent {
     case titleChanged(String)
     case priceChanged(String)
     case addressChanged(String)
-    case addressSelected(address: String, latitude: Double, longitude: Double)
+    case addressSelected(address: String, roadAddress: String, latitude: Double, longitude: Double)
     case ratingChanged(Double)  // Slider 값 (1.0 ~ 5.0, 0.5 단위)
     case descriptionChanged(String)
 

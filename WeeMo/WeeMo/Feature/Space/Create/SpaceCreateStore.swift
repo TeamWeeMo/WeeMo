@@ -5,7 +5,6 @@
 //  Created by Reimos on 11/16/25.
 //
 
-import Foundation
 import Combine
 import UIKit
 
@@ -35,8 +34,9 @@ final class SpaceCreateStore: ObservableObject {
         case .addressChanged(let address):
             state.address = address
 
-        case .addressSelected(let address, let latitude, let longitude):
+        case .addressSelected(let address, let roadAddress, let latitude, let longitude):
             state.address = address
+            state.roadAddress = roadAddress
             state.latitude = latitude
             state.longitude = longitude
 
@@ -197,6 +197,7 @@ final class SpaceCreateStore: ObservableObject {
         // value6: 주차 ("true" or "false")
         // value7: 화장실 여부 ("true" or "false")
         // value8: 최대인원 ("6")
+        // value9: 도로명 주소
 
         guard let priceInt = Int(state.price) else {
             throw NetworkError.badRequest("올바른 가격을 입력해주세요.")
@@ -218,13 +219,16 @@ final class SpaceCreateStore: ObservableObject {
             "value5": state.isPopular ? "true" : "false",
             "value6": state.hasParking ? "true" : "false",
             "value7": state.hasRestroom ? "true" : "false",
-        
         ]
-        
 
         // 최대인원 추가 (입력된 경우만)
         if !state.maxCapacity.isEmpty {
             additionalFields["value8"] = state.maxCapacity
+        }
+
+        // 도로명 주소 추가 (있는 경우만)
+        if !state.roadAddress.isEmpty {
+            additionalFields["value9"] = state.roadAddress
         }
 
         // PostRouter 사용 (사용자가 선택한 실제 좌표 전송)

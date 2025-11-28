@@ -17,6 +17,8 @@ final class SpaceDetailStore: ObservableObject {
     private let postService: PostService
     private let commentService: CommentService
     private let spaceId: String
+    private let latitude: Double
+    private let longitude: Double
     private var cancellables = Set<AnyCancellable>()
 
     // MARK: - Initializer
@@ -26,29 +28,17 @@ final class SpaceDetailStore: ObservableObject {
         postService: PostService = PostService(),
         commentService: CommentService = CommentService(),
         spaceId: String,
-        pricePerHour: Int
+        pricePerHour: Int,
+        latitude: Double,
+        longitude: Double
     ) {
         self.networkService = networkService
         self.postService = postService
         self.commentService = commentService
         self.spaceId = spaceId
+        self.latitude = latitude
+        self.longitude = longitude
         self.state.pricePerHour = pricePerHour
-    }
-
-    // MARK: - Bindings
-
-    var startHourBinding: Binding<Int?> {
-        Binding(
-            get: { self.state.startHour },
-            set: { self.state.startHour = $0 }
-        )
-    }
-
-    var endHourBinding: Binding<Int?> {
-        Binding(
-            get: { self.state.endHour },
-            set: { self.state.endHour = $0 }
-        )
     }
 
     // MARK: - Intent Handler
@@ -61,11 +51,23 @@ final class SpaceDetailStore: ObservableObject {
         case .dateSelected(let date):
             state.selectedDate = date
 
+        case .startHourChanged(let hour):
+            state.startHour = hour
+
+        case .endHourChanged(let hour):
+            state.endHour = hour
+
         case .profileLoaded:
             break
 
         case .reservationButtonTapped:
-            handleReservation()
+            handleReservationButtonTapped()
+
+        case .confirmReservation:
+            handleConfirmReservation()
+
+        case .dismissAlert:
+            state.showReservationAlert = false
         }
     }
 
@@ -75,6 +77,7 @@ final class SpaceDetailStore: ObservableObject {
         Task {
             await loadUserProfile()
             await loadReservationComments()
+            await loadSameLocationMeetings()
         }
     }
 
@@ -119,6 +122,36 @@ final class SpaceDetailStore: ObservableObject {
         }
     }
 
+    /// 예약하기 버튼 탭 처리 (Alert 표시)
+    private func handleReservationButtonTapped() {
+        guard state.canReserve else {
+            print("[SpaceDetailStore] 예약 불가: 날짜 또는 시간 미선택")
+            return
+        }
+
+        // Alert 표시
+        state.showReservationAlert = true
+    }
+
+    /// 예약 확인 처리
+    private func handleConfirmReservation() {
+        state.showReservationAlert = false
+
+        // 예약 정보 표시
+        state.showReservationInfo = true
+
+        print("[SpaceDetailStore] 예약 정보 표시:")
+        print("- 날짜: \(state.formattedDate)")
+        print("- 시간: \(state.formattedTimeSlot)")
+        print("- 가격: \(state.totalPrice)")
+
+        // 좋아요(예약) API 호출
+        Task {
+            await likeSpace()
+        }
+    }
+
+    @available(*, deprecated, renamed: "handleReservationButtonTapped")
     private func handleReservation() {
         guard state.canReserve else {
             print("[SpaceDetailStore] 예약 불가: 날짜 또는 시간 미선택")
@@ -176,9 +209,9 @@ final class SpaceDetailStore: ObservableObject {
                 state.isLiked = response.likeStatus
                 state.isLikeLoading = false
 
-                // 예약 성공 시 해당 시간 블락 처리
+                // 예약 성공 시 해당 시간 블락 처리 (선택 초기화 포함)
                 if response.likeStatus {
-                    addBlockedHours(date: selectedDate, startHour: startHour, endHour: endHour)
+                    addBlockedHours(date: selectedDate, startHour: startHour, endHour: endHour, shouldResetSelection: true)
                 }
             }
 
@@ -216,7 +249,12 @@ final class SpaceDetailStore: ObservableObject {
     }
 
     /// 예약된 시간을 블락 목록에 추가
-    private func addBlockedHours(date: Date, startHour: Int, endHour: Int) {
+    /// - Parameters:
+    ///   - date: 예약 날짜
+    ///   - startHour: 시작 시간
+    ///   - endHour: 종료 시간
+    ///   - shouldResetSelection: 선택 초기화 여부 (기본값: false)
+    private func addBlockedHours(date: Date, startHour: Int, endHour: Int, shouldResetSelection: Bool = false) {
         let calendar = Calendar.current
         let dateOnly = calendar.startOfDay(for: date)
 
@@ -230,11 +268,14 @@ final class SpaceDetailStore: ObservableObject {
 
         state.blockedHoursByDate[dateOnly] = blockedHours
 
-        // 선택 초기화
-        state.startHour = nil
-        state.endHour = nil
+        // 선택 초기화 (필요시만)
+        if shouldResetSelection {
+            state.startHour = nil
+            state.endHour = nil
+        }
 
-        print("[SpaceDetailStore] 블락된 시간 추가: \(dateOnly) - \(startHour):00 ~ \(endHour):00")
+        let source = shouldResetSelection ? "사용자 예약" : "서버 데이터"
+        print("[SpaceDetailStore] 블락된 시간 추가 (\(source)): \(dateOnly) - \(startHour):00 ~ \(endHour):00")
     }
 
     /// 서버에서 예약 댓글 조회 및 블락 시간 적용
@@ -266,10 +307,11 @@ final class SpaceDetailStore: ObservableObject {
                         print("    - 금액: \(price.formatted())원")
 
                         await MainActor.run {
-                            addBlockedHoursFromServer(
+                            addBlockedHours(
                                 date: reservationInfo.date,
                                 startHour: reservationInfo.startHour,
-                                endHour: endHour
+                                endHour: endHour,
+                                shouldResetSelection: false
                             )
                         }
                         print("    타임라인에 블락 적용됨")
@@ -313,21 +355,41 @@ final class SpaceDetailStore: ObservableObject {
         return (date: date, startHour: startHour, totalHours: totalHours)
     }
 
-    /// 서버에서 조회한 예약 시간을 블락 목록에 추가 (선택 초기화 없음)
-    private func addBlockedHoursFromServer(date: Date, startHour: Int, endHour: Int) {
-        let calendar = Calendar.current
-        let dateOnly = calendar.startOfDay(for: date)
-
-        // 해당 날짜의 기존 블락된 시간 가져오기
-        var blockedHours = state.blockedHoursByDate[dateOnly] ?? []
-
-        // 선택된 시간 범위를 블락 목록에 추가
-        for hour in startHour..<endHour {
-            blockedHours.insert(hour)
+    /// 같은 위치의 모임 검색 (위치 기반)
+    private func loadSameLocationMeetings() async {
+        await MainActor.run {
+            state.isMeetingsLoading = true
         }
 
-        state.blockedHoursByDate[dateOnly] = blockedHours
+        do {
+            // 위치 기반 검색: 현재 공간과 같은 위치(±0.0001도, 약 10m 이내)의 모임만 검색
+            let response = try await networkService.request(
+                PostRouter.searchByLocation(
+                    category: .meet,
+                    longitude: longitude,
+                    latitude: latitude,
+                    maxDistance: 100, // 100m 이내
+                    orderBy: nil,
+                    sortBy: nil
+                ),
+                responseType: PostListDTO.self
+            )
 
-        print("[SpaceDetailStore] 서버 예약 블락 추가: \(dateOnly) - \(startHour):00 ~ \(endHour):00")
+            await MainActor.run {
+                state.sameLocationMeetings = response.data
+                state.isMeetingsLoading = false
+            }
+
+            if response.data.isEmpty {
+                print("[SpaceDetailStore] 같은 위치의 모임이 없습니다.")
+            } else {
+                print("[SpaceDetailStore] 같은 위치 모임 \(response.data.count)개 발견")
+            }
+        } catch {
+            await MainActor.run {
+                state.isMeetingsLoading = false
+            }
+            print("[SpaceDetailStore] 같은 위치 모임 검색 실패: \(error)")
+        }
     }
 }

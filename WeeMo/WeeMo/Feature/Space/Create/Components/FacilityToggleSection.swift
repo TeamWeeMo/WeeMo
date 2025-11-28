@@ -15,7 +15,7 @@ struct FacilityToggleSection: View {
         VStack(alignment: .leading, spacing: Spacing.small) {
             Text("편의시설")
                 .font(.app(.subHeadline2))
-                .foregroundColor(Color("textMain"))
+                .foregroundColor(.textMain)
 
             VStack(spacing: Spacing.small) {
                 // 주차 가능 여부
@@ -26,13 +26,13 @@ struct FacilityToggleSection: View {
 
                     Text("주차 가능")
                         .font(.app(.content1))
-                        .foregroundColor(Color("textMain"))
+                        .foregroundColor(.textMain)
 
                     Spacer()
 
                     Toggle("", isOn: $hasParking)
                         .labelsHidden()
-                        .tint(Color("wmMain"))
+                        .tint(.wmMain)
                 }
                 .padding(.vertical, Spacing.xSmall)
 
@@ -47,13 +47,13 @@ struct FacilityToggleSection: View {
 
                     Text("화장실 있음")
                         .font(.app(.content1))
-                        .foregroundColor(Color("textMain"))
+                        .foregroundColor(.textMain)
 
                     Spacer()
 
                     Toggle("", isOn: $hasRestroom)
                         .labelsHidden()
-                        .tint(Color("wmMain"))
+                        .tint(.wmMain)
                 }
                 .padding(.vertical, Spacing.xSmall)
             }
