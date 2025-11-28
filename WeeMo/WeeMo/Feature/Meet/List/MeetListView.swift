@@ -91,11 +91,11 @@ struct MeetListView: View {
                     store.handle(.loadMeets)
                 }
                 .onChange(of: selectedSortOption) { sortOption in
-                    print("🔄 Sort option changed to: \(sortOption.rawValue)")
+                    print(" Sort option changed to: \(sortOption.rawValue)")
                     store.handle(.sortMeets(option: sortOption))
                 }
                 .onChange(of: searchText) { searchQuery in
-                    print("🔍 Search text changed to: '\(searchQuery)'")
+                    print(" Search text changed to: '\(searchQuery)'")
                     store.handle(.searchMeets(query: searchQuery))
                 }
                 .overlay(

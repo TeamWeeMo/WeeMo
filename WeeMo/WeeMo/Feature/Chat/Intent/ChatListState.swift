@@ -26,7 +26,12 @@ struct ChatListState {
 
     var filteredChatRooms: [ChatRoom] {
         return chatRooms.filter { room in
-            // 참여자가 2명이고, 상대방이 나 자신이 아닌 경우만 포함
+            // 1. 메시지가 있는 채팅방만 포함 (lastChat이 있어야 함)
+            guard room.lastChat != nil else {
+                return false
+            }
+
+            // 2. 참여자가 2명이고, 상대방이 나 자신이 아닌 경우만 포함
             if room.participants.count == 2 {
                 return room.participants.contains { $0.userId != currentUserId }
             }

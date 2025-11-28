@@ -101,6 +101,69 @@ final class NetworkService: NetworkServiceProtocol {
         }
     }
 
+    /// 미디어 파일 업로드 (이미지/영상 구분)
+    func uploadMedia<T: Decodable>(
+        _ router: APIRouter,
+        mediaFiles: [Data],
+        responseType: T.Type
+    ) async throws -> T {
+        return try await withCheckedThrowingContinuation { continuation in
+            session.upload(
+                multipartFormData: { multipartFormData in
+                    for (index, mediaData) in mediaFiles.enumerated() {
+                        let (fileName, mimeType) = self.detectMediaType(data: mediaData, index: index)
+                        multipartFormData.append(
+                            mediaData,
+                            withName: "files",
+                            fileName: fileName,
+                            mimeType: mimeType
+                        )
+                    }
+                },
+                with: router
+            )
+            .validate()
+            .responseDecodable(of: T.self) { response in
+                switch response.result {
+                case .success(let data):
+                    continuation.resume(returning: data)
+
+                case .failure(let error):
+                    let networkError = self.handleError(response: response.response, error: error, data: response.data)
+                    continuation.resume(throwing: networkError)
+                }
+            }
+        }
+    }
+
+    /// 미디어 데이터 타입 감지
+    private func detectMediaType(data: Data, index: Int) -> (fileName: String, mimeType: String) {
+        guard data.count > 12 else {
+            return ("file_\(index)", "application/octet-stream")
+        }
+
+        let bytes = data.prefix(12)
+        let signature = bytes.map { String(format: "%02x", $0) }.joined()
+        let sig = signature.lowercased()
+
+        // 이미지 포맷
+        if sig.hasPrefix("ffd8ff") {
+            return ("image_\(index).jpg", "image/jpeg")
+        }
+        if sig.hasPrefix("89504e47") {
+            return ("image_\(index).png", "image/png")
+        }
+        if sig.hasPrefix("47494638") {
+            return ("image_\(index).gif", "image/gif")
+        }
+        if sig.hasPrefix("52494646") {
+            return ("image_\(index).webp", "image/webp")
+        }
+
+        // 영상 파일은 MP4로 처리
+        return ("video_\(index).mp4", "video/mp4")
+    }
+
     /// 파일 다운로드 (이미지, 비디오 등)
     func downloadFile(_ router: APIRouter) async throws -> Data {
         return try await withCheckedThrowingContinuation { continuation in

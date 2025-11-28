@@ -246,9 +246,9 @@ final class SpaceDetailStore: ObservableObject {
             let reservationComments = comments.filter { $0.content.hasPrefix("#") }
 
             if reservationComments.isEmpty {
-                print("[SpaceDetailStore] 📋 저장된 예약 정보가 없습니다.")
+                print("[SpaceDetailStore] 저장된 예약 정보가 없습니다.")
             } else {
-                print("[SpaceDetailStore] 📋 저장된 예약 정보 (\(reservationComments.count)건):")
+                print("[SpaceDetailStore] 저장된 예약 정보 (\(reservationComments.count)건):")
                 print("========================================")
 
                 for (index, comment) in reservationComments.enumerated() {
@@ -272,7 +272,7 @@ final class SpaceDetailStore: ObservableObject {
                                 endHour: endHour
                             )
                         }
-                        print("    ✅ 타임라인에 블락 적용됨")
+                        print("    타임라인에 블락 적용됨")
                     }
                     print("----------------------------------------")
                 }

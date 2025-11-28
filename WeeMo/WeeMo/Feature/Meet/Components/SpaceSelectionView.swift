@@ -95,8 +95,8 @@ struct SpaceRowView: View {
                 if let imageURL = space.imageURLs.first {
                     // FileRouter를 사용하여 올바른 URL 생성
                     let fullImageURL = imageURL.hasPrefix("http") ? imageURL : FileRouter.fileURL(from: imageURL)
-                    let _ = print("🖼️ Original image URL: \(imageURL)")
-                    let _ = print("🖼️ Full image URL with FileRouter: \(fullImageURL)")
+                    let _ = print("Original image URL: \(imageURL)")
+                    let _ = print("Full image URL with FileRouter: \(fullImageURL)")
 
                     // URL 인코딩 처리
                     if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
@@ -126,7 +126,7 @@ struct SpaceRowView: View {
                                 )
                         }
                         .onFailure { error in
-                            print("🖼️ 이미지 로딩 실패: \(error)")
+                            print("이미지 로딩 실패: \(error)")
                         }
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -134,7 +134,7 @@ struct SpaceRowView: View {
                         .clipped()
                         .cornerRadius(8)
                     } else {
-                        let _ = print("🖼️ URL 생성 실패: \(fullImageURL)")
+                        let _ = print("URL 생성 실패: \(fullImageURL)")
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color.red.opacity(0.3))
                             .frame(width: 60, height: 60)

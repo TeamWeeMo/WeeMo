@@ -113,6 +113,13 @@ struct HomeView: View {
                     Spacer()
                 }
             }
+            .onChange(of: currentScreen) { oldValue, newValue in
+                // 채팅 화면에서 다른 화면으로 이동할 때 소켓 연결 해제
+                if oldValue == .chatList && newValue != .chatList {
+                    print("HomeView - 채팅에서 다른 화면으로 이동, 소켓 연결 해제")
+                    ChatSocketIOManager.shared.closeWebSocket()
+                }
+            }
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case .meetList:

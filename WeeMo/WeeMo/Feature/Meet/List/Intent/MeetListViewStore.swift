@@ -145,13 +145,13 @@ final class MeetListViewStore: ObservableObject {
     }
 
     private func searchMeets(query: String) {
-        print("🔍 Searching meets with query: '\(query)'")
+        print(" Searching meets with query: '\(query)'")
         state.searchQuery = query
         applyFilterAndSort()
     }
 
     private func sortMeets(by option: SortOption) {
-        print("🔄 Sorting meets by: \(option.rawValue)")
+        print(" Sorting meets by: \(option.rawValue)")
         state.currentSortOption = option
         applyFilterAndSort()
     }
@@ -169,14 +169,14 @@ final class MeetListViewStore: ObservableObject {
             }
         }
 
-        print("🔍 After filtering: \(state.filteredMeets.count) meets found")
+        print(" After filtering: \(state.filteredMeets.count) meets found")
 
         // 2. 정렬 적용
         switch state.currentSortOption {
         case .registrationDate:
             // 등록일순 - 제목 역순으로 테스트
             state.meets = state.filteredMeets.sorted { $0.title > $1.title }
-            print("📋 Sorted by registration date: \(state.meets.map { $0.title })")
+            print(" Sorted by registration date: \(state.meets.map { $0.title })")
         case .deadline:
             // 마감일순 - daysLeft 기준 (D-day가 적은 순)
             state.meets = state.filteredMeets.sorted { meet1, meet2 in
@@ -184,14 +184,14 @@ final class MeetListViewStore: ObservableObject {
                 let days2 = parseDaysLeft(meet2.daysLeft)
                 return days1 < days2
             }
-            print("📋 Sorted by deadline: \(state.meets.map { "\($0.title) (\($0.daysLeft))" })")
+            print(" Sorted by deadline: \(state.meets.map { "\($0.title) (\($0.daysLeft))" })")
         case .distance:
             // 거리순 - 가격순으로 테스트
             state.meets = state.filteredMeets.sorted { $0.price < $1.price }
-            print("📋 Sorted by distance: \(state.meets.map { $0.title })")
+            print(" Sorted by distance: \(state.meets.map { $0.title })")
         }
 
-        print("✅ Filter & Sort completed. Final count: \(state.meets.count)")
+        print("Filter & Sort completed. Final count: \(state.meets.count)")
     }
 
     // Helper function to parse date from string
@@ -204,7 +204,7 @@ final class MeetListViewStore: ObservableObject {
 
     // Helper function to parse days left from string
     private func parseDaysLeft(_ daysLeftString: String) -> Int {
-        print("🔍 Parsing daysLeft: '\(daysLeftString)'")
+        print(" Parsing daysLeft: '\(daysLeftString)'")
 
         if daysLeftString == "오늘" {
             return 0
@@ -213,10 +213,10 @@ final class MeetListViewStore: ObservableObject {
         } else if daysLeftString.hasPrefix("D-") {
             let numberString = daysLeftString.replacingOccurrences(of: "D-", with: "")
             let result = Int(numberString) ?? Int.max
-            print("✅ Parsed D-\(numberString) -> \(result)")
+            print("Parsed D-\(numberString) -> \(result)")
             return result
         }
-        print("❌ Could not parse: '\(daysLeftString)' -> Int.max")
+        print(" Could not parse: '\(daysLeftString)' -> Int.max")
         return Int.max
     }
 
@@ -225,7 +225,7 @@ final class MeetListViewStore: ObservableObject {
     private func loadMoreMeets() {
         guard state.hasMoreData && !state.isLoadingMore,
               let nextCursor = state.nextCursor else {
-            print("⚠️ No more data to load or already loading")
+            print("No more data to load or already loading")
             return
         }
 
@@ -233,7 +233,7 @@ final class MeetListViewStore: ObservableObject {
 
         Task {
             do {
-                print("🔄 Loading more meets with cursor: \(nextCursor)")
+                print(" Loading more meets with cursor: \(nextCursor)")
 
                 let response = try await networkService.request(
                     PostRouter.fetchPosts(next: nextCursor, limit: 20, category: .meet),
@@ -270,14 +270,14 @@ final class MeetListViewStore: ObservableObject {
                     state.hasMoreData = response.nextCursor != nil
                     state.isLoadingMore = false
 
-                    print("✅ Loaded \(uniqueNewMeets.count) new meets (filtered \(newMeets.count - uniqueNewMeets.count) duplicates). Total: \(state.allMeets.count)")
+                    print("Loaded \(uniqueNewMeets.count) new meets (filtered \(newMeets.count - uniqueNewMeets.count) duplicates). Total: \(state.allMeets.count)")
 
                     // 현재 검색어와 정렬 옵션 적용
                     applyFilterAndSort()
                 }
 
             } catch {
-                print("❌ Error loading more meets: \(error)")
+                print(" Error loading more meets: \(error)")
                 await MainActor.run {
                     state.isLoadingMore = false
                 }

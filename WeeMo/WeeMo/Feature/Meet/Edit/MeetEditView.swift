@@ -135,7 +135,7 @@ struct MeetEditView: View {
                     // 새 이미지를 선택하면 기존 이미지 사용 안 함
                     if !newImages.isEmpty && isEditMode {
                         store.shouldKeepExistingImages = false
-                        print("📸 새 이미지 선택: 기존 이미지 교체")
+                        print(" 새 이미지 선택: 기존 이미지 교체")
                     }
                 }
             }
@@ -165,7 +165,7 @@ struct MeetEditView: View {
                     print("기존 공간 정보: \(spaceInfo.title)")
                 }
 
-                print("✅ UI updated with existing data: \(meetData.title)")
+                print("UI updated with existing data: \(meetData.title)")
             }
         }
         .onChange(of: store.state.isMeetUpdated) { isMeetUpdated in
@@ -210,7 +210,7 @@ struct MeetEditView: View {
     }
 
     private func parseStartDate(from content: String) -> Date? {
-        // "⏰ 모임 시작일: 2025.11.20 (수) 14:00" 형식에서 날짜 추출
+        // "모임 시작일: 2025.11.20 (수) 14:00" 형식에서 날짜 추출
         let pattern = "⏰ 모임 시작일: (.+)"
         if let regex = try? NSRegularExpression(pattern: pattern),
            let match = regex.firstMatch(in: content, range: NSRange(content.startIndex..., in: content)),

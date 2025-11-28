@@ -16,7 +16,7 @@ final class ChatListStore: ObservableObject {
     private var cancellables = Set<AnyCancellable>()
 
     init() {
-        handle(.setupSocketListeners)
+        // 소켓 리스너는 ChatListView에서 수동으로 설정
     }
 
     deinit {
@@ -49,20 +49,20 @@ final class ChatListStore: ObservableObject {
         socketManager.chatRoomUpdateSubject
             .sink { [weak self] roomId in
                 Task { @MainActor in
-                    print("🔄 채팅방 리스트 업데이트 신호 수신: \(roomId)")
+                    print("채팅방 리스트 업데이트 신호 수신: \(roomId)")
                     self?.handle(.refreshChatRooms)
                 }
             }
             .store(in: &cancellables)
 
         state.isSocketListening = true
-        print("✅ ChatList Socket 리스너 설정 완료")
+        print("ChatList Socket 리스너 설정 완료")
     }
 
     private func cleanupSocketListeners() {
         cancellables.removeAll()
         state.isSocketListening = false
-        print("🧹 ChatList Socket 리스너 정리 완료")
+        print("ChatList Socket 리스너 정리 완료")
     }
 
     // MARK: - Chat Room Loading
@@ -83,7 +83,7 @@ final class ChatListStore: ObservableObject {
                 await MainActor.run {
                     state.chatRooms = chatRooms
                     state.isLoading = false
-                    print("✅ 전체 \(response.data.count)개 중 \(state.filteredChatRooms.count)개 채팅방 로드 완료 (나와의 채팅 제외)")
+                    print("전체 \(response.data.count)개 중 \(state.filteredChatRooms.count)개 채팅방 로드 완료 (나와의 채팅 제외)")
                 }
 
             } catch {
@@ -91,7 +91,7 @@ final class ChatListStore: ObservableObject {
                     state.errorMessage = "채팅방을 불러오는데 실패했습니다: \(error.localizedDescription)"
                     state.isLoading = false
                     state.chatRooms = []
-                    print("⚠️ 채팅방 로드 실패: \(error)")
+                    print("채팅방 로드 실패: \(error)")
                 }
             }
         }
@@ -114,13 +114,13 @@ final class ChatListStore: ObservableObject {
                 await MainActor.run {
                     state.chatRooms = chatRooms
                     state.isRefreshing = false
-                    print("🔄 새로고침 완료: 전체 \(response.data.count)개 중 \(state.filteredChatRooms.count)개 (나와의 채팅 제외)")
+                    print(" 새로고침 완료: 전체 \(response.data.count)개 중 \(state.filteredChatRooms.count)개 (나와의 채팅 제외)")
                 }
 
             } catch {
                 await MainActor.run {
                     state.isRefreshing = false
-                    print("❌ 채팅방 새로고침 실패: \(error)")
+                    print("채팅방 새로고침 실패: \(error)")
                     // 새로고침 실패시 기존 데이터 유지
                 }
             }
@@ -139,7 +139,7 @@ final class ChatListStore: ObservableObject {
 
         // 다른 채팅방으로 이동 시 Socket.IO 방 전환
         socketManager.openWebSocket(roomId: room.id)
-        print("🔌 선택된 채팅방으로 Socket 연결: \(room.id)")
+        print("선택된 채팅방으로 Socket 연결: \(room.id)")
     }
 
     // MARK: - Helper Methods
@@ -161,23 +161,70 @@ final class ChatListStore: ObservableObject {
                     nickname: lastChatDTO.sender.nick,
                     profileImageURL: lastChatDTO.sender.profileImage
                 )
+                let parsedDate = parseDate(from: lastChatDTO.createdAt)
+                print(" 마지막 채팅 시간 파싱: '\(lastChatDTO.createdAt)' -> \(parsedDate?.description ?? "nil")")
+
                 lastChat = ChatMessage(
                     id: lastChatDTO.chatId,
                     roomId: lastChatDTO.roomId,
                     content: lastChatDTO.content,
-                    createdAt: ISO8601DateFormatter().date(from: lastChatDTO.createdAt) ?? Date(),
+                    createdAt: parsedDate ?? Date(),
                     sender: sender,
                     files: lastChatDTO.files
                 )
             }
 
-            return ChatRoom(
+            let chatRoom = ChatRoom(
                 id: dto.roomId,
                 participants: participants,
                 lastChat: lastChat,
                 createdAt: ISO8601DateFormatter().date(from: dto.createdAt) ?? Date(),
                 updatedAt: ISO8601DateFormatter().date(from: dto.updatedAt) ?? Date()
             )
+
+            return chatRoom
         }
+    }
+
+    // MARK: - Helper Methods
+
+    /// 다양한 형식의 날짜 문자열을 파싱
+    private func parseDate(from dateString: String) -> Date? {
+        // ISO8601 형식들 시도
+        let formatters = [
+            // 표준 ISO8601
+            ISO8601DateFormatter(),
+            // 커스텀 형식들
+            createDateFormatter(format: "yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'"),
+            createDateFormatter(format: "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"),
+            createDateFormatter(format: "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+            createDateFormatter(format: "yyyy-MM-dd HH:mm:ss"),
+            createDateFormatter(format: "yyyy-MM-dd'T'HH:mm:ss.SSSSSSXXX"),
+            createDateFormatter(format: "yyyy-MM-dd'T'HH:mm:ss.SSSXXX"),
+            createDateFormatter(format: "yyyy-MM-dd'T'HH:mm:ssXXX")
+        ]
+
+        for formatter in formatters {
+            if let iso8601Formatter = formatter as? ISO8601DateFormatter {
+                if let date = iso8601Formatter.date(from: dateString) {
+                    return date
+                }
+            } else if let dateFormatter = formatter as? DateFormatter {
+                if let date = dateFormatter.date(from: dateString) {
+                    return date
+                }
+            }
+        }
+
+        print(" 날짜 파싱 실패: \(dateString)")
+        return nil
+    }
+
+    private func createDateFormatter(format: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateFormat = format
+        formatter.timeZone = TimeZone(identifier: "UTC")
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
     }
 }
