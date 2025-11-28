@@ -53,6 +53,9 @@ final class ProfileStore: ObservableObject {
         case .loadUserFeeds:
             loadUserFeeds()
 
+        case .loadReservedSpaces:
+            loadReservedSpaces()
+
         case .loadLikedPosts:
             loadLikedPosts()
 
@@ -92,10 +95,11 @@ final class ProfileStore: ObservableObject {
 
         Task {
             do {
-                let profile = try await NetworkService().request(
+                let profileDTO = try await NetworkService().request(
                     UserRouter.fetchMyProfile,
                     responseType: ProfileDTO.self
                 )
+                let profile = profileDTO.toDomain()
 
                 state.follower = profile.followers.count
                 state.following = profile.following.count
@@ -125,10 +129,11 @@ final class ProfileStore: ObservableObject {
 
         Task {
             do {
-                let profile = try await NetworkService().request(
+                let profileDTO = try await NetworkService().request(
                     UserRouter.fetchUserProfile(userId: userId),
                     responseType: ProfileDTO.self
                 )
+                let profile = profileDTO.toDomain()
 
                 state.otherUserProfile = profile
                 state.isLoadingOtherProfile = false
@@ -265,6 +270,35 @@ final class ProfileStore: ObservableObject {
         }
     }
 
+    private func loadReservedSpaces() {
+        guard !state.isLoadingReservedSpaces else { return }
+
+        state.isLoadingReservedSpaces = true
+        state.errorMessage = nil
+
+        Task {
+            do {
+                let result = try await postService.fetchMyLikedPosts(
+                    next: nil,
+                    limit: 20,
+                    category: .space
+                )
+
+                state.reservedSpaces = result.data
+                state.reservedSpacesNextCursor = result.nextCursor
+                state.isLoadingReservedSpaces = false
+            } catch let error as NetworkError {
+                print("예약한 공간 로드 에러: \(error)")
+                state.isLoadingReservedSpaces = false
+                state.errorMessage = error.localizedDescription
+            } catch {
+                print("예약한 공간 로드 에러: \(error)")
+                state.isLoadingReservedSpaces = false
+                state.errorMessage = "예약한 공간을 불러오는데 실패했습니다"
+            }
+        }
+    }
+
     private func loadPaidPosts() {
         guard !state.isLoadingPaidPosts else { return }
 
@@ -299,6 +333,12 @@ final class ProfileStore: ObservableObject {
             state.feedsNextCursor = nil
             loadUserMeetings()
             loadUserFeeds()
+
+        case .reservedSpaces:
+            // 예약한 공간 새로고침
+            state.reservedSpaces = []
+            state.reservedSpacesNextCursor = nil
+            loadReservedSpaces()
 
         case .groups:
             // 찜한 모임 새로고침

@@ -15,11 +15,26 @@
 		17C580F82EBDE1B60055A18E /* FSCalendar in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F72EBDE1B60055A18E /* FSCalendar */; };
 		3B5C4AAB2ECEE7AD00BA6325 /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 3B5C4AAA2ECEE7AD00BA6325 /* RealmSwift */; };
 		3B5C4E6A2ED3560000BA6325 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 3B5C4E692ED3560000BA6325 /* SocketIO */; };
+		3BC143AD2ED852C3001F63E3 /* RealmSwift in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 3B5C4AAA2ECEE7AD00BA6325 /* RealmSwift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 		9B8881FC2ECAE43400211811 /* KakaoSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 9B8881FB2ECAE43400211811 /* KakaoSDK */; };
 		9B8881FE2ECAE43400211811 /* KakaoSDKAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 9B8881FD2ECAE43400211811 /* KakaoSDKAuth */; };
 		9B8882002ECAE43400211811 /* KakaoSDKCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 9B8881FF2ECAE43400211811 /* KakaoSDKCommon */; };
 		9B8882022ECAE43400211811 /* KakaoSDKUser in Frameworks */ = {isa = PBXBuildFile; productRef = 9B8882012ECAE43400211811 /* KakaoSDKUser */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		3BC143AE2ED852C3001F63E3 /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				3BC143AD2ED852C3001F63E3 /* RealmSwift in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		17C57DF12EBDCC0B0055A18E /* WeeMo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WeeMo.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -95,6 +110,7 @@
 				17C57DED2EBDCC0B0055A18E /* Sources */,
 				17C57DEE2EBDCC0B0055A18E /* Frameworks */,
 				17C57DEF2EBDCC0B0055A18E /* Resources */,
+				3BC143AE2ED852C3001F63E3 /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -318,10 +334,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 4G4JFKFU2U;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WeeMo/Application/Info.plist;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "주변 모임을 지도에서 보기 위해 위치 권한이 필요합니다.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "채팅에서 사진을 전송하기 위해 사진 라이브러리 접근 권한이 필요합니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -356,10 +375,13 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = 4G4JFKFU2U;
+				DEVELOPMENT_TEAM = "";
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WeeMo/Application/Info.plist;
+				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "주변 모임을 지도에서 보기 위해 위치 권한이 필요합니다.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "채팅에서 사진을 전송하기 위해 사진 라이브러리 접근 권한이 필요합니다.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

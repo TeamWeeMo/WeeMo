@@ -73,7 +73,7 @@ struct FullScreenVideoPlayer: View {
         let fullURL = FileRouter.fileURL(from: videoURL)
         guard let url = URL(string: fullURL) else { return }
 
-        let asset = VideoHelper.makeAuthenticatedAsset(url: url)
+        let asset = MeetVideoHelper.makeAuthenticatedAsset(url: url)
         let playerItem = AVPlayerItem(asset: asset)
         let newPlayer = AVPlayer(playerItem: playerItem)
         self.player = newPlayer

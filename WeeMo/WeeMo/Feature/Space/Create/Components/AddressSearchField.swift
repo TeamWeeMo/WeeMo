@@ -9,7 +9,7 @@ import SwiftUI
 
 struct AddressSearchField: View {
     @Binding var address: String
-    let onAddressSelected: (String, Double, Double) -> Void
+    let onAddressSelected: (String, String, Double, Double) -> Void
 
     @StateObject private var store = AddressSearchStore()
     @FocusState private var isFocused: Bool
@@ -18,7 +18,7 @@ struct AddressSearchField: View {
         VStack(alignment: .leading, spacing: Spacing.small) {
             Text("주소")
                 .font(.app(.subHeadline2))
-                .foregroundColor(Color("textMain"))
+                .foregroundColor(.textMain)
 
             VStack(spacing: 0) {
                 // 검색 텍스트필드 + 검색 버튼
@@ -26,11 +26,11 @@ struct AddressSearchField: View {
                     // 텍스트필드
                     HStack(spacing: Spacing.small) {
                         Image(systemName: "mappin.and.ellipse")
-                            .foregroundColor(Color("textSub"))
+                            .foregroundStyle(.textSub)
 
                         TextField("예) 문래역 스타벅스", text: $address)
                             .font(.app(.content1))
-                            .foregroundColor(Color("textMain"))
+                            .foregroundColor(.textMain)
                             .focused($isFocused)
                             .onSubmit {
                                 performSearch()
@@ -42,7 +42,7 @@ struct AddressSearchField: View {
                                 store.send(.clearResults)
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(Color("textSub"))
+                                    .foregroundColor(.textSub)
                             }
                         }
                     }
@@ -78,7 +78,7 @@ struct AddressSearchField: View {
                                     .scaleEffect(0.8)
                                 Text("검색 중...")
                                     .font(.app(.content2))
-                                    .foregroundColor(Color("textSub"))
+                                    .foregroundColor(.textSub)
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, Spacing.medium)
@@ -92,6 +92,7 @@ struct AddressSearchField: View {
                                                 address = result.displayText
                                                 onAddressSelected(
                                                     result.displayText,
+                                                    result.roadAddress ?? "",
                                                     result.latitude,
                                                     result.longitude
                                                 )
@@ -137,12 +138,12 @@ struct AddressResultRow: View {
         VStack(alignment: .leading, spacing: Spacing.xSmall) {
             Text(result.displayText)
                 .font(.app(.content1))
-                .foregroundColor(Color("textMain"))
+                .foregroundColor(.textMain)
 
             if !result.subText.isEmpty {
                 Text(result.subText)
                     .font(.app(.content3))
-                    .foregroundColor(Color("textSub"))
+                    .foregroundColor(.textSub)
                     .lineLimit(1)
             }
         }

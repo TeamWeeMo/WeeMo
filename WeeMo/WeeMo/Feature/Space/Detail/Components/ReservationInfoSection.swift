@@ -114,12 +114,12 @@ struct ReservationInfoRow: View {
         HStack(spacing: Spacing.medium) {
             Image(systemName: icon)
                 .font(.system(size: AppFontSize.s16.rawValue))
-                .foregroundColor(Color("textSub"))
+                .foregroundColor(.textSub)
                 .frame(width: 20)
 
             Text(title)
                 .font(.app(.content1))
-                .foregroundColor(Color("textSub"))
+                .foregroundColor(.textSub)
 
             Spacer()
 

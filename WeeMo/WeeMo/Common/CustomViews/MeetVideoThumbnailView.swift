@@ -94,7 +94,7 @@ struct MeetVideoThumbnailView: View {
 
     private func loadThumbnail() async {
         loadTask = Task {
-            if let thumbnail = await VideoHelper.extractThumbnail(from: videoURL) {
+            if let thumbnail = await MeetVideoHelper.extractThumbnail(from: videoURL) {
                 guard !Task.isCancelled else { return }
 
                 await MainActor.run {

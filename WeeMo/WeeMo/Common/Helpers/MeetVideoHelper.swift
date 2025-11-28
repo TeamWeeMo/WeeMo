@@ -45,7 +45,7 @@ final class VideoThumbnailCache {
 // MARK: - Video Helper
 
 /// 동영상 관련 헬퍼 유틸리티
-enum VideoHelper {
+enum MeetVideoHelper {
 
     // MARK: - Authentication Headers
 

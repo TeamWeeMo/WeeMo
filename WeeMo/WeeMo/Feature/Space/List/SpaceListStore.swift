@@ -44,9 +44,6 @@ final class SpaceListStore: ObservableObject {
         case .categoryChanged(let category):
             handleCategoryChanged(category)
 
-        case .spaceSelected(let space):
-            handleSpaceSelected(space)
-
         case .refresh:
             handleRefresh()
         }
@@ -69,11 +66,6 @@ final class SpaceListStore: ObservableObject {
     private func handleCategoryChanged(_ category: SpaceCategory) {
         state.selectedCategory = category
         // filteredSpaces는 computed property로 자동 계산됨
-    }
-
-    private func handleSpaceSelected(_ space: Space) {
-        // Navigation은 View에서 처리
-        print("[SpaceListStore] 공간 선택됨: \(space.title)")
     }
 
     private func handleRefresh() {

@@ -74,6 +74,15 @@ final class FeedEditStore {
 
         case .createPostFailed(let error):
             handleCreatePostFailed(error)
+
+        case .setError(let message):
+            state.errorMessage = message
+
+        case .selectVideo(let url):
+            state.selectedVideoURL = url
+            if url != nil {
+                state.selectedImages = []
+            }
         }
     }
 
@@ -93,26 +102,36 @@ final class FeedEditStore {
         }
 
         do {
-            // 2. 이미지 압축 및 검증 (최대 10MB, 최대 5장)
-            let imageDatas = ImageCompressor.compress(state.selectedImages, maxSizeInMB: 10, maxDimension: 2048)
+            var fileDatas: [Data] = []
 
-            // 최대 5장 제한 체크
-            guard imageDatas.count <= 5 else {
-                throw NSError(
-                    domain: "FeedEditStore",
-                    code: -1,
-                    userInfo: [NSLocalizedDescriptionKey: "이미지는 최대 5장까지 업로드 가능합니다."]
-                )
+            // 2-1. 사진이 있으면 압축
+            if !state.selectedImages.isEmpty {
+                fileDatas = ImageCompressor.compress(state.selectedImages, maxSizeInMB: 10, maxDimension: 2048)
+
+                guard fileDatas.count <= 5 else {
+                    throw NSError(domain: "FeedEditStore",
+                                  code: -1,
+                                  userInfo: [NSLocalizedDescriptionKey: "이미지는 최대 5장까지 업로드 가능합니다."])
+                }
+            // 2-2. 동영상이 있으면 Data로 변환
+            } else if let videoURL = state.selectedVideoURL {
+                guard let videoData = try? Data(contentsOf: videoURL) else {
+                    throw NSError(domain: "FeedEditStore",
+                                  code: -1,
+                                  userInfo: [NSLocalizedDescriptionKey: "동영상 파일을 읽을 수 없습니다."])
+                }
+
+                fileDatas = [videoData]
             }
 
             // 3. 이미지 업로드
             let uploadResponse = try await networkService.upload(
-                PostRouter.uploadFiles(images: imageDatas),
-                images: imageDatas,
+                PostRouter.uploadFiles(images: fileDatas),
+                images: fileDatas,
                 responseType: FileDTO.self
             )
 
-            // 3. 게시글 생성
+            // 4. 게시글 생성
             let postResponse = try await networkService.request(
                 PostRouter.createPost(
                     title: "",
@@ -127,10 +146,10 @@ final class FeedEditStore {
                 responseType: PostDTO.self
             )
 
-            // 4. DTO → Domain Model 변환
+            // 5. DTO → Domain Model 변환
             let feed = postResponse.toFeed()
 
-            // 5. 성공 처리
+            // 6. 성공 처리
             await MainActor.run {
                 state.isUploading = false
                 state.isSubmitted = true

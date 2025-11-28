@@ -64,9 +64,12 @@ struct SpaceListView: View {
                     Spacer()
                     HStack {
                         Spacer()
-                        CreateSpaceButton {
-                            isShowingCreateView = true
-                        }
+                        FloatingButton(
+                            icon: "plus",
+                            action: { isShowingCreateView = true },
+                            size: 56,
+                            iconSize: 24
+                        )
                         .padding(.trailing, Spacing.base)
                         .padding(.bottom, Spacing.base)
                     }

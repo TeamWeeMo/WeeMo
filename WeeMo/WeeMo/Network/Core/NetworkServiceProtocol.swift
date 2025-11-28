@@ -35,6 +35,13 @@ protocol NetworkServiceProtocol {
         responseType: T.Type
     ) async throws -> T
 
+    /// 미디어 파일 업로드 (이미지/영상)
+    func uploadMedia<T: Decodable>(
+        _ router: APIRouter,
+        mediaFiles: [Data],
+        responseType: T.Type
+    ) async throws -> T
+
     /// 파일 다운로드
     func downloadFile(_ router: APIRouter) async throws -> Data
 

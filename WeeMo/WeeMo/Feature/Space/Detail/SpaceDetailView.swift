@@ -17,7 +17,9 @@ struct SpaceDetailView: View {
         self.space = space
         _store = StateObject(wrappedValue: SpaceDetailStore(
             spaceId: space.id,
-            pricePerHour: space.pricePerHour
+            pricePerHour: space.pricePerHour,
+            latitude: space.latitude,
+            longitude: space.longitude
         ))
     }
 
@@ -29,7 +31,7 @@ struct SpaceDetailView: View {
 
                 VStack(alignment: .leading, spacing: Spacing.base) {
                     // 같은 위치 모임 섹션
-                    SameLocationMeetingsSection()
+                    SameLocationMeetingsSection(meetings: store.state.sameLocationMeetings)
                         .padding(.top, Spacing.xSmall)
 
                     // 기본 정보
@@ -54,8 +56,14 @@ struct SpaceDetailView: View {
                                 }
                             }
                         ),
-                        startHour: store.startHourBinding,
-                        endHour: store.endHourBinding,
+                        startHour: Binding(
+                            get: { store.state.startHour },
+                            set: { store.send(.startHourChanged($0)) }
+                        ),
+                        endHour: Binding(
+                            get: { store.state.endHour },
+                            set: { store.send(.endHourChanged($0)) }
+                        ),
                         pricePerHour: space.pricePerHour,
                         blockedHours: store.state.currentBlockedHours
                     )
@@ -104,6 +112,19 @@ struct SpaceDetailView: View {
                     }
                 }
             }
+        }
+        .alert("예약 확인", isPresented: Binding(
+            get: { store.state.showReservationAlert },
+            set: { if !$0 { store.send(.dismissAlert) } }
+        )) {
+            Button("취소", role: .cancel) {
+                // Alert 닫기
+            }
+            Button("확인") {
+                store.send(.confirmReservation)
+            }
+        } message: {
+            Text("\(store.state.formattedDate)\n\(store.state.formattedTimeSlot)\n\(store.state.totalPrice)\n\n예약하시겠습니까?")
         }
     }
 }

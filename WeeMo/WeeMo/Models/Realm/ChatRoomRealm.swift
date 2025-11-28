@@ -20,6 +20,7 @@ class ChatRoomRealm: Object {
     @Persisted var lastChatContent: String = ""
     @Persisted var lastChatCreatedAt: Date? = nil
     @Persisted var lastChatSenderId: String = ""
+    @Persisted var lastReadMessageId: String? = nil  // 마지막으로 읽은 메시지 ID
 
     override static func primaryKey() -> String? {
         return "roomId"

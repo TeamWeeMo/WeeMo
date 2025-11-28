@@ -24,13 +24,13 @@ struct ImagePickerSection: View {
             HStack {
                 Text("공간 이미지")
                     .font(.app(.subHeadline2))
-                    .foregroundColor(Color("textMain"))
+                    .foregroundColor(.textMain)
 
                 Spacer()
 
                 Text("\(selectedImages.count)/\(maxImageCount)")
                     .font(.app(.content2))
-                    .foregroundColor(Color("textSub"))
+                    .foregroundColor(.textSub)
             }
 
             // 가로 스크롤 이미지 리스트
@@ -70,11 +70,11 @@ struct ImagePickerSection: View {
                             VStack(spacing: Spacing.small) {
                                 Image(systemName: "plus")
                                     .font(.system(size: 32))
-                                    .foregroundColor(Color("textSub"))
+                                    .foregroundColor(.textSub)
 
                                 Text("추가")
                                     .font(.app(.content2))
-                                    .foregroundColor(Color("textSub"))
+                                    .foregroundColor(.textSub)
                             }
                             .frame(width: 120, height: 120)
                             .background(Color.gray.opacity(0.1))
@@ -89,7 +89,7 @@ struct ImagePickerSection: View {
             if selectedImages.isEmpty {
                 Text("최대 \(maxImageCount)개의 이미지를 선택할 수 있습니다")
                     .font(.app(.content3))
-                    .foregroundColor(Color("textSub"))
+                    .foregroundColor(.textSub)
                     .padding(.top, Spacing.xSmall)
             }
         }

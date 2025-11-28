@@ -100,6 +100,6 @@ struct MeetMediaGallery: View {
 
     /// URL이 동영상 파일인지 확인
     private func isVideoFile(_ urlString: String) -> Bool {
-        VideoHelper.isVideoFile(urlString)
+        MeetVideoHelper.isVideoFile(urlString)
     }
 }
