@@ -35,7 +35,11 @@ enum SpaceCreateIntent {
     case addHashTag
     case removeHashTag(String)
 
-    // 이미지
+    // 미디어 (이미지 + 동영상)
+    case mediaItemsSelected([MediaItem])  // 팀원의 struct MediaItem
+    case mediaItemRemoved(at: Int)
+
+    // 이미지 (하위 호환성)
     case imageSelected(UIImage)
     case imageRemoved(at: Int)
 

@@ -26,8 +26,8 @@ struct SpaceDetailView: View {
     var body: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 0) {
-                // 이미지 캐러셀
-                ImageCarouselView(imageURLs: space.imageURLs)
+                // 미디어 갤러리 (이미지 + 동영상)
+                MeetMediaGallery(fileURLs: space.imageURLs)
 
                 VStack(alignment: .leading, spacing: Spacing.base) {
                     // 같은 위치 모임 섹션

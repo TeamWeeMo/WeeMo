@@ -33,7 +33,11 @@ struct SpaceCreateState {
     var hashTagInput: String = ""
     var hashTags: [String] = []
 
-    // 이미지 (최대 5개)
+    // 미디어 (이미지 + 동영상, 최대 5개)
+    var selectedMediaItems: [MediaItem] = []  // 팀원의 struct MediaItem 사용
+    static let maxMediaCount = 5
+
+    // 하위 호환성 (기존 코드 유지)
     var selectedImages: [UIImage] = []
     static let maxImageCount = 5
 
@@ -50,11 +54,16 @@ struct SpaceCreateState {
         !price.isEmpty &&
         !address.isEmpty &&
         !description.isEmpty &&
-        !selectedImages.isEmpty &&
+        !selectedMediaItems.isEmpty &&  // 미디어 기준으로 변경
         isValidPrice
     }
 
-    /// 이미지 추가 가능 여부
+    /// 미디어 추가 가능 여부
+    var canAddMoreMedia: Bool {
+        selectedMediaItems.count < Self.maxMediaCount
+    }
+
+    /// 이미지 추가 가능 여부 (하위 호환성)
     var canAddMoreImages: Bool {
         selectedImages.count < Self.maxImageCount
     }

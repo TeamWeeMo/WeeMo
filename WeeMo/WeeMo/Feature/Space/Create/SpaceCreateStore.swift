@@ -72,6 +72,12 @@ final class SpaceCreateStore: ObservableObject {
         case .removeHashTag(let tag):
             handleRemoveHashTag(tag)
 
+        case .mediaItemsSelected(let mediaItems):
+            handleMediaItemsSelected(mediaItems)
+
+        case .mediaItemRemoved(let index):
+            handleMediaItemRemoved(at: index)
+
         case .imageSelected(let image):
             handleImageSelected(image)
 
@@ -115,6 +121,28 @@ final class SpaceCreateStore: ObservableObject {
         state.selectedImages.remove(at: index)
     }
 
+    // MARK: - Media Handlers
+
+    private func handleMediaItemsSelected(_ mediaItems: [MediaItem]) {
+        // 최대 개수 확인
+        let remainingSlots = SpaceCreateState.maxMediaCount - state.selectedMediaItems.count
+        let itemsToAdd = Array(mediaItems.prefix(remainingSlots))
+
+        if itemsToAdd.count < mediaItems.count {
+            state.errorMessage = "최대 \(SpaceCreateState.maxMediaCount)개까지만 추가할 수 있습니다."
+        }
+
+        state.selectedMediaItems.append(contentsOf: itemsToAdd)
+        print("[SpaceCreateStore] 미디어 \(itemsToAdd.count)개 추가 완료 (총 \(state.selectedMediaItems.count)개)")
+    }
+
+    private func handleMediaItemRemoved(at index: Int) {
+        guard index < state.selectedMediaItems.count else { return }
+        let removedItem = state.selectedMediaItems[index]
+        state.selectedMediaItems.remove(at: index)
+        print("[SpaceCreateStore] 미디어 삭제: \(removedItem.type == .image ? "이미지" : "동영상")")
+    }
+
     private func handleSubmit() {
         // 유효성 검사
         guard state.isSubmitEnabled else {
@@ -127,8 +155,8 @@ final class SpaceCreateStore: ObservableObject {
             return
         }
 
-        guard !state.selectedImages.isEmpty else {
-            state.errorMessage = "이미지를 선택해주세요."
+        guard !state.selectedMediaItems.isEmpty else {
+            state.errorMessage = "이미지 또는 동영상을 선택해주세요."
             return
         }
 
@@ -137,11 +165,11 @@ final class SpaceCreateStore: ObservableObject {
 
         Task {
             do {
-                // 1: 이미지 업로드 (다중)
-                print("[SpaceCreateStore] 이미지 \(state.selectedImages.count)개 업로드 시작")
-                let uploadedFilePaths = try await uploadImages(state.selectedImages)
+                // 1: 미디어 업로드 (이미지 + 동영상)
+                print("[SpaceCreateStore] 미디어 \(state.selectedMediaItems.count)개 업로드 시작")
+                let uploadedFilePaths = try await uploadMediaItems(state.selectedMediaItems)
 
-                print("[SpaceCreateStore] 이미지 업로드 성공: \(uploadedFilePaths)")
+                print("[SpaceCreateStore] 미디어 업로드 성공: \(uploadedFilePaths)")
 
                 // 2: 게시글 생성
                 print("[SpaceCreateStore] 게시글 생성 시작")
@@ -168,7 +196,24 @@ final class SpaceCreateStore: ObservableObject {
 
     // MARK: - Network Methods
 
-    /// 이미지 업로드 (다중)
+    /// 미디어 업로드 (이미지 + 동영상) - multipartUpload 사용
+    private func uploadMediaItems(_ mediaItems: [MediaItem]) async throws -> [String] {
+        // MediaItem -> (Data, fileName, mimeType) 튜플 배열로 변환
+        let files: [(data: Data, fileName: String, mimeType: String)] = mediaItems.enumerated().map { index, item in
+            let fileName = item.originalFileName ?? "file_\(index).\(item.fileExtension)"
+            return (data: item.data, fileName: fileName, mimeType: item.mimeType)
+        }
+
+        let fileDTO = try await networkService.multipartUpload(
+            PostRouter.uploadFiles(images: []),
+            files: files,
+            responseType: FileDTO.self
+        )
+
+        return fileDTO.files
+    }
+
+    /// 이미지 업로드 (하위 호환성)
     private func uploadImages(_ images: [UIImage]) async throws -> [String] {
         // UIImage -> Data 변환
         let imageDatas = try images.map { image -> Data in
