@@ -168,18 +168,17 @@ struct Meet: Identifiable, Equatable, Hashable {
         if isSameDay {
             // 같은 날: "11월 21일 오후 12시 ~ 오후 2시"
             let dateStr = DateFormatterManager.meetDate.string(from: recruitmentStartDate)
-            let timeFormatter = DateFormatter()
-            timeFormatter.locale = Locale(identifier: "ko_KR")
-            timeFormatter.dateFormat = "a h시"
-
-            let startTime = timeFormatter.string(from: recruitmentStartDate)
-            let endTime = timeFormatter.string(from: recruitmentEndDate)
+            let startTime = DateFormatterManager.koreanTime.string(from: recruitmentStartDate)
+            let endTime = DateFormatterManager.koreanTime.string(from: recruitmentEndDate)
             return "\(dateStr) \(startTime) ~ \(endTime)"
         } else {
-            // 다른 날: "11월 20일 오후 1시 ~ 11월 21일 오후 2시"
-            let startStr = DateFormatterManager.koreanDateTime.string(from: recruitmentStartDate)
-            let endStr = DateFormatterManager.koreanDateTime.string(from: recruitmentEndDate)
-            return "\(startStr) ~ \(endStr)"
+            // 다른 날: "11월 28일 오후 6시 ~ 12월 5일 오후 6시"
+            let startDate = DateFormatterManager.koreanDateOnly.string(from: recruitmentStartDate)
+            let startTime = DateFormatterManager.koreanTime.string(from: recruitmentStartDate)
+            let endDate = DateFormatterManager.koreanDateOnly.string(from: recruitmentEndDate)
+            let endTime = DateFormatterManager.koreanTime.string(from: recruitmentEndDate)
+
+            return "\(startDate) \(startTime) ~ \(endDate) \(endTime)"
         }
     }
 }

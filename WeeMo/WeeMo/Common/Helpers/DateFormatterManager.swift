@@ -46,6 +46,7 @@ enum DateFormatterManager {
     static let meetDate: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ko_KR")
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
         formatter.dateFormat = "M월 d일 (E)"
         return formatter
     }()
@@ -55,6 +56,7 @@ enum DateFormatterManager {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm"
         formatter.locale = Locale(identifier: "ko_KR")
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
         return formatter
     }()
 
@@ -62,7 +64,26 @@ enum DateFormatterManager {
     static let koreanDateTime: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "ko_KR")
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
         formatter.dateFormat = "M월 d일 a h시"
+        return formatter
+    }()
+
+    /// 한국어 시간 포맷터 (a h시)
+    static let koreanTime: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
+        formatter.dateFormat = "a h시"
+        return formatter
+    }()
+
+    /// 한국어 날짜만 포맷터 (M월 d일)
+    static let koreanDateOnly: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "ko_KR")
+        formatter.timeZone = TimeZone(identifier: "Asia/Seoul")
+        formatter.dateFormat = "M월 d일"
         return formatter
     }()
 }
