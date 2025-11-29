@@ -13,10 +13,14 @@ struct SpaceDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     // MARK: - Initializer
-
     init(space: Space) {
         self.space = space
-        _store = StateObject(wrappedValue: SpaceDetailStore(pricePerHour: space.pricePerHour))
+        _store = StateObject(wrappedValue: SpaceDetailStore(
+            spaceId: space.id,
+            pricePerHour: space.pricePerHour,
+            latitude: space.latitude,
+            longitude: space.longitude
+        ))
     }
 
     var body: some View {
@@ -26,10 +30,9 @@ struct SpaceDetailView: View {
                 ImageCarouselView(imageURLs: space.imageURLs)
 
                 VStack(alignment: .leading, spacing: Spacing.base) {
-                    // 해시태그
-                    AmenityTagsView(tags: space.hashTags)
-                        .padding(.horizontal, Spacing.base)
-                        .padding(.top, Spacing.base)
+                    // 같은 위치 모임 섹션
+                    SameLocationMeetingsSection(meetings: store.state.sameLocationMeetings)
+                        .padding(.top, Spacing.xSmall)
 
                     // 기본 정보
                     SpaceInfoSection(space: space)
@@ -53,9 +56,16 @@ struct SpaceDetailView: View {
                                 }
                             }
                         ),
-                        startHour: store.startHourBinding,
-                        endHour: store.endHourBinding,
-                        pricePerHour: space.pricePerHour
+                        startHour: Binding(
+                            get: { store.state.startHour },
+                            set: { store.send(.startHourChanged($0)) }
+                        ),
+                        endHour: Binding(
+                            get: { store.state.endHour },
+                            set: { store.send(.endHourChanged($0)) }
+                        ),
+                        pricePerHour: space.pricePerHour,
+                        blockedHours: store.state.currentBlockedHours
                     )
                     .padding(.horizontal, Spacing.base)
 
@@ -83,6 +93,7 @@ struct SpaceDetailView: View {
                 }
             }
         }
+        .ignoresSafeArea(.all, edges: .top)
         .background(Color("wmBg"))
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -98,32 +109,22 @@ struct SpaceDetailView: View {
                         Image(systemName: "chevron.left")
                             .font(.system(size: AppFontSize.s16.rawValue))
                             .foregroundColor(Color("textMain"))
-
-                        Text("공간 찾기")
-                            .font(.app(.subHeadline1))
-                            .foregroundColor(Color("textMain"))
                     }
                 }
             }
         }
+        .alert("예약 확인", isPresented: Binding(
+            get: { store.state.showReservationAlert },
+            set: { if !$0 { store.send(.dismissAlert) } }
+        )) {
+            Button("취소", role: .cancel) {
+                // Alert 닫기
+            }
+            Button("확인") {
+                store.send(.confirmReservation)
+            }
+        } message: {
+            Text("\(store.state.formattedDate)\n\(store.state.formattedTimeSlot)\n\(store.state.totalPrice)\n\n예약하시겠습니까?")
+        }
     }
 }
-
-//#Preview {
-//    NavigationStack {
-//        SpaceDetailView(space: Space(
-//            id: "1",
-//            title: "모던 카페 라운지",
-//            address: "서울 강남구 테헤란로 123",
-//            imageURLs: ["cafe1", "cafe2", "cafe3"],
-//            rating: 4.8,
-//            pricePerHour: 15000,
-//            category: .cafe,
-//            isPopular: true,
-//            amenities: [.quiet, .wifi, .power],
-//            hasParking: true,
-//            description: "조용하고 아늑한 분위기의 카페입니다. 스터디나 작업하기 좋은 공간으로, 고속 WiFi와 충분한 콘센트를 제공합니다.",
-//            hashTags: ["카페"]
-//        ))
-//    }
-//}

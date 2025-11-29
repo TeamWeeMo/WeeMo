@@ -10,15 +10,16 @@ import Foundation
 struct Space: Identifiable, Hashable {
     let id: String
     let title: String
-    let address: String
+    let address: String // 주소
+    let roadAddress: String? // 도로명 주소
+    let category: SpaceCategory // 카테고리
     let imageURLs: [String]
-    let rating: Double
-    let maxRating: Double = 5.0
-    let pricePerHour: Int
-    let category: SpaceCategory
-    let isPopular: Bool
-    let amenities: [SpaceAmenity]
-    let hasParking: Bool
+    let rating: Double     // 평점
+    let pricePerHour: Int // 시간당 가격
+    let isPopular: Bool  // 인기공간
+    let hasParking: Bool // 주차
+    let hasBathRoom: Bool // 화장실
+    let maxPeople: Int // 최대인원
     let description: String
     let latitude: Double
     let longitude: Double
@@ -46,10 +47,7 @@ struct Space: Identifiable, Hashable {
     }
 
     var formattedDetailRating: String {
-        return "\(formattedRating) / \(String(format: "%.1f", maxRating))"
+        return "\(formattedRating) / \(String(format: "%.1f", 5.0))"
     }
 
-    var amenityTags: [String] {
-        return amenities.map { "#\($0.rawValue)" }
-    }
 }

@@ -31,8 +31,7 @@ struct FeedView: View {
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        ScrollView {
                 if store.state.isLoading {
                     // 로딩 중
                     LoadingView(message: "피드를 불러오는 중...")
@@ -52,8 +51,6 @@ struct FeedView: View {
                 }
             }
             .background(.wmBg)
-            .navigationTitle("피드")
-            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Image(systemName: "plus")
@@ -91,7 +88,6 @@ struct FeedView: View {
             .onAppear {
                 store.send(.onAppear)
             }
-        }
     }
 
     // MARK: - Subviews

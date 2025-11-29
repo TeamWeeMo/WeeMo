@@ -7,6 +7,8 @@
 
 import SwiftUI
 import Kingfisher
+import AVKit
+import AVFoundation
 
 // MARK: - Instagram Style Feed Detail
 
@@ -20,6 +22,11 @@ struct FeedDetailView: View {
 
     // Store
     @State private var store: FeedDetailStore
+
+    // Video players (인덱스별로 관리)
+    @State private var videoPlayers: [Int: AVPlayer] = [:]
+    @State private var videoResourceLoaderDelegates: [Int: VideoResourceLoaderDelegate] = [:]
+    @State private var videoAspectRatios: [Int: CGFloat] = [:]
 
     // MARK: - Initializer
 
@@ -72,6 +79,10 @@ struct FeedDetailView: View {
         }
         .onAppear {
             store.send(.onAppear)
+            setupVideoPlayers()
+        }
+        .onDisappear {
+            cleanupVideoPlayers()
         }
     }
 
@@ -108,19 +119,26 @@ struct FeedDetailView: View {
         .feedDetailHeader()
     }
 
-    /// 게시글 이미지 캐러셀 (여러 장 지원)
+    /// 게시글 이미지/동영상 캐러셀 (여러 장 지원)
     private var imageCarouselView: some View {
-        // TabView로 이미지 스와이프
+        // TabView로 이미지/동영상 스와이프
         TabView(selection: Binding(
             get: { store.state.currentImageIndex },
             set: { store.send(.changeImagePage($0)) }
         )) {
             ForEach(Array(store.state.feed.imageURLs.enumerated()), id: \.offset) { index, imageURL in
-                KFImage(URL(string: imageURL))
-                    .feedDetailImageSetup()
-                    .scaledToFit()
-                    .feedDetailImage()
-                    .tag(index)
+                if isVideoURL(imageURL) {
+                    // 동영상 표시
+                    videoPlayerView(index: index)
+                        .tag(index)
+                } else {
+                    // 이미지 표시
+                    KFImage(URL(string: imageURL))
+                        .detailImageSetup()
+                        .scaledToFit()
+                        .feedDetailImage()
+                        .tag(index)
+                }
             }
         }
         .tabViewStyle(.page(indexDisplayMode: store.state.hasMultipleImages ? .always : .never))
@@ -197,6 +215,140 @@ struct FeedDetailView: View {
             }
 
             Spacer()
+        }
+    }
+
+    /// 동영상 플레이어 뷰
+    private func videoPlayerView(index: Int) -> some View {
+        Group {
+            if let player = videoPlayers[index] {
+                VideoPlayer(player: player)
+                    .aspectRatio(videoAspectRatios[index] ?? 1.0, contentMode: .fit)
+                    .feedDetailImage()
+                    .onTapGesture {
+                        togglePlayPause(player: player)
+                    }
+            } else {
+                // 플레이어 로딩 중 플레이스홀더
+                Rectangle()
+                    .fill(Color.gray.opacity(0.2))
+                    .aspectRatio(1.0, contentMode: .fit)
+                    .feedDetailImage()
+                    .overlay {
+                        ProgressView()
+                            .tint(.wmMain)
+                    }
+            }
+        }
+    }
+
+    // MARK: - Helper Methods
+
+    /// URL이 동영상인지 확인
+    private func isVideoURL(_ urlString: String) -> Bool {
+        let url = urlString.lowercased()
+        return url.contains(".mp4") || url.contains(".mov") || url.contains(".m4v")
+    }
+
+    /// 모든 동영상 플레이어 설정
+    private func setupVideoPlayers() {
+        for (index, urlString) in store.state.feed.imageURLs.enumerated() {
+            if isVideoURL(urlString) {
+                setupPlayer(urlString: urlString, index: index)
+            }
+        }
+    }
+
+    /// 개별 플레이어 설정
+    private func setupPlayer(urlString: String, index: Int) {
+        print("[FeedDetail] 플레이어 설정 시작 - Index: \(index)")
+
+        // VideoHelper를 사용하여 스트리밍 Asset 생성
+        guard let (asset, delegate) = VideoHelper.shared.createStreamingAsset(from: urlString) else {
+            print("[FeedDetail] 비디오 Asset 생성 실패 - Index: \(index)")
+            return
+        }
+
+        // Delegate 저장 (메모리에서 해제되지 않도록)
+        videoResourceLoaderDelegates[index] = delegate
+        print("[FeedDetail] Delegate 저장 완료 - Index: \(index)")
+
+        // Resource Loader Delegate 설정
+        asset.resourceLoader.setDelegate(delegate, queue: DispatchQueue.main)
+        print("[FeedDetail] Delegate 설정 완료 - Index: \(index)")
+
+        // Player Item 및 Player 생성
+        let playerItem = AVPlayerItem(asset: asset)
+        let player = AVPlayer(playerItem: playerItem)
+        player.isMuted = true
+        videoPlayers[index] = player
+        print("[FeedDetail] Player 생성 완료 - Index: \(index)")
+
+        // 비디오 크기 정보를 비동기로 로드하여 aspect ratio 계산
+        Task {
+            await loadVideoAspectRatio(from: asset, index: index)
+        }
+
+        // 무한 루프 재생 설정
+        NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: playerItem,
+            queue: .main
+        ) { [weak player] _ in
+            player?.seek(to: .zero)
+            player?.play()
+        }
+
+        // 자동 재생 시작
+        player.play()
+        print("[FeedDetail] 재생 시작! - Index: \(index)")
+    }
+
+    /// 동영상 Aspect Ratio 로드
+    private func loadVideoAspectRatio(from asset: AVAsset, index: Int) async {
+        do {
+            let videoTracks = try await asset.loadTracks(withMediaType: .video)
+
+            guard let videoTrack = videoTracks.first else {
+                print("[FeedDetail] 비디오 트랙을 찾을 수 없음 - Index: \(index)")
+                return
+            }
+
+            let naturalSize = try await videoTrack.load(.naturalSize)
+            let preferredTransform = try await videoTrack.load(.preferredTransform)
+
+            let size = naturalSize.applying(preferredTransform)
+            let width = abs(size.width)
+            let height = abs(size.height)
+
+            let aspectRatio = width / height
+
+            print("[FeedDetail] 비디오 크기: \(width) x \(height), aspect ratio: \(aspectRatio) - Index: \(index)")
+
+            await MainActor.run {
+                videoAspectRatios[index] = aspectRatio
+            }
+        } catch {
+            print("[FeedDetail] 비디오 aspect ratio 로드 실패: \(error) - Index: \(index)")
+        }
+    }
+
+    /// 플레이어 정리
+    private func cleanupVideoPlayers() {
+        for (_, player) in videoPlayers {
+            player.pause()
+            NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player.currentItem)
+        }
+        videoPlayers.removeAll()
+        videoResourceLoaderDelegates.removeAll()
+    }
+
+    /// 재생/일시정지 토글
+    private func togglePlayPause(player: AVPlayer) {
+        if player.timeControlStatus == .playing {
+            player.pause()
+        } else {
+            player.play()
         }
     }
 }

@@ -16,10 +16,22 @@ struct ChatRoom: Identifiable, Hashable {
     let lastChat: ChatMessage?
     let createdAt: Date
     let updatedAt: Date
+    var unreadCount: Int = 0  // 읽지 않은 메시지 개수
 
     /// 상대방 정보 (1:1 채팅 기준)
     var otherUser: User? {
-        participants.first
+        // 현재 사용자 ID 가져오기
+        guard let currentUserId = TokenManager.shared.userId else {
+            return participants.first // 토큰 없으면 첫 번째 참여자 반환
+        }
+
+        // 현재 사용자가 아닌 참여자 찾기
+        return participants.first { $0.userId != currentUserId }
+    }
+
+    /// 특정 사용자 기준으로 상대방 찾기
+    func otherUser(currentUserId: String) -> User? {
+        return participants.first { $0.userId != currentUserId }
     }
 
     /// 마지막 메시지 시간 표시용

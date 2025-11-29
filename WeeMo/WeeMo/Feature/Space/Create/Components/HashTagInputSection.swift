@@ -19,7 +19,7 @@ struct HashTagInputSection: View {
         VStack(alignment: .leading, spacing: Spacing.small) {
             Text("해시태그")
                 .font(.app(.subHeadline2))
-                .foregroundColor(Color("textMain"))
+                .foregroundColor(.textMain)
 
             // 해시태그 입력 필드
             HStack(spacing: Spacing.small) {
@@ -45,14 +45,14 @@ struct HashTagInputSection: View {
                             HStack(spacing: Spacing.xSmall) {
                                 Text("#\(tag)")
                                     .font(.app(.content2))
-                                    .foregroundColor(Color("wmMain"))
+                                    .foregroundColor(.wmMain)
 
-                                Button(action: {
+                                Button {
                                     onRemoveHashTag(tag)
-                                }) {
+                                } label: {
                                     Image(systemName: "xmark.circle.fill")
                                         .font(.system(size: 14))
-                                        .foregroundColor(Color("textSub"))
+                                        .foregroundColor(.textSub)
                                 }
                             }
                             .padding(.horizontal, Spacing.medium)

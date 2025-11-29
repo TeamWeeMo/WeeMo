@@ -9,51 +9,88 @@ import SwiftUI
 import PhotosUI
 
 struct ImagePickerSection: View {
-    @Binding var selectedPhotoItem: PhotosPickerItem?
-    
-    let selectedImage: UIImage?
-    let onImageRemove: () -> Void
+    @Binding var selectedPhotoItems: [PhotosPickerItem]
+
+    let selectedImages: [UIImage]
+    let maxImageCount: Int
+    let onImageRemove: (Int) -> Void
+
+    private var canAddMoreImages: Bool {
+        selectedImages.count < maxImageCount
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.small) {
-            Text("공간 이미지")
-                .font(.app(.subHeadline2))
-                .foregroundColor(Color("textMain"))
+            HStack {
+                Text("공간 이미지")
+                    .font(.app(.subHeadline2))
+                    .foregroundColor(.textMain)
 
-            if let selectedImage = selectedImage {
-                ZStack(alignment: .topTrailing) {
-                    Image(uiImage: selectedImage)
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(height: 200)
-                        .clipped()
-                        .cornerRadius(Spacing.radiusMedium)
+                Spacer()
 
-                    Button(action: onImageRemove) {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 24))
-                            .foregroundColor(.white)
-                            .background(Color.black.opacity(0.6))
-                            .clipShape(Circle())
-                            .padding(Spacing.small)
+                Text("\(selectedImages.count)/\(maxImageCount)")
+                    .font(.app(.content2))
+                    .foregroundColor(.textSub)
+            }
+
+            // 가로 스크롤 이미지 리스트
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Spacing.medium) {
+                    // 선택된 이미지들
+                    ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, image in
+                        ZStack(alignment: .topTrailing) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 120, height: 120)
+                                .clipped()
+                                .cornerRadius(Spacing.radiusMedium)
+                            
+                            
+                            Button {
+                                onImageRemove(index)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.white)
+                                    .background(Color.black.opacity(0.6))
+                                    .clipShape(Circle())
+                                    .padding(Spacing.xSmall)
+                            }
+                        }
+                    }
+
+                    // 이미지 추가 버튼
+                    if canAddMoreImages {
+                        PhotosPicker(
+                            selection: $selectedPhotoItems,
+                            maxSelectionCount: maxImageCount - selectedImages.count,
+                            matching: .images
+                        ) {
+                            VStack(spacing: Spacing.small) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 32))
+                                    .foregroundColor(.textSub)
+
+                                Text("추가")
+                                    .font(.app(.content2))
+                                    .foregroundColor(.textSub)
+                            }
+                            .frame(width: 120, height: 120)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(Spacing.radiusMedium)
+                        }
                     }
                 }
-            } else {
-                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                    VStack(spacing: Spacing.small) {
-                        Image(systemName: "photo")
-                            .font(.system(size: 40))
-                            .foregroundColor(Color("textSub"))
+            }
+            .frame(height: 120)
 
-                        Text("이미지 선택")
-                            .font(.app(.content1))
-                            .foregroundColor(Color("textSub"))
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 200)
-                    .background(Color.gray.opacity(0.1))
-                    .cornerRadius(Spacing.radiusMedium)
-                }
+            // 이미지가 없을 때 안내 텍스트
+            if selectedImages.isEmpty {
+                Text("최대 \(maxImageCount)개의 이미지를 선택할 수 있습니다")
+                    .font(.app(.content3))
+                    .foregroundColor(.textSub)
+                    .padding(.top, Spacing.xSmall)
             }
         }
     }

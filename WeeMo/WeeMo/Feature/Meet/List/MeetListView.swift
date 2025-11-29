@@ -11,133 +11,110 @@ struct MeetListView: View {
     @State private var searchText = ""
     @State private var selectedSortOption: SortOption = .registrationDate
     @State private var showingSortOptions = false
-    @StateObject private var store = MeetListViewStore()
-    @State private var navigationPath = NavigationPath()
+    @State private var store = MeetListStore()
+    @State private var isFirstAppear = true
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
+        ZStack(alignment: .bottomTrailing) {
             ScrollView {
                 VStack {
-                    HStack {
-                        Text("모임")
-                            .font(.app(.headline2))
-                            .foregroundColor(Color("textMain"))
-                            .padding(.leading, 16)
-                        Spacer()
+                    VStack {
+                        SearchBarTextField(text: $searchText)
+                        
+                        MeetFilterButton(
+                            selectedOption: $selectedSortOption,
+                            showingOptions: $showingSortOptions
+                        )
                     }
-                    .padding(.top)
-
-                    SearchBar(text: $searchText)
-
-                    FilterButton(
-                        selectedOption: $selectedSortOption,
-                        showingOptions: $showingSortOptions
-                    )
+                    .padding(.horizontal, Spacing.base)
 
                     if store.state.isLoading {
-                        VStack {
-                            ProgressView("모임을 불러오는 중...")
-                                .padding()
-                            Spacer()
-                        }
+                        LoadingView(message: "모임을 불러오는 중...")
                     } else if let errorMessage = store.state.errorMessage {
-                        VStack(spacing: 16) {
-                            Text("오류가 발생했습니다")
-                                .font(.headline)
-                            Text(errorMessage)
-                                .font(.body)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.center)
-                            Button("다시 시도") {
-                                store.handle(.retryLoadMeets)
-                            }
-                            .buttonStyle(.bordered)
-                            Spacer()
+                        EmptyStateView(
+                            icon: "exclamationmark.triangle",
+                            title: "오류가 발생했습니다",
+                            message: errorMessage,
+                            actionTitle: "다시 시도"
+                        ) {
+                            store.send(.retryLoadMeets)
                         }
-                        .padding()
                     } else {
-                        LazyVStack(spacing: 16) {
-                            ForEach(store.state.meets) { meet in
-                                Button(action: {
-                                    navigationPath.append(meet.postId)
-                                }) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(store.state.meets.enumerated()), id: \.element.id) { index, meet in
+                                NavigationLink(value: meet.id) {
                                     MeetCardView(meet: meet)
                                 }
-                                .buttonStyle(PlainButtonStyle())
-                            }
-                        }
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
-                    }
-                }
-            }
-            .navigationBarHidden(true)
-            .background(Color("wmBg"))
-            .onAppear {
-                store.handle(.loadMeets)
-            }
-            .onChange(of: selectedSortOption) { sortOption in
-                print("🔄 Sort option changed to: \(sortOption.rawValue)")
-                store.handle(.sortMeets(option: sortOption))
-            }
-            .onChange(of: searchText) { searchQuery in
-                print("🔍 Search text changed to: '\(searchQuery)'")
-                store.handle(.searchMeets(query: searchQuery))
-            }
-            .overlay(
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 12) {
-                            Button(action: {
-                                navigationPath.append("map")
-                            }) {
-                                HStack {
-                                    Image(systemName: "map")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.black)
-                                    Text("지도보기")
-                                        .font(.app(.content2))
-                                        .foregroundColor(.black)
+                                .onAppear {
+                                    // 마지막에서 3번째 아이템이 나타날 때 더 로드
+                                    if index >= store.state.meets.count - 3 && store.state.hasMoreData && !store.state.isLoadingMore {
+                                        store.send(.loadMoreMeets)
+                                    }
                                 }
-                                .frame(width: 130, height: 40)
-                                .background(Color.white)
-                                .cornerRadius(25)
-                                .cardShadow()
                             }
 
-                            Button(action: {
-                                navigationPath.append("edit")
-                            }) {
+                            // 로딩 인디케이터 (더 불러올 데이터가 있을 때만)
+                            if store.state.isLoadingMore && store.state.hasMoreData {
                                 HStack {
-                                    Image(systemName: "plus")
-                                        .font(.system(size: 16, weight: .semibold))
-                                        .foregroundColor(.white)
-                                    Text("모임 만들기")
-                                        .font(.app(.content2))
-                                        .foregroundColor(.white)
+                                    Spacer()
+                                    ProgressView("더 불러오는 중...")
+                                        .padding()
+                                    Spacer()
                                 }
-                                .frame(width: 130, height: 40)
-                                .background(Color.black)
-                                .cornerRadius(25)
                             }
                         }
+                        .padding(.top, Spacing.base)
                     }
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 20)
                 }
-            )
-            .navigationDestination(for: String.self) { value in
-                if value == "map" {
-                    MeetMapView()
-                } else if value == "edit" {
-                    MeetEditView()
-                } else {
-                    MeetDetailView(postId: value)
+                .background(.wmBg)
+                .onAppear {
+                    if isFirstAppear {
+                        // 첫 번째 appear에서만 로드
+                        isFirstAppear = false
+                        store.send(.loadMeets)
+                    } else {
+                        // 두 번째 이후 appear에서는 새로고침 (네비게이션 돌아올 때)
+                        store.send(.refreshMeets)
+                    }
+                }
+                .onChange(of: selectedSortOption) { _, sortOption in
+                    store.send(.sortMeets(option: sortOption))
+                }
+                .onChange(of: searchText) { _, searchQuery in
+                    store.send(.searchMeets(query: searchQuery))
                 }
             }
+            .refreshable {
+                await store.refreshMeets()
+            }
+
+            // Floating Buttons
+            VStack(spacing: Spacing.medium) {
+                NavigationLink(value: HomeRoute.meetMap) {
+                    Image(systemName: "map")
+                        .font(.system(size: 24))
+                        .foregroundColor(.black)
+                        .frame(width: 56, height: 56)
+                        .background(.white)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                }
+
+                NavigationLink(value: HomeRoute.meetEdit) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(.wmMain)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                }
+            }
+            .padding(.trailing, 20)
+            .padding(.bottom, 20)
         }
+        .toolbarRole(.editor)
+        .tint(.wmMain)
     }
 }
 

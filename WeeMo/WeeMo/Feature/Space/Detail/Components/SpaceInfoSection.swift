@@ -14,72 +14,99 @@ struct SpaceInfoSection: View {
         VStack(alignment: .leading, spacing: Spacing.medium) {
             // 제목
             Text(space.title)
-                .font(.app(.headline1))
-                .foregroundColor(Color("textMain"))
+                .font(.app(.headline4))
+                .foregroundColor(.textMain)
+            
+            // 해시태그
+            AmenityTagsView(tags: space.hashTags)
+                .offset(y: -4)
 
             // 주소
-            HStack(spacing: Spacing.small) {
-                Image(systemName: "mappin.circle")
-                    .font(.system(size: AppFontSize.s16.rawValue))
-                    .foregroundColor(Color("textSub"))
-
-                Text(space.address)
+            HStack(alignment: .top, spacing: Spacing.small) {
+                Image(systemName: "mappin.and.ellipse")
                     .font(.app(.content2))
-                    .foregroundColor(Color("textSub"))
-            }
+                    .foregroundColor(.textSub)
 
-            // 별점
+                VStack(alignment: .leading, spacing: Spacing.xSmall) {
+                    Text(space.address)
+                        .font(.app(.content2))
+                        .foregroundColor(.textMain)
+
+                    if let roadAddress = space.roadAddress, !roadAddress.isEmpty {
+                        Text(roadAddress)
+                            .font(.app(.subContent1))
+                            .foregroundColor(.textSub)
+                    }
+                }
+            }
+            
+            
+            // 가격
             HStack(spacing: Spacing.small) {
+                Image(systemName: "wonsign.square")
+                    .font(.app(.content2))
+                    .foregroundColor(.textSub)
+                
+                Text(space.formattedPrice)
+                    .font(.app(.content2))
+                    .foregroundColor(.wmMain)
+                Spacer()
+                // 별점
                 Image(systemName: "star.fill")
-                    .font(.system(size: AppFontSize.s16.rawValue))
+                    .font(.app(.content2))
+                    //.font(.system(size: AppFontSize.s14.rawValue))
                     .foregroundColor(.yellow)
 
                 Text(space.formattedDetailRating)
-                    .font(.app(.subHeadline2))
-                    .foregroundColor(Color("textMain"))
+                    .font(.app(.content2))
+                    .foregroundColor(.textMain)
+
             }
+            .padding(.trailing, Spacing.base)
 
-            // 가격
-            HStack(spacing: Spacing.small) {
-                Image(systemName: "dollarsign.circle")
-                    .font(.system(size: AppFontSize.s16.rawValue))
-                    .foregroundColor(Color("wmMain"))
-
-                Text(space.formattedPrice)
-                    .font(.app(.subHeadline2))
-                    .foregroundColor(Color("wmMain"))
-            }
-
-            // 주차 가능
-            if space.hasParking {
-                HStack(spacing: Spacing.small) {
+            // 편의시설 정보 (주차, 화장실, 최대인원)
+            HStack(spacing: Spacing.base) {
+                // 주차 정보
+                HStack(spacing: Spacing.xSmall) {
                     Image(systemName: "car.fill")
-                        .font(.system(size: AppFontSize.s16.rawValue))
-                        .foregroundColor(Color("textSub"))
+                        .font(.app(.content2))
+                        //.font(.system(size: AppFontSize.s14.rawValue))
+                        .foregroundColor(.textSub)
 
-                    Text("주차 가능")
+                    Text(space.hasParking ? "주차 가능" : "주차 불가")
                         .font(.app(.content2))
                         .foregroundColor(Color("textSub"))
                 }
+                
+                Spacer()
+                
+                // 화장실 정보
+                HStack(spacing: Spacing.xSmall) {
+                    Image(systemName: "figure.stand.dress.line.vertical.figure")
+                        .font(.app(.content2))
+                        //.font(.system(size: AppFontSize.s14.rawValue))
+                        .foregroundColor(.textSub)
+
+                    Text(space.hasBathRoom ? "화장실 있음" : "화장실 없음")
+                        .font(.app(.content2))
+                        .foregroundColor(.textSub)
+                }
+                
+                Spacer()
+                
+                // 최대인원 정보
+                HStack(spacing: Spacing.xSmall) {
+                    Image(systemName: "person.2.fill")
+                        .font(.app(.content2))
+                        //.font(.system(size: AppFontSize.s14.rawValue))
+                        .foregroundColor(.textSub)
+
+                    Text("\(space.maxPeople)명까지")
+                        .font(.app(.content2))
+                        .foregroundColor(.textSub)
+                }
             }
+            .padding(.trailing, Spacing.base)
         }
     }
 }
-
-//#Preview {
-//    SpaceInfoSection(space: Space(
-//        id: "1",
-//        title: "모던 카페 라운지",
-//        address: "서울 강남구 테헤란로 123",
-//        imageURLs: ["cafe1", "cafe2", "cafe3"],
-//        rating: 4.8,
-//        pricePerHour: 15000,
-//        category: .cafe,
-//        isPopular: true,
-//        amenities: [.quiet, .wifi, .power],
-//        hasParking: true,
-//        description: "조용하고 아늑한 분위기의 카페입니다. 스터디나 작업하기 좋은 공간으로, 고속 WiFi와 충분한 콘센트를 제공합니다.",
-//        hashTags: ["카페"]
-//    ))
-//        .padding()
-//}

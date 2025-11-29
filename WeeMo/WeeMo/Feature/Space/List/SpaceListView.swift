@@ -17,21 +17,9 @@ struct SpaceListView: View {
     @State private var isShowingCreateView = false
 
     var body: some View {
-        NavigationStack {
-            ZStack {
+        ZStack {
                 ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: Spacing.base) {
-                        // 상단 타이틀
-                        HStack {
-                            Text("공간 찾기")
-                                .font(.app(.headline1))
-                                .foregroundColor(Color("textMain"))
-
-                            Spacer()
-                        }
-                        .padding(.horizontal, Spacing.base)
-                        .padding(.top, Spacing.small)
-
+                    VStack(spacing: Spacing.small) {
                         // 검색바
                         SearchBarView(
                             searchText: Binding(
@@ -41,6 +29,12 @@ struct SpaceListView: View {
                         )
                         .padding(.horizontal, Spacing.base)
 
+                        // 인기 공간 섹션
+                        if store.state.shouldShowPopularSection {
+                            PopularSpaceSectionView(spaces: store.state.popularSpaces)
+                                .padding(.top, Spacing.xSmall)
+                        }
+
                         // 카테고리 탭
                         CategoryTabView(
                             selectedCategory: Binding(
@@ -48,17 +42,11 @@ struct SpaceListView: View {
                                 set: { store.send(.categoryChanged($0)) }
                             )
                         )
-                        .padding(.top, Spacing.xSmall)
-
-                        // 인기 공간 섹션
-                        if store.state.shouldShowPopularSection {
-                            PopularSpaceSectionView(spaces: store.state.popularSpaces)
-                                .padding(.top, Spacing.small)
-                        }
+                        .padding(.top, Spacing.base)
 
                         // 모든 공간 리스트
                         AllSpaceListView(spaces: store.state.filteredSpaces)
-                            .padding(.top, store.state.searchText.isEmpty ? Spacing.base : Spacing.small)
+                            .padding(.top, Spacing.small)
                     }
                     .padding(.bottom, Spacing.base)
                 }
@@ -76,19 +64,19 @@ struct SpaceListView: View {
                     Spacer()
                     HStack {
                         Spacer()
-                        CreateSpaceButton {
-                            isShowingCreateView = true
-                        }
+                        FloatingButton(
+                            icon: "plus",
+                            action: { isShowingCreateView = true },
+                            size: 56,
+                            iconSize: 24
+                        )
                         .padding(.trailing, Spacing.base)
                         .padding(.bottom, Spacing.base)
                     }
                 }
             }
-            .background(Color("wmBg"))
-            .navigationBarHidden(true)
-            .navigationDestination(for: Space.self) { space in
-                SpaceDetailView(space: space)
-            }
+            .background(.background)
+            .navigationBarTitleDisplayMode(.inline)
             .alert("오류", isPresented: Binding(
                 get: { store.state.errorMessage != nil },
                 set: { if !$0 { store.send(.refresh) } }
@@ -114,7 +102,6 @@ struct SpaceListView: View {
                     store.send(.refresh)
                 }
             }
-        }
     }
 }
 

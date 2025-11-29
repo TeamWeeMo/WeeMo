@@ -14,34 +14,115 @@ import Kingfisher
 struct ChatListView: View {
     // MARK: - Properties
 
-    @State private var chatRooms: [ChatRoom] = MockChatData.chatRooms
-    @State private var selectedRoom: ChatRoom?
+    @StateObject private var store = ChatListStore()
 
     // MARK: - Body
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: 0) {
-                    ForEach(chatRooms) { room in
-                        ChatRoomRow(room: room)
-                            .buttonWrapper {
-                                selectedRoom = room
-                            }
+        ZStack {
+            // 전체 배경색
+            Color.wmBg
+                .ignoresSafeArea(.all)
 
-                        // 구분선
-                        if room.id != chatRooms.last?.id {
-                            Divider()
-                                .padding(.leading, 68)
-                        }
+            VStack {
+                if store.state.isLoading {
+                    loadingView
+                } else if let errorMessage = store.state.errorMessage {
+                    errorView(errorMessage)
+                } else if store.state.isEmpty {
+                    emptyView
+                } else {
+                    chatRoomListView
+                }
+            }
+        }
+        .navigationTitle("채팅")
+        .navigationBarTitleDisplayMode(.large)
+        .onAppear {
+                print(" ChatListView 나타남 - 소켓 연결 시작")
+                store.handle(.setupSocketListeners)
+                if store.state.chatRooms.isEmpty {
+                    store.handle(.loadChatRooms)
+                }
+            }
+            .onDisappear {
+                print(" 채팅 목록에서 나감 - 소켓 리스너 정리")
+                store.handle(.cleanupSocketListeners)
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
+                ChatSocketIOManager.shared.closeWebSocket()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didEnterBackgroundNotification)) { _ in
+                print(" 앱이 백그라운드로 이동 - WebSocket 연결 유지")
+            }
+    }
+
+    // MARK: - Subviews
+
+    private var loadingView: some View {
+        VStack {
+            ProgressView("채팅방을 불러오는 중...")
+                .padding()
+            Spacer()
+        }
+    }
+
+    private func errorView(_ message: String) -> some View {
+        VStack(spacing: 16) {
+            Text("오류가 발생했습니다")
+                .font(.headline)
+            Text(message)
+                .font(.body)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            Button("다시 시도") {
+                store.handle(.retryLoadChatRooms)
+            }
+            .buttonStyle(.bordered)
+            Spacer()
+        }
+        .padding()
+    }
+
+    private var emptyView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            Image(systemName: "message")
+                .font(.system(size: 48))
+                .foregroundColor(.gray)
+            Text("채팅방이 없습니다")
+                .font(.headline)
+                .foregroundColor(.gray)
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
+    }
+
+    private var chatRoomListView: some View {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                ForEach(store.state.filteredChatRooms) { room in
+                    NavigationLink(value: room) {
+                        ChatRoomRow(room: room)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    // 구분선
+                    if room.id != store.state.filteredChatRooms.last?.id {
+                        Divider()
+                            .padding(.leading, 68)
                     }
                 }
             }
-            .background(.wmBg)
-            .navigationTitle("채팅")
-            .navigationBarTitleDisplayMode(.large)
-            .navigationDestination(item: $selectedRoom) { room in
-                ChatDetailView(room: room)
+        }
+        .refreshable {
+            store.handle(.refreshChatRooms)
+            // 새로고침이 완료될 때까지 기다리기
+            while store.state.isRefreshing {
+                try? await Task.sleep(nanoseconds: 100_000_000) // 0.1초
             }
         }
     }
@@ -60,7 +141,7 @@ struct ChatRoomRow: View {
 
             // 채팅 정보
             VStack(alignment: .leading, spacing: Spacing.xSmall) {
-                // 상단: 이름 + 시간
+                // 상단: 이름 + 시간 + 읽지 않은 메시지 뱃지
                 HStack {
                     Text(room.otherUser?.nickname ?? "알 수 없음")
                         .font(.app(.subHeadline2))
@@ -107,12 +188,24 @@ struct ChatRoomRow: View {
     private var profileImage: some View {
         Group {
             if let profileURL = room.otherUser?.profileImageURL,
-               let url = URL(string: profileURL) {
+               let url = URL(string: FileRouter.fileURL(from: profileURL)) {
                 KFImage(url)
+                    .withAuthHeaders()
                     .placeholder {
                         Circle()
                             .fill(Color.gray.opacity(0.3))
+                            .overlay {
+                                ProgressView()
+                                    .tint(.gray)
+                            }
                     }
+                    .onSuccess { result in
+                        print("프로필 이미지 로딩 성공: \(url)")
+                    }
+                    .onFailure { error in
+                        print(" 프로필 이미지 로딩 실패: \(url), 에러: \(error)")
+                    }
+                    .retry(maxCount: 2, interval: .seconds(1))
                     .resizable()
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 52, height: 52)
@@ -129,6 +222,7 @@ struct ChatRoomRow: View {
             }
         }
     }
+
 }
 
 // MARK: - Preview

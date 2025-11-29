@@ -8,46 +8,42 @@
 import Foundation
 
 struct MeetDetailState {
-    var meetDetail: MeetDetail? = nil
+    // MARK: - Data
+    var meet: Meet? = nil
+
+    // MARK: - Loading States
     var isLoading: Bool = false
     var errorMessage: String? = nil
+
+    // MARK: - Join States
     var isJoining: Bool = false
     var joinErrorMessage: String? = nil
     var hasJoined: Bool = false
-}
 
-struct MeetDetail {
-    let postId: String
-    let title: String
-    let content: String
-    let creator: Creator
-    let date: String
-    let location: String
-    let address: String
-    let price: String
-    let capacity: Int
-    let currentParticipants: Int
-    let participants: [Participant]
-    let imageName: String
-    let daysLeft: String
-    let gender: String
-    let spaceInfo: SpaceInfo?
+    // MARK: - Chat States
+    var isCreatingChat: Bool = false
+    var createdChatRoom: ChatRoom? = nil
+    var chatErrorMessage: String? = nil
 
-    struct Creator {
-        let userId: String
-        let nickname: String
-        let profileImage: String?
-    }
+    // MARK: - Navigation
+    var shouldNavigateToChat: Bool = false
+    var shouldNavigateToEdit: Bool = false
 
-    struct Participant {
-        let userId: String
-        let nickname: String
-        let profileImage: String?
-    }
+    // MARK: - Space Navigation
+    var isLoadingSpace: Bool = false
+    var loadedSpace: Space? = nil
+    var shouldNavigateToSpace: Bool = false
 
-    struct SpaceInfo {
-        let spaceId: String
-        let title: String
-        let address: String
-    }
+    // MARK: - Payment States
+    var showPaymentConfirmAlert: Bool = false
+    var shouldNavigateToPayment: Bool = false
+    var isValidatingPayment: Bool = false
+    var paymentSuccessMessage: String? = nil
+    var paymentErrorMessage: String? = nil
+
+    // MARK: - Action Sheet & Delete States
+    var showActionSheet: Bool = false
+    var showDeleteAlert: Bool = false
+    var isDeleting: Bool = false
+    var isDeleted: Bool = false
 }

@@ -17,13 +17,13 @@ struct RatingSliderSection: View {
             HStack {
                 Text("평점")
                     .font(.app(.subHeadline2))
-                    .foregroundColor(Color("textMain"))
+                    .foregroundColor(.textMain)
 
                 Spacer()
 
                 Text("\(formattedRating) / 5.0")
                     .font(.app(.subHeadline2))
-                    .foregroundColor(Color("wmMain"))
+                    .foregroundColor(.wmMain)
             }
 
             Slider(
@@ -31,7 +31,7 @@ struct RatingSliderSection: View {
                 in: 1.0...5.0,
                 step: 0.5
             )
-            .accentColor(Color("wmMain"))
+            .accentColor(.wmMain)
 
             HStack {
                 Text("1.0")

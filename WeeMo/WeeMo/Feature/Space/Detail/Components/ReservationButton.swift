@@ -17,7 +17,7 @@ struct ReservationButton: View {
                 .foregroundColor(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, Spacing.base)
-                .background(Color("wmMain"))
+                .background(.wmMain)
                 .cornerRadius(Spacing.radiusMedium)
         }
     }

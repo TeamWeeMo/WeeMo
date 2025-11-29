@@ -17,6 +17,7 @@ enum FeedEditIntent {
     // 입력
     case updateContent(String)
     case selectImages([UIImage])
+    case selectVideo(URL?)
     case removeImage(at: Int)
 
     // 액션
@@ -28,4 +29,5 @@ enum FeedEditIntent {
     case uploadImagesFailed(Error)
     case createPostSuccess(Feed)
     case createPostFailed(Error)
+    case setError(String)
 }
