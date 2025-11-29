@@ -31,28 +31,22 @@ struct MeetMapCardView: View {
     /// 이미지 섹션
     private var imageSection: some View {
         ZStack {
-            if let firstImageURL = meet.fileURLs.first, !firstImageURL.isEmpty {
-                let fullImageURL = firstImageURL.hasPrefix("http") ? firstImageURL : FileRouter.fileURL(from: firstImageURL)
-                if let encodedURL = fullImageURL.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-                   let url = URL(string: encodedURL) {
-                    KFImage(url)
-                        .withAuthHeaders()
-                        .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 200, height: 100)))
-                        .placeholder {
-                            placeholderView
-                        }
-                        .retry(maxCount: 2, interval: .seconds(1))
-                        .onFailure { error in
-                            print("이미지 로드 실패: \(error.localizedDescription)")
-                        }
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 200, height: 100)
-                        .clipped()
-                        .cornerRadius(8, corners: [.topLeft, .topRight])
-                } else {
-                    placeholderView
-                }
+            if let imageURL = meet.firstImageURL {
+                KFImage(URL(string: FileRouter.fileURL(from: imageURL)))
+                    .withAuthHeaders()
+                    .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 200, height: 100)))
+                    .placeholder {
+                        placeholderView
+                    }
+                    .retry(maxCount: 2, interval: .seconds(1))
+                    .onFailure { error in
+                        print("이미지 로드 실패: \(error.localizedDescription)")
+                    }
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 200, height: 100)
+                    .clipped()
+                    .cornerRadius(8, corners: [.topLeft, .topRight])
             } else {
                 placeholderView
             }
@@ -79,14 +73,13 @@ struct MeetMapCardView: View {
         VStack {
             HStack {
                 Spacer()
-                ZStack {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(.wmMain)
-                        .frame(width: 40, height: 18)
-                    Text(meet.dDayText)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundColor(.white)
-                }
+                Text(meet.dDayText)
+                    .font(.app(.subContent3))
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 4)
+                    .background(dDayBackgroundColor(for: meet))
+                    .cornerRadius(4)
             }
             .padding(.top, 6)
             .padding(.trailing, 6)
@@ -99,31 +92,79 @@ struct MeetMapCardView: View {
         VStack(alignment: .leading, spacing: Spacing.xSmall) {
             Text(meet.title)
                 .font(.app(.subContent1))
+                .fontWeight(.semibold)
                 .foregroundColor(.textMain)
                 .lineLimit(1)
 
-            Text(meet.meetingDateText)
-                .font(.app(.subContent3))
-                .foregroundColor(.textSub)
-                .lineLimit(1)
+            HStack(spacing: Spacing.small) {
+                Image(systemName: "calendar")
+                    .font(.system(size: 14))
+                    .foregroundColor(.textSub)
 
-            Text(meet.spaceName)
-                .font(.app(.subContent3))
-                .foregroundColor(.textSub)
-                .lineLimit(1)
-
-            HStack {
-                Text(meet.priceText)
+                Text(meet.meetingDateText)
                     .font(.app(.subContent3))
                     .foregroundColor(.textSub)
+            }
+
+
+            HStack(spacing: Spacing.small) {
+                Image(systemName: "mappin.square.fill")
+                    .font(.system(size: 14))
+                    .foregroundColor(.textSub)
+
+                Text(meet.spaceName)
+                    .font(.app(.subContent3))
+                    .foregroundColor(.textSub)
+                    .lineLimit(1)
+            }
+            
+            HStack {
+                // 프로필 이미지
+                if let profileImage = meet.creator.profileImageURL, !profileImage.isEmpty {
+                    KFImage(URL(string: FileRouter.fileURL(from: profileImage)))
+                        .withAuthHeaders()
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 16, height: 16)
+                        .clipShape(Circle())
+                } else {
+                    profilePlaceholder
+                }
+
+                Text(meet.creator.nickname)
+                    .font(.app(.subContent3))
+                    .foregroundColor(.textSub)
+                    .lineLimit(1)
+            }
+
+            HStack(spacing: Spacing.xSmall) {
+                Text("참가비")
+                    .font(.app(.subContent1))
+                    .foregroundColor(.textSub)
+
+                Text(meet.priceText)
+                    .font(.app(.subContent1))
+                    .fontWeight(.semibold)
+                    .foregroundColor(.wmMain)
 
                 Spacer()
 
-                Text("0/\(meet.capacity)명")
-                    .font(.app(.subContent3))
+                Text("\(meet.participants)/\(meet.capacity)명")
+                    .font(.app(.subContent1))
                     .foregroundColor(.textSub)
             }
         }
         .padding(Spacing.medium)
+    }
+    
+    private var profilePlaceholder: some View {
+        Circle()
+            .fill(Color.gray.opacity(0.3))
+            .frame(width: 16, height: 16)
+            .overlay(
+                Image(systemName: "person.fill")
+                    .font(.system(size: 10))
+                    .foregroundColor(.gray)
+            )
     }
 }
