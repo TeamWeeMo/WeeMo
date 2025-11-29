@@ -112,59 +112,34 @@ struct ChatDetailView: View {
     private var messageListView: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                LazyVStack(spacing: Spacing.xSmall) {
-                    // 더 불러오기 버튼 (상단)
-                    if !store.state.messages.isEmpty && store.state.hasMoreMessages {
-                        Button("이전 메시지 더보기") {
-                            if let firstMessage = store.state.messages.first {
-                                store.handle(.loadMoreMessages(beforeMessageId: firstMessage.id))
-                            }
+                // 하이브리드: 메시지 수에 따라 VStack 또는 LazyVStack
+                Group {
+                    if store.state.messages.count > 100 {
+                        LazyVStack(spacing: Spacing.xSmall) {
+                            contentView
                         }
-                        .font(.app(.subContent1))
-                        .foregroundStyle(Color("wmMain"))
-                        .padding(.vertical, Spacing.small)
-                        .onAppear {
-                            if !store.state.isLoadingMore,
-                               let firstMessage = store.state.messages.first {
-                                print("스크롤 상단 도달 - 이전 메시지 로드 시작")
-                                store.handle(.loadMoreMessages(beforeMessageId: firstMessage.id))
-                            }
+                    } else {
+                        VStack(spacing: Spacing.xSmall) {
+                            contentView
                         }
                     }
-
-                    if store.state.isLoadingMore {
-                        ProgressView("이전 메시지를 불러오는 중...")
-                            .font(.app(.subContent2))
-                            .foregroundStyle(.textSub)
-                            .padding()
-                    }
-
-                    // 메시지 목록 (일반 순서)
-                    messagesListView
                 }
                 .padding(.top, Spacing.small)
                 .padding(.bottom, Spacing.base)
             }
+            .defaultScrollAnchor(.bottom)
             .onAppear {
                 handleViewAppear()
-                // 이미지 로딩을 위해 여러 번 스크롤 시도
-                for delay in [0.1, 0.3, 0.6, 1.0] {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
-                        if let lastMessage = store.state.messages.last {
-                            withAnimation(.none) {
-                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
-                            }
-                        }
-                    }
-                }
             }
-            .onChange(of: store.state.messages) { _, newMessages in
-                // 새 메시지 추가시 이미지 로딩 고려하여 스크롤
-                if let lastMessage = newMessages.last {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        withAnimation(.none) {
-                            proxy.scrollTo(lastMessage.id, anchor: .bottom)
+            .onChange(of: store.state.shouldScrollToBottom) { _, shouldScroll in
+                if shouldScroll && !store.state.messages.isEmpty {
+                    DispatchQueue.main.async {
+                        let lastIndex = store.state.messages.count - 1
+                        withAnimation(.easeOut(duration: 0.5)) {
+                            proxy.scrollTo("message_\(lastIndex)", anchor: .bottom)
                         }
+                        store.state.shouldScrollToBottom = false
+                        print("스크롤 완료: message_\(lastIndex)")
                     }
                 }
             }
@@ -172,6 +147,38 @@ struct ChatDetailView: View {
                 store.handle(.retryLoadMessages)
             }
         }
+    }
+
+    @ViewBuilder
+    private var contentView: some View {
+        // 더 불러오기 버튼 (상단)
+        if !store.state.messages.isEmpty && store.state.hasMoreMessages {
+            Button("이전 메시지 더보기") {
+                if let firstMessage = store.state.messages.first {
+                    store.handle(.loadMoreMessages(beforeMessageId: firstMessage.id))
+                }
+            }
+            .font(.app(.subContent1))
+            .foregroundStyle(Color("wmMain"))
+            .padding(.vertical, Spacing.small)
+            .onAppear {
+                if !store.state.isLoadingMore,
+                   let firstMessage = store.state.messages.first {
+                    print("스크롤 상단 도달 - 이전 메시지 로드 시작")
+                    store.handle(.loadMoreMessages(beforeMessageId: firstMessage.id))
+                }
+            }
+        }
+
+        if store.state.isLoadingMore {
+            ProgressView("이전 메시지를 불러오는 중...")
+                .font(.app(.subContent2))
+                .foregroundStyle(.textSub)
+                .padding()
+        }
+
+        // 단순한 메시지 리스트 (그룹화 없이)
+        simpleMessagesListView
     }
 
     // MARK: - Computed Properties
@@ -188,15 +195,25 @@ struct ChatDetailView: View {
         .sorted { $0.date < $1.date }
     }
 
-    private var messagesListView: some View {
-        ForEach(groupedMessages, id: \.date) { dateGroup in
-            DateSeparatorView(date: dateGroup.date)
-                .padding(.vertical, Spacing.medium)
+    // 안정성을 위한 단순한 메시지 리스트
+    private var simpleMessagesListView: some View {
+        let messageCount = store.state.messages.count
+        let _ = print("UI 렌더링: \(messageCount)개 메시지 (isLoading: \(store.state.isLoading))")
 
-            ForEach(Array(dateGroup.messages.enumerated()), id: \.element.id) { index, message in
-                let showTime = shouldShowTime(for: index, in: dateGroup.messages)
-                let isMine = message.sender.userId == store.state.currentUserId
+        return ForEach(store.state.messages.indices, id: \.self) { index in
+            let message = store.state.messages[index]
+            let showTime = shouldShowSimpleTime(for: index)
+            let isMine = message.sender.userId == store.state.currentUserId
+            let showDateSeparator = shouldShowDateSeparator(for: index)
 
+            VStack(spacing: 0) {
+                // 날짜 구분선 (필요한 경우)
+                if showDateSeparator {
+                    DateSeparatorView(date: message.createdAt)
+                        .padding(.vertical, Spacing.medium)
+                }
+
+                // 채팅 버블
                 ChatBubble(
                     message: message,
                     isMine: isMine,
@@ -220,8 +237,8 @@ struct ChatDetailView: View {
                     }
                 )
                 .padding(.vertical, showTime ? Spacing.xSmall : 2)
-                .id(message.id)
             }
+            .id("message_\(index)")
         }
     }
 
@@ -262,9 +279,6 @@ struct ChatDetailView: View {
     // MARK: - Helper Methods
 
     private func handleViewAppear() {
-        // 30일 이내 메시지 정리 (한 번만 실행)
-        store.cleanupRecentMessages()
-
         store.handle(.loadMessages(roomId: store.state.room.id))
         store.handle(.setupSocketConnection(roomId: store.state.room.id))
     }
@@ -280,20 +294,37 @@ struct ChatDetailView: View {
         }
     }
 
-    /// 시간 표시 여부 결정
-    private func shouldShowTime(for index: Int, in messages: [ChatMessage]) -> Bool {
+    /// 단순 시간 표시 여부 결정
+    private func shouldShowSimpleTime(for index: Int) -> Bool {
+        let messages = store.state.messages
         guard index >= 0 && index < messages.count else { return true }
 
         let currentMessage = messages[index]
         guard index < messages.count - 1 else { return true }
 
         let nextMessage = messages[index + 1]
-        guard currentMessage.id == messages[index].id else { return true }
-
         let timeDifference = nextMessage.createdAt.timeIntervalSince(currentMessage.createdAt)
         let isSameSender = currentMessage.sender.userId == nextMessage.sender.userId
 
         return !isSameSender || timeDifference > 60
+    }
+
+    /// 날짜 구분선 표시 여부 결정
+    private func shouldShowDateSeparator(for index: Int) -> Bool {
+        let messages = store.state.messages
+        guard index >= 0 && index < messages.count else { return false }
+
+        // 첫 번째 메시지는 항상 날짜 표시
+        guard index > 0 else { return true }
+
+        let currentMessage = messages[index]
+        let previousMessage = messages[index - 1]
+
+        let calendar = Calendar.current
+        let currentDate = calendar.startOfDay(for: currentMessage.createdAt)
+        let previousDate = calendar.startOfDay(for: previousMessage.createdAt)
+
+        return currentDate != previousDate
     }
 
     /// 선택된 미디어(사진/동영상) 로드 및 즉시 전송

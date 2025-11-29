@@ -61,14 +61,39 @@ class ChatRealmService {
 
     /// 채팅 메시지 저장
     func saveChatMessage(_ message: ChatMessageDTO) throws {
+        // 중복 체크
+        if realmManager.fetch(ChatMessageRealm.self, primaryKey: message.chatId) != nil {
+            print("중복 메시지 저장 무시: \(message.chatId)")
+            return
+        }
+
         let realmMessage = ChatMessageRealm(from: message)
         try realmManager.save(realmMessage)
     }
 
     /// 채팅 메시지 목록 저장
     func saveChatMessages(_ messages: [ChatMessageDTO]) throws {
-        let realmMessages = messages.map { ChatMessageRealm(from: $0) }
-        try realmManager.save(realmMessages)
+        print("saveChatMessages 시작: \(messages.count)개 메시지")
+
+        // 기존 메시지 ID들을 한 번에 조회
+        let existingIds = Set(realmManager.fetch(ChatMessageRealm.self).map { $0.chatId })
+
+        // 중복 제거 - 기존에 없는 메시지만 필터링
+        let uniqueMessages = messages.filter { message in
+            let isUnique = !existingIds.contains(message.chatId)
+            if !isUnique {
+                print("중복 메시지 제외: \(message.chatId)")
+            }
+            return isUnique
+        }
+
+        if !uniqueMessages.isEmpty {
+            let realmMessages = uniqueMessages.map { ChatMessageRealm(from: $0) }
+            try realmManager.save(realmMessages)
+            print("메시지 저장 완료: 전체 \(messages.count)개 중 \(uniqueMessages.count)개 새로 저장")
+        } else {
+            print("모든 메시지가 이미 존재함: \(messages.count)개")
+        }
     }
 
     /// 임시 메시지 저장 (전송 중)
@@ -99,7 +124,14 @@ class ChatRealmService {
         let messages = Array(realmMessages)
         let limitedMessages = limit != nil ? Array(messages.suffix(limit!)) : messages
 
-        return limitedMessages.map { $0.toChatMessage() }
+        let chatMessages = limitedMessages.map { $0.toChatMessage() }
+
+        // 중복 ID 제거
+        let uniqueMessages = Dictionary(chatMessages.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let sortedUniqueMessages = Array(uniqueMessages.values).sorted { $0.createdAt < $1.createdAt }
+
+        print("Realm에서 \(chatMessages.count)개 조회 -> 중복제거 후 \(sortedUniqueMessages.count)개")
+        return sortedUniqueMessages
     }
 
     /// 최근 메시지 조회 (페이징)
@@ -168,19 +200,11 @@ class ChatRealmService {
 
     // MARK: - Utility
 
-    /// 오래된 메시지 삭제 (성능 최적화)
-    func deleteOldMessages(olderThan days: Int = 30) throws {
+    /// 오래된 메시지 삭제 (선택적 성능 최적화용)
+    func deleteOldMessages(olderThan days: Int = 90) throws {
         let cutoffDate = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? Date()
         let oldMessages = realmManager.fetch(ChatMessageRealm.self).where { $0.createdAt < cutoffDate }
         try realmManager.delete(oldMessages)
-    }
-
-    /// 특정 날짜 이후의 메시지 삭제 (30일 정책용)
-    func deleteMessagesAfter(date: Date, roomId: String) throws {
-        let recentMessages = realmManager.fetch(ChatMessageRealm.self).where {
-            $0.roomId == roomId && $0.createdAt > date
-        }
-        try realmManager.delete(recentMessages)
     }
 
     /// 채팅 데이터 전체 삭제
