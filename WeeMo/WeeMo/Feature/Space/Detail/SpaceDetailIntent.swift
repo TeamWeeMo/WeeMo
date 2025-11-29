@@ -33,4 +33,11 @@ enum SpaceDetailIntent {
 
     // Alert 닫기
     case dismissAlert
+
+    // 수정/삭제 관련
+    case showActionSheet
+    case dismissActionSheet
+    case showDeleteAlert
+    case dismissDeleteAlert
+    case deleteSpace
 }

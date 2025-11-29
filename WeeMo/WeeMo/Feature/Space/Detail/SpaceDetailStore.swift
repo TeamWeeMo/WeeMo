@@ -68,6 +68,22 @@ final class SpaceDetailStore: ObservableObject {
 
         case .dismissAlert:
             state.showReservationAlert = false
+
+        case .showActionSheet:
+            state.showActionSheet = true
+
+        case .dismissActionSheet:
+            state.showActionSheet = false
+
+        case .showDeleteAlert:
+            state.showActionSheet = false
+            state.showDeleteAlert = true
+
+        case .dismissDeleteAlert:
+            state.showDeleteAlert = false
+
+        case .deleteSpace:
+            handleDeleteSpace()
         }
     }
 
@@ -390,6 +406,32 @@ final class SpaceDetailStore: ObservableObject {
                 state.isMeetingsLoading = false
             }
             print("[SpaceDetailStore] 같은 위치 모임 검색 실패: \(error)")
+        }
+    }
+
+    /// 공간 삭제 처리
+    private func handleDeleteSpace() {
+        state.showDeleteAlert = false
+        state.isDeleting = true
+
+        Task {
+            do {
+                try await networkService.request(PostRouter.deletePost(postId: spaceId))
+
+                await MainActor.run {
+                    state.isDeleting = false
+                    state.isDeleted = true
+                }
+
+                print("[SpaceDetailStore] 공간 삭제 성공")
+            } catch {
+                await MainActor.run {
+                    state.isDeleting = false
+                    state.errorMessage = "공간 삭제에 실패했습니다."
+                }
+
+                print("[SpaceDetailStore] 공간 삭제 실패: \(error)")
+            }
         }
     }
 }

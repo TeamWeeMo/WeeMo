@@ -19,7 +19,4 @@ enum SpaceListIntent {
 
     // 카테고리 필터링
     case categoryChanged(SpaceCategory)
-
-    // 새로고침
-    case refresh
 }

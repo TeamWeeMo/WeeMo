@@ -43,6 +43,12 @@ struct SpaceDetailState {
     var sameLocationMeetings: [PostDTO] = []
     var isMeetingsLoading: Bool = false
 
+    // 수정/삭제 관련 상태
+    var showActionSheet: Bool = false
+    var showDeleteAlert: Bool = false
+    var isDeleting: Bool = false
+    var isDeleted: Bool = false
+
     // MARK: - Computed Properties
 
     /// 현재 선택된 날짜의 블락된 시간

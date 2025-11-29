@@ -9,25 +9,37 @@ import SwiftUI
 import PhotosUI
 
 struct SpaceCreateView: View {
-    @StateObject private var store = SpaceCreateStore()
+    let mode: SpaceCreateState.Mode
+    @StateObject private var store: SpaceCreateStore
     @Environment(\.dismiss) private var dismiss
 
     // 커스텀 미디어 피커 표시 여부
     @State private var showMediaPicker = false
 
+    // MARK: - Initializer
+
+    init(mode: SpaceCreateState.Mode = .create) {
+        self.mode = mode
+        _store = StateObject(wrappedValue: SpaceCreateStore(mode: mode))
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: Spacing.base) {
-                // 미디어 선택 (이미지 + 동영상)
-                SimpleMediaPickerSection(
+                // 미디어 선택 (기존 파일 + 새 미디어)
+                SpaceMediaPickerSection(
                     title: "공간 미디어 (최대 5개)",
                     maxCount: SpaceCreateState.maxMediaCount,
+                    existingFileURLs: store.state.existingFileURLs,
                     selectedMediaItems: store.state.selectedMediaItems,
                     onAddTapped: {
                         showMediaPicker = true
                     },
-                    onRemoveItem: { index in
+                    onRemoveExistingFile: { index in
+                        store.send(.existingFileRemoved(at: index))
+                    },
+                    onRemoveMediaItem: { index in
                         store.send(.mediaItemRemoved(at: index))
                     }
                 )
@@ -167,7 +179,7 @@ struct SpaceCreateView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
                     } else {
-                        Text("저장")
+                        Text(store.state.mode.submitButtonText)
                             .font(.app(.subHeadline1))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -183,7 +195,7 @@ struct SpaceCreateView: View {
             }
         }
         .background(Color("wmBg"))
-        .navigationTitle("공간 등록")
+        .navigationTitle(store.state.mode.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {

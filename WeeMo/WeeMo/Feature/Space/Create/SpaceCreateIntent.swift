@@ -39,6 +39,9 @@ enum SpaceCreateIntent {
     case mediaItemsSelected([MediaItem])  // 팀원의 struct MediaItem
     case mediaItemRemoved(at: Int)
 
+    // 기존 파일 (수정 모드)
+    case existingFileRemoved(at: Int)
+
     // 이미지 (하위 호환성)
     case imageSelected(UIImage)
     case imageRemoved(at: Int)

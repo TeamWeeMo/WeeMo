@@ -112,10 +112,30 @@ struct SpaceDetailView: View {
                     }
                 }
             }
+
+            // 본인이 작성한 공간일 때만 ... 버튼 표시
+            if let currentUserId = TokenManager.shared.userId,
+               currentUserId == space.creatorId {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        store.send(.showActionSheet)
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 18))
+                            .foregroundColor(Color("wmMain"))
+                    }
+                }
+            }
         }
         .alert("예약 확인", isPresented: Binding(
             get: { store.state.showReservationAlert },
-            set: { if !$0 { store.send(.dismissAlert) } }
+            set: { newValue in
+                if !newValue {
+                    Task { @MainActor in
+                        store.send(.dismissAlert)
+                    }
+                }
+            }
         )) {
             Button("취소", role: .cancel) {
                 // Alert 닫기
@@ -125,6 +145,64 @@ struct SpaceDetailView: View {
             }
         } message: {
             Text("\(store.state.formattedDate)\n\(store.state.formattedTimeSlot)\n\(store.state.totalPrice)\n\n예약하시겠습니까?")
+        }
+        .confirmationDialog("", isPresented: Binding(
+            get: { store.state.showActionSheet },
+            set: { newValue in
+                if !newValue {
+                    Task { @MainActor in
+                        store.send(.dismissActionSheet)
+                    }
+                }
+            }
+        ), titleVisibility: .hidden) {
+            NavigationLink(destination: SpaceCreateView(mode: .edit(postId: space.id))) {
+                Text("수정")
+            }
+
+            Button("삭제", role: .destructive) {
+                store.send(.showDeleteAlert)
+            }
+
+            Button("취소", role: .cancel) {
+                store.send(.dismissActionSheet)
+            }
+        }
+        .alert("공간 삭제", isPresented: Binding(
+            get: { store.state.showDeleteAlert },
+            set: { newValue in
+                if !newValue {
+                    Task { @MainActor in
+                        store.send(.dismissDeleteAlert)
+                    }
+                }
+            }
+        )) {
+            Button("취소", role: .cancel) {
+                store.send(.dismissDeleteAlert)
+            }
+            Button("삭제", role: .destructive) {
+                store.send(.deleteSpace)
+            }
+        } message: {
+            Text("정말 이 공간을 삭제하시겠습니까?\n삭제된 공간은 복구할 수 없습니다.")
+        }
+        .onChange(of: store.state.isDeleted) { _, isDeleted in
+            if isDeleted {
+                dismiss()
+            }
+        }
+        .overlay {
+            if store.state.isDeleting {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .overlay(
+                        ProgressView("삭제 중...")
+                            .padding()
+                            .background(Color(UIColor.systemBackground))
+                            .cornerRadius(10)
+                    )
+            }
         }
     }
 }
