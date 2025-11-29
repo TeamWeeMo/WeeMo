@@ -10,7 +10,7 @@ import SwiftUI
 enum ProfileTab: String, CaseIterable, Identifiable {
     case posts = "내 모임"
     case reservedSpaces = "예약 현황"
-    case groups = "찜한 공간"
+    case likeMeets = "찜한 모임"
     case likes = "결제 현황"
     var id: String { rawValue }
 }

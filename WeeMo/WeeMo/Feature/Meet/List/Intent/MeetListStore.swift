@@ -61,6 +61,14 @@ final class MeetListStore {
             // Mapper를 사용하여 변환
             let meets = response.data.map { $0.toMeet() }
 
+            // LikeManager에 좋아요 상태 동기화
+            let currentUserId = TokenManager.shared.userId ?? ""
+            response.data.forEach { postDTO in
+                let isLiked = postDTO.likes.contains(currentUserId)
+                let likeCount = postDTO.likes.count
+                LikeManager.shared.setLikeState(postId: postDTO.postId, isLiked: isLiked, likeCount: likeCount)
+            }
+
             await MainActor.run {
                 state.allMeets = meets
                 state.filteredMeets = meets
@@ -95,6 +103,14 @@ final class MeetListStore {
 
             // Mapper를 사용하여 변환
             let meets = response.data.map { $0.toMeet() }
+
+            // LikeManager에 좋아요 상태 동기화
+            let currentUserId = TokenManager.shared.userId ?? ""
+            response.data.forEach { postDTO in
+                let isLiked = postDTO.likes.contains(currentUserId)
+                let likeCount = postDTO.likes.count
+                LikeManager.shared.setLikeState(postId: postDTO.postId, isLiked: isLiked, likeCount: likeCount)
+            }
 
             await MainActor.run {
                 state.allMeets = meets
@@ -162,6 +178,14 @@ final class MeetListStore {
 
             // Mapper를 사용하여 변환
             let newMeets = response.data.map { $0.toMeet() }
+
+            // LikeManager에 좋아요 상태 동기화 (새로 로드된 데이터만)
+            let currentUserId = TokenManager.shared.userId ?? ""
+            response.data.forEach { postDTO in
+                let isLiked = postDTO.likes.contains(currentUserId)
+                let likeCount = postDTO.likes.count
+                LikeManager.shared.setLikeState(postId: postDTO.postId, isLiked: isLiked, likeCount: likeCount)
+            }
 
             await MainActor.run {
                 // 중복 제거

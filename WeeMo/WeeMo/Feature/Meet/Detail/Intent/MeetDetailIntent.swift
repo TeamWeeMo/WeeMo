@@ -15,6 +15,7 @@ enum MeetDetailIntent {
     // MARK: - Actions
     case joinMeet
     case createChatRoom(opponentUserId: String)
+    case toggleLike
 
     // MARK: - Navigation
     case navigateToEdit

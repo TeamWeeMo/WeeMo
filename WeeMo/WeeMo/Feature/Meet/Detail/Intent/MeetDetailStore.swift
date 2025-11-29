@@ -100,6 +100,10 @@ final class MeetDetailStore {
         case .deleteMeet:
             guard let postId = currentPostId else { return }
             Task { await deleteMeet(postId: postId) }
+
+        case .toggleLike:
+            guard let postId = currentPostId else { return }
+            LikeManager.shared.toggleLike(postId: postId)
         }
     }
 
@@ -122,9 +126,19 @@ final class MeetDetailStore {
             // 현재 사용자가 이미 참가했는지 확인
             let hasJoined = postData.buyers.contains(TokenManager.shared.userId ?? "")
 
+            // 좋아요 상태 확인 (현재 사용자가 좋아요 했는지)
+            let currentUserId = TokenManager.shared.userId ?? ""
+            let isLiked = postData.likes.contains(currentUserId)
+            let likeCount = postData.likes.count
+
+            // LikeManager에 초기 상태 설정
+            LikeManager.shared.setLikeState(postId: meet.id, isLiked: isLiked, likeCount: likeCount)
+
             await MainActor.run {
                 state.meet = meet
                 state.hasJoined = hasJoined
+                state.isLiked = isLiked
+                state.likeCount = likeCount
                 state.isLoading = false
             }
 

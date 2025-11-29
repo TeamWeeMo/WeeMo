@@ -246,10 +246,10 @@ struct ProfileView: View {
                                             .frame(height: 276)
                                             .frame(maxWidth: .infinity)
                                     } else {
-                                        LargeMeetingSection(items: profileStore.state.userMeetings.map { post in
-                                            let imageURL = post.files.first.map { FileRouter.fileURL(from: $0) }
+                                        LargeMeetingSection(items: profileStore.state.userMeetings.toMeets().map { meet in
+                                            let imageURL = meet.firstImageURL.map { FileRouter.fileURL(from: $0) }
                                             print("[ProfileView] 작성한 모임 이미지 URL: \(imageURL ?? "nil")")
-                                            return (title: post.title, imageURL: imageURL)
+                                            return (title: meet.title, imageURL: imageURL)
                                         })
                                     }
                                 }
@@ -297,7 +297,7 @@ struct ProfileView: View {
                                     return (title: post.title, imageURL: imageURL)
                                 })
                             }
-                        case .groups:
+                        case .likeMeets:
                             if profileStore.state.isLoadingLikedPosts {
                                 ProgressView()
                                     .frame(height: 400)
@@ -308,9 +308,9 @@ struct ProfileView: View {
                                     .frame(height: 400)
                                     .frame(maxWidth: .infinity)
                             } else {
-                                ProfileGridSection(columnCount: 3, items: profileStore.state.likedPosts.map { post in
-                                    let imageURL = post.files.first.map { FileRouter.fileURL(from: $0) }
-                                    return (title: post.title, imageURL: imageURL)
+                                ProfileGridSection(columnCount: 3, items: profileStore.state.likedPosts.toMeets().map { meet in
+                                    let imageURL = meet.firstImageURL.map { FileRouter.fileURL(from: $0) }
+                                    return (title: meet.title, imageURL: imageURL)
                                 })
                             }
                         case .likes:
@@ -350,9 +350,9 @@ struct ProfileView: View {
                                         .frame(height: 276)
                                         .frame(maxWidth: .infinity)
                                 } else {
-                                    LargeMeetingSection(items: profileStore.state.userMeetings.map { post in
-                                        let imageURL = post.files.first.map { FileRouter.fileURL(from: $0) }
-                                        return (title: post.title, imageURL: imageURL)
+                                    LargeMeetingSection(items: profileStore.state.userMeetings.toMeets().map { meet in
+                                        let imageURL = meet.firstImageURL.map { FileRouter.fileURL(from: $0) }
+                                        return (title: meet.title, imageURL: imageURL)
                                     })
                                 }
                             }
@@ -440,7 +440,7 @@ struct ProfileView: View {
                     if profileStore.state.reservedSpaces.isEmpty && !profileStore.state.isLoadingReservedSpaces {
                         profileStore.send(.loadReservedSpaces)
                     }
-                case .groups:
+                case .likeMeets:
                     if profileStore.state.likedPosts.isEmpty && !profileStore.state.isLoadingLikedPosts {
                         profileStore.send(.loadLikedPosts)
                     }

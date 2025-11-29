@@ -64,7 +64,7 @@ extension PostDTO {
             latitude: geolocation.latitude,
             longitude: geolocation.longitude,
             pricePerPerson: pricePerPerson,
-            likeCount: likes.count,
+            likes: likes,
             distance: distance
         )
     }

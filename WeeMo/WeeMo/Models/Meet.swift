@@ -68,10 +68,21 @@ struct Meet: Identifiable, Equatable, Hashable {
 
     // MARK: - 기타
 
-    let likeCount: Int // 좋아요 카운트
+    let likes: [String] // 좋아요한 사용자 ID 배열
     let distance: Double? // 거리 (위치 기반 검색 시)
 
     // MARK: - Computed Properties
+
+    /// 현재 사용자가 좋아요했는지 여부
+    var isLiked: Bool {
+        let currentUserId = TokenManager.shared.userId ?? ""
+        return likes.contains(currentUserId)
+    }
+
+    /// 좋아요 개수
+    var likeCount: Int {
+        likes.count
+    }
 
     /// 모집 완료 여부 (인원이 다 찬 경우)
     var isFullyBooked: Bool {
@@ -180,5 +191,19 @@ struct Meet: Identifiable, Equatable, Hashable {
 
             return "\(startDate) \(startTime) ~ \(endDate) \(endTime)"
         }
+    }
+
+    /// 이미지 파일만 필터링 (동영상 제외)
+    var imageFileURLs: [String] {
+        fileURLs.filter { urlString in
+            let imageExtensions = ["jpg", "jpeg", "png", "heic", "heif", "webp", "gif"]
+            let lowercased = urlString.lowercased()
+            return imageExtensions.contains { lowercased.hasSuffix(".\($0)") }
+        }
+    }
+
+    /// 첫 번째 이미지 파일 URL (동영상 제외)
+    var firstImageURL: String? {
+        imageFileURLs.first
     }
 }
