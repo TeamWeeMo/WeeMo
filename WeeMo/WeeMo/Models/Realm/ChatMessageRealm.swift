@@ -51,7 +51,7 @@ class ChatMessageRealm: Object {
         self.chatId = dto.chatId
         self.roomId = dto.roomId
         self.content = dto.content
-        self.createdAt = ISO8601DateFormatter().date(from: dto.createdAt) ?? Date()
+        self.createdAt = parseDate(from: dto.createdAt)
         self.senderId = dto.sender.userId
         self.senderName = dto.sender.nick
         self.senderProfileImage = dto.sender.profileImage ?? ""
@@ -63,6 +63,39 @@ class ChatMessageRealm: Object {
 
         self.isTemporary = false
         self.isSent = true
+    }
+
+    /// 다양한 날짜 형식을 지원하는 파싱 함수
+    private func parseDate(from dateString: String) -> Date {
+        // ISO8601 먼저 시도
+        if let date = ISO8601DateFormatter().date(from: dateString) {
+            return date
+        }
+
+        // 다른 가능한 포맷들
+        let formatters: [(String, TimeZone?)] = [
+            ("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", TimeZone(secondsFromGMT: 0)),
+            ("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone(secondsFromGMT: 0)),
+            ("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone(secondsFromGMT: 0)),
+            ("yyyy-MM-dd HH:mm:ss", nil),
+            ("yyyy-MM-dd'T'HH:mm:ss.SSSSSS", nil),
+            ("yyyy-MM-dd'T'HH:mm:ss.SSS", nil),
+            ("yyyy-MM-dd'T'HH:mm:ss", nil)
+        ]
+
+        for (format, timeZone) in formatters {
+            let formatter = DateFormatter()
+            formatter.dateFormat = format
+            if let tz = timeZone {
+                formatter.timeZone = tz
+            }
+            if let date = formatter.date(from: dateString) {
+                return date
+            }
+        }
+
+        print("ChatMessageRealm: 모든 날짜 포맷 파싱 실패: '\(dateString)' - 현재 시간 사용")
+        return Date()
     }
 
     /// 임시 메시지 생성 (전송 중)

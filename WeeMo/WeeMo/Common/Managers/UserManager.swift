@@ -78,4 +78,11 @@ final class UserManager: ObservableObject {
         self.profileImageURL = nil
         UserDefaults.standard.removeObject(forKey: profileImageURLKey)
     }
+
+    /// 모든 사용자 데이터 삭제 (로그아웃/회원탈퇴)
+    func clearUserData() {
+        print("[UserManager] 모든 사용자 데이터 삭제")
+        clearNickname()
+        clearProfileImageURL()
+    }
 }

@@ -15,7 +15,7 @@ enum AuthRouter: APIRouter {
     case join(email: String, password: String, nickname: String)
     case login(email: String, password: String)
     case loginKakao(oauthToken: String)
-    case loginApple(idToken: String, nickname: String?)
+    case loginApple(idToken: String)
     case refreshToken(refreshToken: String)
     case withdraw
 
@@ -71,12 +71,8 @@ enum AuthRouter: APIRouter {
         case .loginKakao(let oauthToken):
             return ["oauthToken": oauthToken]
 
-        case .loginApple(let idToken, let nickname):
-            var params: Parameters = ["idToken": idToken]
-            if let nickname = nickname {
-                params["nick"] = nickname
-            }
-            return params
+        case .loginApple(let idToken):
+            return ["idToken": idToken]
 
         case .refreshToken, .withdraw:
             return nil

@@ -196,7 +196,7 @@ struct CustomMediaPickerView: View {
                         completion(tempURL)
                     }
                 } catch {
-                    print("⚠️ 동영상 복사 실패: \(error)")
+                    print("동영상 복사 실패: \(error)")
                     Task { @MainActor in
                         completion(nil)
                     }

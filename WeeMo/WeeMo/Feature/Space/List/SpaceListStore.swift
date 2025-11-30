@@ -43,18 +43,13 @@ final class SpaceListStore: ObservableObject {
 
         case .categoryChanged(let category):
             handleCategoryChanged(category)
-
-        case .refresh:
-            handleRefresh()
         }
     }
 
     // MARK: - Private Intent Handlers
 
     private func handleViewAppeared() {
-        // 이미 데이터가 있으면 재호출 안함
-        guard state.allSpaces.isEmpty else { return }
-
+        // 첫 진입 시 데이터 로드
         fetchSpaces()
     }
 
@@ -68,13 +63,9 @@ final class SpaceListStore: ObservableObject {
         // filteredSpaces는 computed property로 자동 계산됨
     }
 
-    private func handleRefresh() {
-        fetchSpaces()
-    }
-
     // MARK: - Network Requests
 
-    /// 서버에서 Space 카테고리 게시글 조회
+    /// 서버에서 Space 카테고리 게시글 조회 (첫 진입)
     private func fetchSpaces() {
         // 로딩 시작
         state.isLoading = true

@@ -11,6 +11,7 @@ import Kingfisher
 struct SpaceListCardView: View {
     let space: Space
     @State private var currentImageIndex: Int = 0
+    @State private var videoThumbnails: [Int: UIImage] = [:]  // index: thumbnail
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -29,8 +30,38 @@ struct SpaceListCardView: View {
                     .padding(.horizontal, Spacing.base)
                     .padding(.bottom, Spacing.small)
             } else if space.imageURLs.count == 1 {
-                // 이미지가 1개인 경우
-                if let imageURL = URL(string: FileRouter.fileURL(from: space.imageURLs[0])) {
+                // 이미지가 1개인 경우 (동영상일 수도 있음)
+                let mediaURL = space.imageURLs[0]
+                let isVideo = MeetVideoHelper.isVideoFile(mediaURL)
+
+                if isVideo {
+                    // 동영상 썸네일 + 재생 아이콘
+                    ZStack {
+                        if let thumbnail = videoThumbnails[0] {
+                            Image(uiImage: thumbnail)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(height: 160)
+                                .clipped()
+                        } else {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(height: 160)
+                                .overlay(ProgressView())
+                        }
+
+                        Image(systemName: "play.circle.fill")
+                            .font(.system(size: 50))
+                            .foregroundStyle(.white)
+                            .shadow(radius: 4)
+                    }
+                    .cornerRadius(Spacing.radiusSmall)
+                    .padding(.horizontal, Spacing.base)
+                    .padding(.bottom, Spacing.small)
+                    .task {
+                        videoThumbnails[0] = await MeetVideoHelper.extractThumbnail(from: mediaURL)
+                    }
+                } else if let imageURL = URL(string: FileRouter.fileURL(from: mediaURL)) {
                     KFImage(imageURL)
                         .withAuthHeaders()
                         .placeholder {
@@ -47,7 +78,7 @@ struct SpaceListCardView: View {
                         .padding(.bottom, Spacing.small)
                 }
             } else if space.imageURLs.count == 2 {
-                // 이미지가 2개인 경우 (2개만 표시)
+                // 이미지가 2개인 경우 (2개만 표시, 동영상일 수도 있음)
                 GeometryReader { geometry in
                     let pageWidth = geometry.size.width * 0.7
                     let pageSpacing: CGFloat = Spacing.base
@@ -55,7 +86,35 @@ struct SpaceListCardView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: pageSpacing) {
                             ForEach(0..<2, id: \.self) { index in
-                                if let imageURL = URL(string: FileRouter.fileURL(from: space.imageURLs[index])) {
+                                let mediaURL = space.imageURLs[index]
+                                let isVideo = MeetVideoHelper.isVideoFile(mediaURL)
+
+                                if isVideo {
+                                    // 동영상 썸네일 + 재생 아이콘
+                                    ZStack {
+                                        if let thumbnail = videoThumbnails[index] {
+                                            Image(uiImage: thumbnail)
+                                                .resizable()
+                                                .aspectRatio(contentMode: .fill)
+                                                .frame(width: pageWidth, height: 160)
+                                                .clipped()
+                                        } else {
+                                            Rectangle()
+                                                .fill(Color.gray.opacity(0.3))
+                                                .frame(width: pageWidth, height: 160)
+                                                .overlay(ProgressView())
+                                        }
+
+                                        Image(systemName: "play.circle.fill")
+                                            .font(.system(size: 50))
+                                            .foregroundStyle(.white)
+                                            .shadow(radius: 4)
+                                    }
+                                    .cornerRadius(Spacing.radiusSmall)
+                                    .task {
+                                        videoThumbnails[index] = await MeetVideoHelper.extractThumbnail(from: mediaURL)
+                                    }
+                                } else if let imageURL = URL(string: FileRouter.fileURL(from: mediaURL)) {
                                     KFImage(imageURL)
                                         .withAuthHeaders()
                                         .placeholder {
@@ -89,10 +148,38 @@ struct SpaceListCardView: View {
                             imageLayoutView(imageURLs: Array(space.imageURLs.prefix(3)))
                                 .frame(width: pageWidth)
 
-                            // 4번째 이미지부터는 한 개씩 표시
+                            // 4번째 이미지부터는 한 개씩 표시 (동영상일 수도 있음)
                             if space.imageURLs.count > 3 {
                                 ForEach(3..<space.imageURLs.count, id: \.self) { index in
-                                    if let imageURL = URL(string: FileRouter.fileURL(from: space.imageURLs[index])) {
+                                    let mediaURL = space.imageURLs[index]
+                                    let isVideo = MeetVideoHelper.isVideoFile(mediaURL)
+
+                                    if isVideo {
+                                        // 동영상 썸네일 + 재생 아이콘
+                                        ZStack {
+                                            if let thumbnail = videoThumbnails[index] {
+                                                Image(uiImage: thumbnail)
+                                                    .resizable()
+                                                    .aspectRatio(contentMode: .fill)
+                                                    .frame(width: pageWidth, height: 160)
+                                                    .clipped()
+                                            } else {
+                                                Rectangle()
+                                                    .fill(Color.gray.opacity(0.3))
+                                                    .frame(width: pageWidth, height: 160)
+                                                    .overlay(ProgressView())
+                                            }
+
+                                            Image(systemName: "play.circle.fill")
+                                                .font(.system(size: 50))
+                                                .foregroundStyle(.white)
+                                                .shadow(radius: 4)
+                                        }
+                                        .cornerRadius(Spacing.radiusSmall)
+                                        .task {
+                                            videoThumbnails[index] = await MeetVideoHelper.extractThumbnail(from: mediaURL)
+                                        }
+                                    } else if let imageURL = URL(string: FileRouter.fileURL(from: mediaURL)) {
                                         KFImage(imageURL)
                                             .withAuthHeaders()
                                             .placeholder {
@@ -161,7 +248,7 @@ struct SpaceListCardView: View {
 
     // MARK: - Helper Views
 
-    /// 첫 3개 이미지 레이아웃 (좌측 큰 이미지 + 우측 작은 이미지 2개)
+    /// 첫 3개 이미지 레이아웃 (좌측 큰 이미지 + 우측 작은 이미지 2개, 동영상 썸네일 지원)
     @ViewBuilder
     private func imageLayoutView(imageURLs: [String]) -> some View {
         GeometryReader { geometry in
@@ -170,8 +257,35 @@ struct SpaceListCardView: View {
             let leftImageWidth = geometry.size.width - rightImageWidth - imageSpacing
 
             HStack(spacing: imageSpacing) {
-                // 좌측 큰 이미지
-                if let imageURL = URL(string: FileRouter.fileURL(from: imageURLs[0])) {
+                // 좌측 큰 이미지 (동영상일 수도 있음)
+                let leftMediaURL = imageURLs[0]
+                let isLeftVideo = MeetVideoHelper.isVideoFile(leftMediaURL)
+
+                if isLeftVideo {
+                    // 동영상 썸네일 + 재생 아이콘
+                    ZStack {
+                        if let thumbnail = videoThumbnails[0] {
+                            Image(uiImage: thumbnail)
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: leftImageWidth, height: 160)
+                                .clipped()
+                        } else {
+                            Rectangle()
+                                .fill(Color.gray.opacity(0.3))
+                                .frame(width: leftImageWidth, height: 160)
+                                .overlay(ProgressView())
+                        }
+
+                        Image(systemName: "play.circle.fill")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.white)
+                            .shadow(radius: 4)
+                    }
+                    .task {
+                        videoThumbnails[0] = await MeetVideoHelper.extractThumbnail(from: leftMediaURL)
+                    }
+                } else if let imageURL = URL(string: FileRouter.fileURL(from: leftMediaURL)) {
                     KFImage(imageURL)
                         .withAuthHeaders()
                         .placeholder {
@@ -183,13 +297,39 @@ struct SpaceListCardView: View {
                         .aspectRatio(contentMode: .fill)
                         .frame(width: leftImageWidth, height: 160)
                         .clipped()
-//                        .cornerRadius(Spacing.radiusSmall) // 왼쪽 위아래
                 }
 
-                // 우측 작은 이미지 2개 (세로 배치)
+                // 우측 작은 이미지 2개 (세로 배치, 동영상일 수도 있음)
                 VStack(spacing: imageSpacing) {
                     ForEach(1..<min(3, imageURLs.count), id: \.self) { index in
-                        if let imageURL = URL(string: FileRouter.fileURL(from: imageURLs[index])) {
+                        let mediaURL = imageURLs[index]
+                        let isVideo = MeetVideoHelper.isVideoFile(mediaURL)
+
+                        if isVideo {
+                            // 동영상 썸네일 + 재생 아이콘
+                            ZStack {
+                                if let thumbnail = videoThumbnails[index] {
+                                    Image(uiImage: thumbnail)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(width: rightImageWidth, height: (160 - imageSpacing) / 2)
+                                        .clipped()
+                                } else {
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.3))
+                                        .frame(width: rightImageWidth, height: (160 - imageSpacing) / 2)
+                                        .overlay(ProgressView().scaleEffect(0.7))
+                                }
+
+                                Image(systemName: "play.circle.fill")
+                                    .font(.system(size: 30))
+                                    .foregroundStyle(.white)
+                                    .shadow(radius: 4)
+                            }
+                            .task {
+                                videoThumbnails[index] = await MeetVideoHelper.extractThumbnail(from: mediaURL)
+                            }
+                        } else if let imageURL = URL(string: FileRouter.fileURL(from: mediaURL)) {
                             KFImage(imageURL)
                                 .withAuthHeaders()
                                 .placeholder {
@@ -201,7 +341,6 @@ struct SpaceListCardView: View {
                                 .aspectRatio(contentMode: .fill)
                                 .frame(width: rightImageWidth, height: (160 - imageSpacing) / 2)
                                 .clipped()
-//                                .cornerRadius(Spacing.radiusSmall)
                         }
                     }
                 }

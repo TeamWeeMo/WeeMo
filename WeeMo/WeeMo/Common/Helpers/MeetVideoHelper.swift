@@ -151,8 +151,8 @@ enum MeetVideoHelper {
             let cgImage = try await imageGenerator.image(at: cmTime).image
             return UIImage(cgImage: cgImage)
         } catch {
-            print("⚠️ [VideoHelper] Failed to extract thumbnail: \(error)")
-            print("⚠️ [VideoHelper] Error details: \(error.localizedDescription)")
+            print("[VideoHelper] Failed to extract thumbnail: \(error)")
+            print("[VideoHelper] Error details: \(error.localizedDescription)")
             return nil
         }
     }

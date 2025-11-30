@@ -10,6 +10,10 @@ import UIKit
 // MARK: - Space Create State
 
 struct SpaceCreateState {
+    // 모드 (생성 또는 수정)
+    var mode: Mode = .create
+    var postId: String?  // 수정 모드일 때 게시글 ID
+
     // 입력 필드
     var title: String = ""
     var price: String = ""
@@ -33,7 +37,12 @@ struct SpaceCreateState {
     var hashTagInput: String = ""
     var hashTags: [String] = []
 
-    // 이미지 (최대 5개)
+    // 미디어 (이미지 + 동영상, 최대 5개)
+    var selectedMediaItems: [MediaItem] = []  // 팀원의 struct MediaItem 사용
+    var existingFileURLs: [String] = []  // 수정 모드: 기존 파일 URL
+    static let maxMediaCount = 5
+
+    // 하위 호환성 (기존 코드 유지)
     var selectedImages: [UIImage] = []
     static let maxImageCount = 5
 
@@ -42,19 +51,51 @@ struct SpaceCreateState {
     var errorMessage: String?
     var isSubmitSuccessful: Bool = false
 
+    // MARK: - Mode
+
+    enum Mode {
+        case create
+        case edit(postId: String)
+
+        var title: String {
+            switch self {
+            case .create:
+                return "공간 등록"
+            case .edit:
+                return "공간 수정"
+            }
+        }
+
+        var submitButtonText: String {
+            switch self {
+            case .create:
+                return "저장"
+            case .edit:
+                return "수정 완료"
+            }
+        }
+    }
+
     // MARK: - Computed Properties
 
     /// 제출 버튼 활성화 여부
     var isSubmitEnabled: Bool {
-        !title.isEmpty &&
+        let hasMedia = !existingFileURLs.isEmpty || !selectedMediaItems.isEmpty
+
+        return !title.isEmpty &&
         !price.isEmpty &&
         !address.isEmpty &&
         !description.isEmpty &&
-        !selectedImages.isEmpty &&
+        hasMedia &&  // 기존 파일이나 새 미디어 중 하나는 필수
         isValidPrice
     }
 
-    /// 이미지 추가 가능 여부
+    /// 미디어 추가 가능 여부
+    var canAddMoreMedia: Bool {
+        selectedMediaItems.count < Self.maxMediaCount
+    }
+
+    /// 이미지 추가 가능 여부 (하위 호환성)
     var canAddMoreImages: Bool {
         selectedImages.count < Self.maxImageCount
     }

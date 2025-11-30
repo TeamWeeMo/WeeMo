@@ -16,6 +16,7 @@ final class NetworkService: NetworkServiceProtocol {
     // MARK: - Properties
 
     private let session: Session
+    private let maxRetryCount = 3
 
     // MARK: - Initializer
 
@@ -35,19 +36,45 @@ final class NetworkService: NetworkServiceProtocol {
         _ router: APIRouter,
         responseType: T.Type
     ) async throws -> T {
-        return try await withCheckedThrowingContinuation { continuation in
-            session.request(router)
-                .validate()
-                .responseDecodable(of: T.self) { response in
-                    switch response.result {
-                    case .success(let data):
-                        continuation.resume(returning: data)
+        return try await requestWithRetry(router: router, responseType: responseType, retryCount: 0)
+    }
 
-                    case .failure(let error):
-                        let networkError = self.handleError(response: response.response, error: error, data: response.data)
-                        continuation.resume(throwing: networkError)
+    /// 재시도 로직이 포함된 내부 요청 메서드
+    private func requestWithRetry<T: Decodable>(
+        router: APIRouter,
+        responseType: T.Type,
+        retryCount: Int
+    ) async throws -> T {
+        do {
+            return try await withCheckedThrowingContinuation { continuation in
+                session.request(router)
+                    .validate()
+                    .responseDecodable(of: T.self) { response in
+                        switch response.result {
+                        case .success(let data):
+                            continuation.resume(returning: data)
+
+                        case .failure(let error):
+                            let networkError = self.handleError(response: response.response, error: error, data: response.data)
+                            continuation.resume(throwing: networkError)
+                        }
                     }
-                }
+            }
+        } catch let error as NetworkError {
+            // 재시도 가능 여부 확인
+            if error.shouldRetry && retryCount < maxRetryCount {
+                let delay = error.retryDelay
+                print("[NetworkService] \(error) - \(delay)초 후 재시도 (\(retryCount + 1)/\(maxRetryCount))")
+
+                try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                return try await requestWithRetry(router: router, responseType: responseType, retryCount: retryCount + 1)
+            }
+
+            // 재시도 불가능하거나 최대 재시도 횟수 초과
+            throw error
+        } catch {
+            // NetworkError가 아닌 에러는 그대로 throw
+            throw error
         }
     }
 

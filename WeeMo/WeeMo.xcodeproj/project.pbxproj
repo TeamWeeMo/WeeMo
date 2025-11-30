@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		171078BE2EDC288D00A22C2B /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 171078BD2EDC288D00A22C2B /* FirebaseCore */; };
+		171078C02EDC288D00A22C2B /* FirebaseRemoteConfig in Frameworks */ = {isa = PBXBuildFile; productRef = 171078BF2EDC288D00A22C2B /* FirebaseRemoteConfig */; };
 		178DEDE12EC5E0CA0014C227 /* KeychainAccess in Frameworks */ = {isa = PBXBuildFile; productRef = 178DEDE02EC5E0CA0014C227 /* KeychainAccess */; };
 		179C3FF82ECDD98300EDAE31 /* NMapsMap in Frameworks */ = {isa = PBXBuildFile; productRef = 179C3FF72ECDD98300EDAE31 /* NMapsMap */; };
 		17BE83682ED6DC2900C7D841 /* iamport-ios in Frameworks */ = {isa = PBXBuildFile; productRef = 17BE83672ED6DC2900C7D841 /* iamport-ios */; };
@@ -69,11 +71,13 @@
 				178DEDE12EC5E0CA0014C227 /* KeychainAccess in Frameworks */,
 				9B8882002ECAE43400211811 /* KakaoSDKCommon in Frameworks */,
 				9B8881FC2ECAE43400211811 /* KakaoSDK in Frameworks */,
+				171078C02EDC288D00A22C2B /* FirebaseRemoteConfig in Frameworks */,
 				17BE83682ED6DC2900C7D841 /* iamport-ios in Frameworks */,
 				3B5C4E6A2ED3560000BA6325 /* SocketIO in Frameworks */,
 				3B5C4AAB2ECEE7AD00BA6325 /* RealmSwift in Frameworks */,
 				17C580F52EBDE16D0055A18E /* Kingfisher in Frameworks */,
 				179C3FF82ECDD98300EDAE31 /* NMapsMap in Frameworks */,
+				171078BE2EDC288D00A22C2B /* FirebaseCore in Frameworks */,
 				9B8882022ECAE43400211811 /* KakaoSDKUser in Frameworks */,
 				17C580F82EBDE1B60055A18E /* FSCalendar in Frameworks */,
 				17C580F22EBDE1440055A18E /* Alamofire in Frameworks */,
@@ -133,6 +137,8 @@
 				3B5C4AAA2ECEE7AD00BA6325 /* RealmSwift */,
 				3B5C4E692ED3560000BA6325 /* SocketIO */,
 				17BE83672ED6DC2900C7D841 /* iamport-ios */,
+				171078BD2EDC288D00A22C2B /* FirebaseCore */,
+				171078BF2EDC288D00A22C2B /* FirebaseRemoteConfig */,
 			);
 			productName = WeeMo;
 			productReference = 17C57DF12EBDCC0B0055A18E /* WeeMo.app */;
@@ -172,6 +178,7 @@
 				3B5C4AA92ECEE7AD00BA6325 /* XCRemoteSwiftPackageReference "realm-swift" */,
 				3B5C4E682ED3560000BA6325 /* XCRemoteSwiftPackageReference "socket" */,
 				17BE83662ED6DC2900C7D841 /* XCRemoteSwiftPackageReference "iamport-ios" */,
+				171078BC2EDC288D00A22C2B /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 17C57DF22EBDCC0B0055A18E /* Products */;
@@ -332,6 +339,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = WeeMo/WeeMo.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -354,6 +363,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.TeamWeeMo.WeeMo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -373,6 +383,8 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = WeeMo/WeeMo.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = "";
@@ -395,6 +407,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.TeamWeeMo.WeeMo;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -433,6 +446,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		171078BC2EDC288D00A22C2B /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.6.0;
+			};
+		};
 		178DEDDF2EC5E0CA0014C227 /* XCRemoteSwiftPackageReference "KeychainAccess" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/kishikawakatsumi/KeychainAccess.git";
@@ -508,6 +529,16 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		171078BD2EDC288D00A22C2B /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 171078BC2EDC288D00A22C2B /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		171078BF2EDC288D00A22C2B /* FirebaseRemoteConfig */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 171078BC2EDC288D00A22C2B /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseRemoteConfig;
+		};
 		178DEDE02EC5E0CA0014C227 /* KeychainAccess */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 178DEDDF2EC5E0CA0014C227 /* XCRemoteSwiftPackageReference "KeychainAccess" */;

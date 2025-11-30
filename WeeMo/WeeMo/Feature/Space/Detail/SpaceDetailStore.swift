@@ -68,6 +68,22 @@ final class SpaceDetailStore: ObservableObject {
 
         case .dismissAlert:
             state.showReservationAlert = false
+
+        case .showActionSheet:
+            state.showActionSheet = true
+
+        case .dismissActionSheet:
+            state.showActionSheet = false
+
+        case .showDeleteAlert:
+            state.showActionSheet = false
+            state.showDeleteAlert = true
+
+        case .dismissDeleteAlert:
+            state.showDeleteAlert = false
+
+        case .deleteSpace:
+            handleDeleteSpace()
         }
     }
 
@@ -292,6 +308,8 @@ final class SpaceDetailStore: ObservableObject {
                 print("[SpaceDetailStore] 저장된 예약 정보 (\(reservationComments.count)건):")
                 print("========================================")
 
+                var reservations: [ServerReservationInfo] = []
+
                 for (index, comment) in reservationComments.enumerated() {
                     print("[\(index + 1)] 예약자: \(comment.creator.nick)")
                     print("    작성일: \(comment.createdAt)")
@@ -306,6 +324,16 @@ final class SpaceDetailStore: ObservableObject {
                         print("    - 시간: \(String(format: "%02d:00 - %02d:00", reservationInfo.startHour, endHour))")
                         print("    - 금액: \(price.formatted())원")
 
+                        // 서버 예약 정보 저장 (PDF용)
+                        let serverReservation = ServerReservationInfo(
+                            userName: comment.creator.nick,
+                            date: reservationInfo.date,
+                            startHour: reservationInfo.startHour,
+                            endHour: endHour,
+                            totalPrice: price
+                        )
+                        reservations.append(serverReservation)
+
                         await MainActor.run {
                             addBlockedHours(
                                 date: reservationInfo.date,
@@ -318,6 +346,12 @@ final class SpaceDetailStore: ObservableObject {
                     }
                     print("----------------------------------------")
                 }
+
+                // State에 서버 예약 정보 저장
+                await MainActor.run {
+                    state.serverReservations = reservations
+                }
+
                 print("========================================")
             }
         } catch {
@@ -390,6 +424,32 @@ final class SpaceDetailStore: ObservableObject {
                 state.isMeetingsLoading = false
             }
             print("[SpaceDetailStore] 같은 위치 모임 검색 실패: \(error)")
+        }
+    }
+
+    /// 공간 삭제 처리
+    private func handleDeleteSpace() {
+        state.showDeleteAlert = false
+        state.isDeleting = true
+
+        Task {
+            do {
+                try await networkService.request(PostRouter.deletePost(postId: spaceId))
+
+                await MainActor.run {
+                    state.isDeleting = false
+                    state.isDeleted = true
+                }
+
+                print("[SpaceDetailStore] 공간 삭제 성공")
+            } catch {
+                await MainActor.run {
+                    state.isDeleting = false
+                    state.errorMessage = "공간 삭제에 실패했습니다."
+                }
+
+                print("[SpaceDetailStore] 공간 삭제 실패: \(error)")
+            }
         }
     }
 }

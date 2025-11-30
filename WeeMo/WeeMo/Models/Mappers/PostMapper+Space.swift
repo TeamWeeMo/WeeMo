@@ -39,7 +39,8 @@ extension PostDTO {
             description: content,
             latitude: geolocation.latitude,
             longitude: geolocation.longitude,
-            hashTags: hashTags  // 서버에서 받은 해시태그
+            hashTags: hashTags,  // 서버에서 받은 해시태그
+            creatorId: creator.userId  // 작성자 ID
         )
 
     }

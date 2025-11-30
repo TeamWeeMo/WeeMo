@@ -60,89 +60,111 @@ class ChatService {
 
     // MARK: - Chat Message Operations
 
-    /// 채팅 메시지 목록 조회 (30일 정책: 최근 메시지는 서버, 오래된 메시지는 로컬)
+    /// 채팅 메시지 목록 조회 (로컬 우선, 서버는 최신 동기화용)
     func fetchMessages(roomId: String, cursorDate: String? = nil) async throws -> [ChatMessage] {
-        print("fetchMessages 시작 - roomId: \(roomId), cursorDate: \(cursorDate ?? "nil")")
+        print("ChatService.fetchMessages 시작 - roomId: \(roomId), cursorDate: \(cursorDate ?? "nil")")
 
+        // 1. 먼저 로컬에서 메시지 조회
+        let localMessages = realmService.fetchChatMessages(roomId: roomId)
+        print("로컬에서 \(localMessages.count)개 메시지 조회")
+
+        // 2. 로컬이 비어있으면 서버에서 즉시 로드
+        if localMessages.isEmpty {
+            print("로컬이 비어있음 - 서버에서 즉시 로드")
+            let serverMessages = try await fetchMessagesFromServer(roomId: roomId)
+            print("서버에서 \(serverMessages.count)개 메시지 로드 완료 - fetchMessages 반환")
+            return serverMessages
+        }
+
+        // 3. 백그라운드에서 서버 최신 메시지 동기화
+        Task {
+            await syncLatestMessagesFromServer(roomId: roomId)
+        }
+
+        print("로컬 메시지 \(localMessages.count)개 반환 - fetchMessages 완료")
+        return localMessages
+    }
+
+    /// 서버에서 직접 메시지 조회 후 로컬에 저장
+    func fetchMessagesFromServer(roomId: String, cursorDate: String? = nil) async throws -> [ChatMessage] {
+        print("서버에서 메시지 직접 조회 - roomId: \(roomId)")
+
+        let serverResponse: [ChatMessageDTO]
         do {
-            // 먼저 딕셔너리 형태(ChatMessageListDTO)로 시도
             let listResponse = try await networkService.request(
                 ChatRouter.fetchMessages(roomId: roomId, cursorDate: cursorDate),
                 responseType: ChatMessageListDTO.self
             )
-
-            print("딕셔너리 형태로 서버에서 \(listResponse.data.count)개 메시지 받음")
-            return processChatMessages(listResponse.data, roomId: roomId)
-
+            serverResponse = listResponse.data
         } catch {
-            print("딕셔너리 형태 실패, 배열 형태로 재시도: \(error)")
+            serverResponse = try await networkService.request(
+                ChatRouter.fetchMessages(roomId: roomId, cursorDate: cursorDate),
+                responseType: [ChatMessageDTO].self
+            )
+        }
+
+        // 서버에서 받은 메시지를 로컬에 저장
+        if !serverResponse.isEmpty {
+            try realmService.saveChatMessages(serverResponse)
+            print("서버에서 \(serverResponse.count)개 메시지 로드 및 저장 완료")
+        }
+
+        let chatMessages = serverResponse.map { $0.toChatMessage() }.sorted { $0.createdAt < $1.createdAt }
+        print("fetchMessagesFromServer 반환: \(chatMessages.count)개 메시지")
+        return chatMessages
+    }
+
+    /// 서버에서 최신 메시지 동기화 (백그라운드)
+    private func syncLatestMessagesFromServer(roomId: String) async {
+        do {
+            // 로컬에서 가장 최근 메시지 시간 조회
+            let localMessages = realmService.fetchChatMessages(roomId: roomId)
+            let lastMessageDate = localMessages.last?.createdAt
+            let cursorDate = lastMessageDate.map { ISO8601DateFormatter().string(from: $0) }
+
+            // 서버에서 최신 메시지들만 조회
+            let serverResponse: [ChatMessageDTO]
 
             do {
+                let listResponse = try await networkService.request(
+                    ChatRouter.fetchMessages(roomId: roomId, cursorDate: cursorDate),
+                    responseType: ChatMessageListDTO.self
+                )
+                serverResponse = listResponse.data
+            } catch {
                 // 배열 형태로 재시도
-                let arrayResponse = try await networkService.request(
+                serverResponse = try await networkService.request(
                     ChatRouter.fetchMessages(roomId: roomId, cursorDate: cursorDate),
                     responseType: [ChatMessageDTO].self
                 )
-
-                print("배열 형태로 서버에서 \(arrayResponse.count)개 메시지 받음")
-                return processChatMessages(arrayResponse, roomId: roomId)
-
-            } catch {
-                // 네트워크 오류시 로컬 데이터 반환
-                print("Network error, returning cached messages: \(error)")
-                return realmService.fetchChatMessages(roomId: roomId)
             }
+
+            // 새로운 메시지만 로컬에 저장
+            if !serverResponse.isEmpty {
+                let newMessages = serverResponse.filter { dto in
+                    !localMessages.contains { $0.id == dto.chatId }
+                }
+
+                if !newMessages.isEmpty {
+                    try realmService.saveChatMessages(newMessages)
+                    print("서버에서 \(newMessages.count)개 새 메시지 동기화 완료")
+                }
+            }
+        } catch {
+            print("서버 메시지 동기화 실패: \(error)")
         }
     }
 
-    /// 메시지 처리 공통 로직
-    private func processChatMessages(_ messageDTOs: [ChatMessageDTO], roomId: String) -> [ChatMessage] {
-        // 30일 기준 날짜
-        let calendar = Calendar.current
-        let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-
-        // 서버에서 받은 메시지를 30일 기준으로 분리
-        let serverMessages = messageDTOs.map { $0.toChatMessage() }
-        let oldMessages = serverMessages.filter { $0.createdAt <= thirtyDaysAgo }
-
-        // 30일 이후 메시지만 Realm에 저장
-        if !oldMessages.isEmpty {
-            let oldMessageDTOs = messageDTOs.filter {
-                let messageDate = ISO8601DateFormatter().date(from: $0.createdAt) ?? Date()
-                return messageDate <= thirtyDaysAgo
-            }
-            do {
-                try realmService.saveChatMessages(oldMessageDTOs)
-                print("30일+ 이전 메시지 \(oldMessageDTOs.count)개 Realm에 저장")
-            } catch {
-                print("Realm 저장 실패: \(error)")
-            }
-        }
-
-        print("메시지 처리 완료 - 전체: \(serverMessages.count)개, 30일+ 이전: \(oldMessages.count)개")
-
-        // 서버에서 받은 메시지 그대로 반환 (30일 이내는 서버 데이터 우선)
-        return serverMessages
-    }
-
-    /// 메시지 전송
+    /// 메시지 전송 (즉시 로컬 저장 + 소켓 전송)
     func sendMessage(roomId: String, content: String, files: [String]? = nil) async throws -> ChatMessage {
-        // 현재 유저 정보 (임시)
         guard let currentUser = getCurrentUser() else {
             throw ChatError.userNotFound
         }
 
-        // 1. 임시 메시지 생성 및 로컬 저장
-        let tempMessageId = try realmService.saveTempMessage(
-            content: content,
-            roomId: roomId,
-            sender: currentUser
-        )
-
         do {
             print("ChatService.sendMessage 시작!")
 
-            // 2. 서버로 메시지 전송
+            // 1. 서버로 메시지 전송
             let response = try await networkService.request(
                 ChatRouter.sendMessage(roomId: roomId, content: content, files: files),
                 responseType: ChatMessageDTO.self
@@ -151,43 +173,19 @@ class ChatService {
 
             let chatMessage = response.toChatMessage()
 
-            // 3. Realm 작업을 백그라운드에서 처리
-            Task.detached(priority: .background) {
-                do {
-                    try await Task.sleep(nanoseconds: 100_000_000) // 100ms 지연
-                    try self.realmService.deleteTempMessage(tempId: tempMessageId)
-                    try self.realmService.saveChatMessage(response)
-                } catch {
-                    print("Realm 업데이트 실패: \(error)")
-                }
-            }
+            // 2. 즉시 로컬에 저장
+            try realmService.saveChatMessage(response)
+            print("메시진 로컬 저장 완료")
 
-            // 4. 웹소켓으로 실시간 전송 (선택적)
+            // 3. 소켓으로 실시간 전송 (다른 사용자에게 알림)
             webSocketManager.sendMessage(roomId: roomId, content: content, files: files)
             print("Socket.IO 전송 완료")
 
-            print("ChatMessage 생성 완료: \(chatMessage.id) - \(chatMessage.content)")
-
-            // 5. 즉시 UI 업데이트를 위해 Socket.IO Subject에 메시지 전송
-            print("즉시 UI 업데이트 시작...")
-            DispatchQueue.main.async {
-                print("메인 스레드에서 Subject.send 호출")
-                self.webSocketManager.chatMessageSubject.send(chatMessage)
-                print("즉시 UI 업데이트 완료: \(chatMessage.content)")
-            }
             print("ChatService.sendMessage 완료!")
-
             return chatMessage
 
         } catch {
-            // 5. 전송 실패시 임시 메시지 삭제 (백그라운드에서 처리)
-            Task.detached(priority: .background) {
-                do {
-                    try self.realmService.deleteTempMessage(tempId: tempMessageId)
-                } catch {
-                    print("임시 메시지 삭제 실패: \(error)")
-                }
-            }
+            print("ChatService.sendMessage 실패: \(error)")
             throw error
         }
     }
@@ -197,85 +195,63 @@ class ChatService {
         return realmService.fetchChatMessages(roomId: roomId, limit: limit)
     }
 
-    /// 더 이전 메시지 로드 (30일 정책 적용)
+    /// 더 이전 메시지 로드 (로컬 우선)
     func loadMoreMessages(roomId: String, beforeMessageId: String, limit: Int = 50) async throws -> [ChatMessage] {
-        // 30일 기준 날짜
-        let calendar = Calendar.current
-        let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) ?? Date()
+        print("이전 메시지 로드 - roomId: \(roomId), beforeMessageId: \(beforeMessageId)")
 
-        // 로컬에서 해당 메시지의 날짜 찾기
-        let localMessages = realmService.fetchChatMessages(roomId: roomId)
-        guard let beforeMessage = localMessages.first(where: { $0.id == beforeMessageId }) else {
-            return []
+        // 1. 먼저 로컬에서 이전 메시지 조회
+        let localMoreMessages = realmService.fetchRecentMessages(
+            roomId: roomId,
+            before: beforeMessageId,
+            limit: limit
+        )
+
+        if !localMoreMessages.isEmpty {
+            print("로컬에서 \(localMoreMessages.count)개 이전 메시지 조회")
+            return localMoreMessages
         }
 
-        // 메시지가 30일 이후인지 확인
-        if beforeMessage.createdAt <= thirtyDaysAgo {
-            // 30일 이후 메시지는 로컬에서만 조회
-            print("30일 이후 메시지 - 로컬에서 조회")
-            return realmService.fetchRecentMessages(roomId: roomId, before: beforeMessageId, limit: limit)
-        } else {
-            // 30일 이내 메시지는 서버에서 조회
+        // 2. 로컬에 없으면 서버에서 조회 후 로컬에 저장
+        do {
+            print("로컬에 없음, 서버에서 조회 중...")
+
+            let localMessages = realmService.fetchChatMessages(roomId: roomId)
+            guard let beforeMessage = localMessages.first(where: { $0.id == beforeMessageId }) else {
+                print("기준 메시지를 찾을 수 없음")
+                return []
+            }
+
             let cursorDate = ISO8601DateFormatter().string(from: beforeMessage.createdAt)
 
-            print("이전 메시지 로드 - roomId: \(roomId), cursorDate: \(cursorDate)")
-            print("beforeMessage 날짜: \(beforeMessage.createdAt), ID: \(beforeMessage.id)")
-
+            // 서버에서 이전 메시지 조회
+            let serverResponse: [ChatMessageDTO]
             do {
-                // 서버 응답이 딕셔너리일 가능성을 고려하여 ChatMessageListDTO로 시도
-                print("서버에서 이전 메시지 조회 중...")
                 let response = try await networkService.request(
                     ChatRouter.fetchMessages(roomId: roomId, cursorDate: cursorDate),
                     responseType: ChatMessageListDTO.self
                 )
-
-                print("서버에서 \(response.data.count)개 이전 메시지 받음")
-
-                // 30일 기준으로 분리
-                let serverMessages = response.data.map { $0.toChatMessage() }
-                let oldMessages = serverMessages.filter { $0.createdAt <= thirtyDaysAgo }
-
-                // 30일 이후 메시지만 Realm에 저장
-                if !oldMessages.isEmpty {
-                    let oldMessageDTOs = response.data.filter {
-                        let messageDate = ISO8601DateFormatter().date(from: $0.createdAt) ?? Date()
-                        return messageDate <= thirtyDaysAgo
-                    }
-                    try realmService.saveChatMessages(oldMessageDTOs)
-                }
-
-                return serverMessages
-
+                serverResponse = response.data
             } catch {
-                // 배열 형식으로 다시 시도
-                print("ChatMessageListDTO 실패, 배열 형식으로 재시도: \(error)")
-                do {
-                    let response = try await networkService.request(
-                        ChatRouter.fetchMessages(roomId: roomId, cursorDate: cursorDate),
-                        responseType: [ChatMessageDTO].self
-                    )
-
-                    print("배열 형식으로 서버에서 \(response.count)개 이전 메시지 받음")
-
-                    let serverMessages = response.map { $0.toChatMessage() }
-                    let oldMessages = serverMessages.filter { $0.createdAt <= thirtyDaysAgo }
-
-                    // 30일 이후 메시지만 Realm에 저장
-                    if !oldMessages.isEmpty {
-                        let oldMessageDTOs = response.filter {
-                            let messageDate = ISO8601DateFormatter().date(from: $0.createdAt) ?? Date()
-                            return messageDate <= thirtyDaysAgo
-                        }
-                        try realmService.saveChatMessages(oldMessageDTOs)
-                        print("30일+ 이전 메시지 \(oldMessageDTOs.count)개 Realm에 저장")
-                    }
-
-                    return serverMessages
-                } catch let networkError {
-                    print("서버에서 이전 메시지 로드 완전 실패: \(networkError)")
-                    throw networkError
-                }
+                let response = try await networkService.request(
+                    ChatRouter.fetchMessages(roomId: roomId, cursorDate: cursorDate),
+                    responseType: [ChatMessageDTO].self
+                )
+                serverResponse = response
             }
+
+            if !serverResponse.isEmpty {
+                // 서버에서 받은 메시지를 로컬에 저장
+                try realmService.saveChatMessages(serverResponse)
+                print("서버에서 \(serverResponse.count)개 이전 메시지를 로컬에 저장")
+
+                return serverResponse.map { $0.toChatMessage() }
+            }
+
+            return []
+
+        } catch {
+            print("서버에서 이전 메시지 로드 실패: \(error)")
+            throw error
         }
     }
 
