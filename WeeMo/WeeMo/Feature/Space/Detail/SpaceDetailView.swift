@@ -6,11 +6,15 @@
 //
 
 import SwiftUI
+import Kingfisher
 
 struct SpaceDetailView: View {
     let space: Space
     @StateObject private var store: SpaceDetailStore
     @Environment(\.dismiss) private var dismiss
+    @State private var showPDFViewer = false
+    @State private var generatedPDFURL: URL?
+    @State private var isGeneratingPDF = false
 
     // MARK: - Initializer
     init(space: Space) {
@@ -113,6 +117,17 @@ struct SpaceDetailView: View {
                 }
             }
 
+            // PDF 생성 버튼
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    generatePDF()
+                } label: {
+                    Image(systemName: "doc.richtext")
+                        .font(.system(size: 18))
+                        .foregroundColor(.wmMain)
+                }
+            }
+
             // 본인이 작성한 공간일 때만 ... 버튼 표시
             if let currentUserId = TokenManager.shared.userId,
                currentUserId == space.creatorId {
@@ -202,6 +217,135 @@ struct SpaceDetailView: View {
                             .background(Color(UIColor.systemBackground))
                             .cornerRadius(10)
                     )
+            }
+
+            if isGeneratingPDF {
+                Color.black.opacity(0.3)
+                    .ignoresSafeArea()
+                    .overlay(
+                        ProgressView("PDF 생성 중...")
+                            .padding()
+                            .background(Color(UIColor.systemBackground))
+                            .cornerRadius(10)
+                    )
+            }
+        }
+        .sheet(isPresented: $showPDFViewer) {
+            PDFViewerView(pdfURL: generatedPDFURL)
+        }
+    }
+
+    // MARK: - PDF 생성
+
+    private func generatePDF() {
+        isGeneratingPDF = true
+
+        // 서버 예약 정보를 ReservationInfo 배열로 변환
+        var reservationInfos: [ReservationInfo] = store.state.serverReservations.map { serverReservation in
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: "ko_KR")
+            formatter.dateFormat = "yyyy년 MM월 dd일"
+            let dateString = formatter.string(from: serverReservation.date)
+            let timeSlot = String(format: "%02d:00 - %02d:00", serverReservation.startHour, serverReservation.endHour)
+
+            // 가격 포맷팅 (NumberFormatter 사용)
+            let numberFormatter = NumberFormatter()
+            numberFormatter.numberStyle = .decimal
+            let priceString = (numberFormatter.string(from: NSNumber(value: serverReservation.totalPrice)) ?? "\(serverReservation.totalPrice)") + "원"
+
+            return ReservationInfo(
+                userName: serverReservation.userName,
+                date: dateString,
+                timeSlot: timeSlot,
+                totalPrice: priceString
+            )
+        }
+
+        // 현재 사용자가 새로 예약한 정보가 있으면 추가
+        if store.state.shouldShowReservationInfo {
+            let currentReservation = ReservationInfo(
+                userName: store.state.userNickname,
+                date: store.state.formattedDate,
+                timeSlot: store.state.formattedTimeSlot,
+                totalPrice: store.state.totalPrice
+            )
+            reservationInfos.append(currentReservation)
+        }
+
+        print("[PDF] 총 예약 정보: \(reservationInfos.count)건")
+        print("[PDF] - 서버 예약: \(store.state.serverReservations.count)건")
+        print("[PDF] - 현재 예약: \(store.state.shouldShowReservationInfo ? 1 : 0)건")
+
+        // 상세 예약 정보 출력
+        for (index, info) in reservationInfos.enumerated() {
+            print("[PDF] 예약 [\(index + 1)]: \(info.userName) - \(info.date) - \(info.timeSlot) - \(info.totalPrice)")
+        }
+
+        print("[PDF] 공간 이미지 URLs: \(space.imageURLs)")
+
+        // 공간 이미지 다운로드 (첫 번째 이미지)
+        if let firstImageURL = space.imageURLs.first, !firstImageURL.isEmpty {
+            print("[PDF] 이미지 다운로드 시작: \(firstImageURL)")
+            downloadImage(from: firstImageURL) { image in
+                print("[PDF] 이미지 다운로드 완료: \(image != nil)")
+                self.createPDF(with: image, reservationInfos: reservationInfos)
+            }
+        } else {
+            print("[PDF] 이미지 없이 PDF 생성")
+            // 이미지 없이 PDF 생성
+            createPDF(with: nil, reservationInfos: reservationInfos)
+        }
+    }
+
+    private func downloadImage(from urlString: String, completion: @escaping (UIImage?) -> Void) {
+        // 상대 경로를 절대 경로로 변환 (v1 포함)
+        let fullURLString: String
+        if urlString.hasPrefix("http") {
+            fullURLString = urlString
+        } else {
+            // FileRouter의 헬퍼 사용 (자동으로 /v1 추가)
+            fullURLString = FileRouter.fileURL(from: urlString)
+        }
+
+        print("[PDF] 최종 이미지 URL: \(fullURLString)")
+
+        guard let url = URL(string: fullURLString) else {
+            print("[PDF] 유효하지 않은 URL: \(fullURLString)")
+            completion(nil)
+            return
+        }
+
+        KingfisherManager.shared.retrieveImage(with: url) { result in
+            switch result {
+            case .success(let imageResult):
+                print("[PDF] 이미지 다운로드 성공")
+                completion(imageResult.image)
+            case .failure(let error):
+                print("[PDF] 이미지 다운로드 실패: \(error)")
+                completion(nil)
+            }
+        }
+    }
+
+    private func createPDF(with image: UIImage?, reservationInfos: [ReservationInfo]) {
+        print("[PDF] createPDF 호출 - 이미지: \(image != nil), 예약정보 수: \(reservationInfos.count)")
+
+        // PDF 생성
+        if let pdfURL = SpacePDFGenerator.generatePDF(
+            space: space,
+            reservationInfos: reservationInfos,
+            spaceImage: image
+        ) {
+            print("[PDF] PDF 생성 성공: \(pdfURL)")
+            DispatchQueue.main.async {
+                self.generatedPDFURL = pdfURL
+                self.showPDFViewer = true
+                self.isGeneratingPDF = false
+            }
+        } else {
+            print("[PDF] PDF 생성 실패")
+            DispatchQueue.main.async {
+                self.isGeneratingPDF = false
             }
         }
     }
