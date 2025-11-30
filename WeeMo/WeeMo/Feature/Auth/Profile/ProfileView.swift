@@ -21,6 +21,8 @@ struct ProfileView: View {
     @Namespace private var underlineNS
     @State private var shouldNavigateToEdit = false
     @State private var currentProfileImage: UIImage? = nil
+    @State private var showWithdrawAlert = false
+    @State private var showFinalConfirmAlert = false
 
     // 내 프로필인지 확인
     private var isMyProfile: Bool {
@@ -402,7 +404,7 @@ struct ProfileView: View {
                         .padding(.horizontal, 20)
 
                         Button {
-                            print("회원탈퇴")
+                            showWithdrawAlert = true
                         } label: {
                             Text("회원탈퇴")
                                 .font(.app(.subContent2))
@@ -452,6 +454,35 @@ struct ProfileView: View {
             }
             .navigationDestination(isPresented: $shouldNavigateToEdit) {
                 ProfileEditView(isNewProfile: false, initialImage: currentProfileImage)
+            }
+            .alert("회원탈퇴", isPresented: $showWithdrawAlert) {
+                Button("취소", role: .cancel) { }
+                Button("계속", role: .destructive) {
+                    showFinalConfirmAlert = true
+                }
+            } message: {
+                Text("정말 탈퇴하시겠습니까?")
+            }
+            .alert("최종 확인", isPresented: $showFinalConfirmAlert) {
+                Button("취소", role: .cancel) { }
+                Button("탈퇴하기", role: .destructive) {
+                    profileStore.send(.withdrawTapped)
+                }
+            } message: {
+                Text("회원탈퇴 시 작성한 게시글, 댓글/대댓글, 팔로우 내역 등 모든 데이터가 삭제되며 복구할 수 없습니다.\n정말로 탈퇴하시겠습니까?")
+            }
+            .onChange(of: profileStore.state.isWithdrawSucceeded) { _, newValue in
+                if newValue {
+                    print("회원탈퇴 성공 - 로그아웃 처리")
+                    appState.logout()
+                }
+            }
+            .alert("회원탈퇴 실패", isPresented: .constant(profileStore.state.withdrawErrorMessage != nil)) {
+                Button("확인", role: .cancel) {
+                    // 에러 메시지 초기화는 ProfileStore에서 처리
+                }
+            } message: {
+                Text(profileStore.state.withdrawErrorMessage ?? "")
             }
     }
 }

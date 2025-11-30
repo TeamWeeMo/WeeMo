@@ -43,4 +43,9 @@ struct ProfileState {
     // 다른 사람 프로필 조회 (피드 화면 등에서 사용)
     var otherUserProfile: Profile? = nil
     var isLoadingOtherProfile: Bool = false
+
+    // 회원탈퇴 관련
+    var isWithdrawing: Bool = false
+    var withdrawErrorMessage: String? = nil
+    var isWithdrawSucceeded: Bool = false
 }
