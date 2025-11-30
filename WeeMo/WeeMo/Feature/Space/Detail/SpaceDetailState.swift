@@ -39,9 +39,18 @@ struct SpaceDetailState {
     // 예약된(블락된) 시간 - 날짜별로 관리
     var blockedHoursByDate: [Date: Set<Int>] = [:]
 
+    // 서버에서 받은 예약 정보 목록 (PDF 생성용)
+    var serverReservations: [ServerReservationInfo] = []
+
     // 같은 위치 모임 목록
     var sameLocationMeetings: [PostDTO] = []
     var isMeetingsLoading: Bool = false
+
+    // 수정/삭제 관련 상태
+    var showActionSheet: Bool = false
+    var showDeleteAlert: Bool = false
+    var isDeleting: Bool = false
+    var isDeleted: Bool = false
 
     // MARK: - Computed Properties
 
@@ -90,6 +99,17 @@ struct SpaceDetailState {
         let total = pricePerHour * selectedHours
         return "\(total.formattedWithComma())원"
     }
+}
+
+// MARK: - Server Reservation Info
+
+/// 서버에서 받은 예약 정보 (PDF 표시용)
+struct ServerReservationInfo {
+    let userName: String     // 예약자 닉네임
+    let date: Date           // 예약 날짜
+    let startHour: Int       // 시작 시간
+    let endHour: Int         // 종료 시간
+    let totalPrice: Int      // 총 금액
 }
 
 // MARK: - Int Extension for Price Formatting

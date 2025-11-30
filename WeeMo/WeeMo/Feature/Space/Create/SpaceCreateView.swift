@@ -9,23 +9,38 @@ import SwiftUI
 import PhotosUI
 
 struct SpaceCreateView: View {
-    @StateObject private var store = SpaceCreateStore()
+    let mode: SpaceCreateState.Mode
+    @StateObject private var store: SpaceCreateStore
     @Environment(\.dismiss) private var dismiss
 
-    // 이미지 피커 (다중 선택)
-    @State private var selectedPhotoItems: [PhotosPickerItem] = []
+    // 커스텀 미디어 피커 표시 여부
+    @State private var showMediaPicker = false
+
+    // MARK: - Initializer
+
+    init(mode: SpaceCreateState.Mode = .create) {
+        self.mode = mode
+        _store = StateObject(wrappedValue: SpaceCreateStore(mode: mode))
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
                 VStack(spacing: Spacing.base) {
-                // 이미지 선택
-                ImagePickerSection(
-                    selectedPhotoItems: $selectedPhotoItems,
-                    selectedImages: store.state.selectedImages,
-                    maxImageCount: SpaceCreateState.maxImageCount,
-                    onImageRemove: { index in
-                        store.send(.imageRemoved(at: index))
+                // 미디어 선택 (기존 파일 + 새 미디어)
+                SpaceMediaPickerSection(
+                    title: "공간 미디어 (최대 5개)",
+                    maxCount: SpaceCreateState.maxMediaCount,
+                    existingFileURLs: store.state.existingFileURLs,
+                    selectedMediaItems: store.state.selectedMediaItems,
+                    onAddTapped: {
+                        showMediaPicker = true
+                    },
+                    onRemoveExistingFile: { index in
+                        store.send(.existingFileRemoved(at: index))
+                    },
+                    onRemoveMediaItem: { index in
+                        store.send(.mediaItemRemoved(at: index))
                     }
                 )
                 .padding(.horizontal, Spacing.base)
@@ -164,7 +179,7 @@ struct SpaceCreateView: View {
                             .frame(maxWidth: .infinity)
                             .frame(height: 50)
                     } else {
-                        Text("저장")
+                        Text(store.state.mode.submitButtonText)
                             .font(.app(.subHeadline1))
                             .foregroundColor(.white)
                             .frame(maxWidth: .infinity)
@@ -180,7 +195,7 @@ struct SpaceCreateView: View {
             }
         }
         .background(Color("wmBg"))
-        .navigationTitle("공간 등록")
+        .navigationTitle(store.state.mode.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
@@ -194,22 +209,43 @@ struct SpaceCreateView: View {
                 }
             }
         }
-        .onChange(of: selectedPhotoItems) { oldValue, newValue in
-            Task {
-                // 새로 추가된 아이템만 처리
-                let newItems = newValue.filter { newItem in
-                    !oldValue.contains(where: { $0 == newItem })
-                }
+        .sheet(isPresented: $showMediaPicker) {
+            CustomMediaPickerView(
+                maxSelectionCount: SpaceCreateState.maxMediaCount - store.state.selectedMediaItems.count,
+                onImageSelected: { images in
+                    showMediaPicker = false
 
-                for item in newItems {
-                    if let data = try? await item.loadTransferable(type: Data.self),
-                       let image = UIImage(data: data) {
+                    // 이미지를 MediaItem으로 변환 (압축 포함)
+                    Task {
+                        var mediaItems: [MediaItem] = []
+
+                        for image in images {
+                            if let mediaItem = MediaItem.fromImage(image) {
+                                mediaItems.append(mediaItem)
+                            }
+                        }
+
                         await MainActor.run {
-                            store.send(.imageSelected(image))
+                            store.send(.mediaItemsSelected(mediaItems))
                         }
                     }
+                },
+                onVideoSelected: { videoURL in
+                    showMediaPicker = false
+
+                    // 동영상을 MediaItem으로 변환 (압축 + 썸네일 추출 포함)
+                    Task {
+                        if let mediaItem = await MediaItem.fromVideo(videoURL) {
+                            await MainActor.run {
+                                store.send(.mediaItemsSelected([mediaItem]))
+                            }
+                        }
+                    }
+                },
+                onDismiss: {
+                    showMediaPicker = false
                 }
-            }
+            )
         }
         .onChange(of: store.state.isSubmitSuccessful) { oldValue, newValue in
             if newValue {

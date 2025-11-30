@@ -7,16 +7,23 @@
 
 import SwiftUI
 import PhotosUI
+import Kingfisher
 
 struct ImagePickerSection: View {
     @Binding var selectedPhotoItems: [PhotosPickerItem]
 
-    let selectedImages: [UIImage]
+    let existingImageURLs: [String]  // 기존 서버 이미지 URL
+    let selectedImages: [UIImage]     // 새로 선택한 이미지
     let maxImageCount: Int
-    let onImageRemove: (Int) -> Void
+    let onExistingImageRemove: (Int) -> Void  // 기존 이미지 삭제
+    let onNewImageRemove: (Int) -> Void       // 새 이미지 삭제
+
+    private var totalImageCount: Int {
+        existingImageURLs.count + selectedImages.count
+    }
 
     private var canAddMoreImages: Bool {
-        selectedImages.count < maxImageCount
+        totalImageCount < maxImageCount
     }
 
     var body: some View {
@@ -28,7 +35,7 @@ struct ImagePickerSection: View {
 
                 Spacer()
 
-                Text("\(selectedImages.count)/\(maxImageCount)")
+                Text("\(totalImageCount)/\(maxImageCount)")
                     .font(.app(.content2))
                     .foregroundColor(.textSub)
             }
@@ -36,7 +43,34 @@ struct ImagePickerSection: View {
             // 가로 스크롤 이미지 리스트
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Spacing.medium) {
-                    // 선택된 이미지들
+                    // 기존 서버 이미지들
+                    ForEach(Array(existingImageURLs.enumerated()), id: \.element) { index, urlString in
+                        ZStack(alignment: .topTrailing) {
+                            KFImage(URL(string: urlString))
+                                .placeholder {
+                                    Color.gray.opacity(0.2)
+                                }
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: 120, height: 120)
+                                .clipped()
+                                .cornerRadius(Spacing.radiusMedium)
+
+                            // 삭제 버튼
+                            Button {
+                                onExistingImageRemove(index)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 24))
+                                    .foregroundColor(.white)
+                                    .background(Color.black.opacity(0.6))
+                                    .clipShape(Circle())
+                                    .padding(Spacing.xSmall)
+                            }
+                        }
+                    }
+
+                    // 새로 선택한 이미지들
                     ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, image in
                         ZStack(alignment: .topTrailing) {
                             Image(uiImage: image)
@@ -45,10 +79,10 @@ struct ImagePickerSection: View {
                                 .frame(width: 120, height: 120)
                                 .clipped()
                                 .cornerRadius(Spacing.radiusMedium)
-                            
-                            
+
+                            // 삭제 버튼
                             Button {
-                                onImageRemove(index)
+                                onNewImageRemove(index)
                             } label: {
                                 Image(systemName: "xmark.circle.fill")
                                     .font(.system(size: 24))
@@ -64,7 +98,7 @@ struct ImagePickerSection: View {
                     if canAddMoreImages {
                         PhotosPicker(
                             selection: $selectedPhotoItems,
-                            maxSelectionCount: maxImageCount - selectedImages.count,
+                            maxSelectionCount: maxImageCount - totalImageCount,
                             matching: .images
                         ) {
                             VStack(spacing: Spacing.small) {
@@ -86,7 +120,7 @@ struct ImagePickerSection: View {
             .frame(height: 120)
 
             // 이미지가 없을 때 안내 텍스트
-            if selectedImages.isEmpty {
+            if totalImageCount == 0 {
                 Text("최대 \(maxImageCount)개의 이미지를 선택할 수 있습니다")
                     .font(.app(.content3))
                     .foregroundColor(.textSub)
