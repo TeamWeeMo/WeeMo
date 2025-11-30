@@ -24,9 +24,14 @@ enum MainScreen {
 struct HomeView: View {
 
     @EnvironmentObject var appState: AppState
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showSideMenu = false
     @State private var navigationPath = NavigationPath()
     @State private var currentScreen: MainScreen = .home
+    @State private var showNoticeAlert = false
+    @State private var hasShownNotice = false // 이번 세션에 공지를 이미 표시했는지
+
+    private let configManager = RemoteConfigManager.shared
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -160,6 +165,48 @@ struct HomeView: View {
             .tint(.wmMain)
         }
         .tint(.wmMain)
+        .onChange(of: scenePhase) { oldPhase, newPhase in
+            // 앱이 백그라운드에서 포그라운드로 돌아올 때 플래그 리셋
+            if oldPhase == .background && newPhase == .active {
+                hasShownNotice = false
+            }
+        }
+        .onAppear {
+            // 앱 실행 후 첫 HomeView 진입 시에만 공지사항 체크
+            if !hasShownNotice {
+                fetchAndCheckNotice()
+            }
+        }
+        .alert("공지사항", isPresented: $showNoticeAlert) {
+            if !RemoteConfigManager.shared.homeNoticeLink.isEmpty,
+               let url = URL(string: RemoteConfigManager.shared.homeNoticeLink) {
+                Button("자세히 보기") {
+                    UIApplication.shared.open(url)
+                }
+                Button("확인", role: .cancel) { }
+            } else {
+                Button("확인", role: .cancel) { }
+            }
+        } message: {
+            Text(RemoteConfigManager.shared.homeNoticeMessage)
+        }
+    }
+
+    // MARK: - Private Methods
+
+    /// Remote Config를 fetch하고 공지사항 확인
+    private func fetchAndCheckNotice() {
+        Task { @MainActor in
+            do {
+                try await configManager.fetchConfig()
+                if configManager.homeNoticeEnabled {
+                    showNoticeAlert = true
+                    hasShownNotice = true
+                }
+            } catch {
+                // 에러 발생 시 공지사항 표시 안 함 (조용히 실패)
+            }
+        }
     }
 
     // MARK: - Home Content
