@@ -18,4 +18,5 @@ enum ProfileIntent {
     case loadLikedPosts
     case loadPaidPosts
     case refreshCurrentTab
+    case withdrawTapped
 }

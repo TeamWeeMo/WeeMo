@@ -28,9 +28,12 @@ struct NetworkErrorMapper {
             return .badRequest(serverMessage ?? "필수값을 채워주세요.")
 
         case 401:
-            // 메시지로 구분 (AccessToken vs RefreshToken)
+            // 메시지로 구분 (AccessToken vs RefreshToken vs 로그인 실패)
             if serverMessage?.contains("리프레시") == true {
                 return .invalidRefreshToken
+            } else if let message = serverMessage, !message.isEmpty {
+                // 서버 메시지가 있으면 badRequest로 처리 (로그인 실패 등)
+                return .badRequest(message)
             } else {
                 return .invalidAccessToken
             }

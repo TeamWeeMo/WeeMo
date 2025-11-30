@@ -46,6 +46,10 @@ final class TokenManager {
         _ = KeychainManager.shared.delete(key: userIdKey)
     }
 
+    func deleteTokens() {
+        clearTokens()
+    }
+
     var isLoggedIn: Bool {
         return accessToken != nil && refreshToken != nil
     }

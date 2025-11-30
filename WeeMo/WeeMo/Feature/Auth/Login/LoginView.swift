@@ -26,18 +26,18 @@ struct LoginView: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
-                    // 상단 X 버튼
-                    HStack {
-                        Spacer()
-                        Button {
-                            dismiss()
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 20))
-                                .foregroundStyle(.textMain)
-                        }
-                        .padding()
-                    }
+//                    // 상단 X 버튼
+//                    HStack {
+//                        Spacer()
+//                        Button {
+//                            dismiss()
+//                        } label: {
+//                            Image(systemName: "xmark")
+//                                .font(.system(size: 20))
+//                                .foregroundStyle(.textMain)
+//                        }
+//                        .padding()
+//                    }
 
                     Spacer()
 
@@ -97,17 +97,8 @@ struct LoginView: View {
                             }
 
                             // 애플 로그인
-                            Button {
-                                print("애플 로그인")
-                            } label: {
-                                Circle()
-                                    .fill(.black)
-                                    .frame(width: 70, height: 70)
-                                    .overlay {
-                                        Image(systemName: "apple.logo")
-                                            .font(.system(size: 30))
-                                            .foregroundStyle(.white)
-                                    }
+                            AppleLoginButtonUI { idToken in
+                                loginStore.send(.appleLoginTapped(idToken: idToken))
                             }
                         }
 

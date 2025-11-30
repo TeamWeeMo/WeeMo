@@ -9,6 +9,7 @@ import Foundation
 import Combine
 import KakaoSDKUser
 import KakaoSDKAuth
+import AuthenticationServices
 
 @MainActor
 final class LoginStore: ObservableObject {
@@ -36,6 +37,9 @@ final class LoginStore: ObservableObject {
 
         case .kakaoLoginTapped:
             kakaoLoginTapped()
+
+        case .appleLoginTapped(let idToken):
+            appleLoginTapped(idToken: idToken)
         }
     }
 
@@ -84,9 +88,11 @@ final class LoginStore: ObservableObject {
                     print(error.localizedDescription)
                 }
 
+                // 서버 메시지를 우선적으로 표시
                 switch error {
-                case .invalidInput, .badRequest:
-                    state.loginErrorMessage = "이메일 또는 비밀번호가 올바르지 않습니다"
+                case .invalidInput(let message), .badRequest(let message):
+                    // 서버 메시지가 있으면 그대로, 없으면 기본 메시지
+                    state.loginErrorMessage = message.isEmpty ? "이메일 또는 비밀번호가 올바르지 않습니다" : message
                 default:
                     state.loginErrorMessage = error.localizedDescription
                 }
@@ -157,6 +163,61 @@ extension LoginStore {
                         continuation.resume(returning: token.accessToken)
                     }
                 }
+            }
+        }
+    }
+
+    private func appleLoginTapped(idToken: String) {
+        state.isLoading = true
+        state.loginErrorMessage = nil
+
+        Task {
+            do {
+                print("애플 idToken: \(String(idToken))")
+                print("애플 idToken 전체 길이: \(idToken.count)")
+
+                let result = try await authService.appleLogin(idToken: idToken)
+
+                TokenManager.shared.saveTokens(
+                    accessToken: result.accessToken,
+                    refreshToken: result.refreshToken
+                )
+                TokenManager.shared.saveUserId(result.userId)
+                UserManager.shared.saveNickname(result.nick)
+                UserManager.shared.saveProfileImageURL(result.profileImage)
+
+                print("[LoginStore] 애플 로그인 성공!")
+                print("[LoginStore] userId 저장 완료: \(result.userId)")
+                print("[LoginStore] nickname 저장 완료: \(result.nick)")
+                print("[LoginStore] profileImageURL 저장 완료: \(result.profileImage ?? "nil")")
+                state.isLoading = false
+                state.isLoginSucceeded = true
+            } catch let error as NetworkError {
+                print("======== 애플 로그인 실패 ========")
+                print("NetworkError 타입: \(error)")
+                print("에러 메시지: \(error.localizedDescription)")
+
+                switch error {
+                case .serverError(let message):
+                    print("서버 에러 상세: \(message)")
+                case .badRequest(let message):
+                    print("잘못된 요청: \(message)")
+                case .invalidInput(let message):
+                    print("유효하지 않은 입력: \(message)")
+                default:
+                    print("기타 에러")
+                }
+
+                state.isLoading = false
+                state.loginErrorMessage = error.localizedDescription
+            } catch {
+                print("======== 애플 로그인 알 수 없는 에러 ========")
+                print("에러 타입: \(type(of: error))")
+                print("에러 내용: \(error)")
+                print("에러 localizedDescription: \(error.localizedDescription)")
+
+                state.isLoading = false
+                state.loginErrorMessage = "애플 로그인에 실패했어요"
             }
         }
     }

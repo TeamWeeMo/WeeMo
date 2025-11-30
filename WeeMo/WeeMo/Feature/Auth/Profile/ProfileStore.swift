@@ -15,16 +15,19 @@ final class ProfileStore: ObservableObject {
 
     private let postService: PostServicing
     private let paymentService: PaymentServicing
+    private let authService: AuthServicing
     private let targetUserId: String?  // nil이면 내 프로필, 값이 있으면 해당 유저 프로필
 
     init(
         userId: String? = nil,
         postService: PostServicing = PostService(),
-        paymentService: PaymentServicing = PaymentService()
+        paymentService: PaymentServicing = PaymentService(),
+        authService: AuthServicing = AuthService()
     ) {
         self.targetUserId = userId
         self.postService = postService
         self.paymentService = paymentService
+        self.authService = authService
     }
 
     // 내 프로필인지 확인
@@ -64,6 +67,9 @@ final class ProfileStore: ObservableObject {
 
         case .refreshCurrentTab:
             refreshCurrentTab()
+
+        case .withdrawTapped:
+            withdrawUser()
         }
     }
 
@@ -350,6 +356,35 @@ final class ProfileStore: ObservableObject {
             // 결제한 모임 새로고침
             state.paidPosts = []
             loadPaidPosts()
+        }
+    }
+
+    private func withdrawUser() {
+        print("[ProfileStore] withdrawUser 호출됨")
+
+        state.isWithdrawing = true
+        state.withdrawErrorMessage = nil
+
+        Task {
+            do {
+                let result = try await authService.withdraw()
+                print("[ProfileStore] 회원탈퇴 성공: \(result)")
+
+                // 로컬 데이터 삭제
+                TokenManager.shared.deleteTokens()
+                UserManager.shared.clearUserData()
+
+                state.isWithdrawing = false
+                state.isWithdrawSucceeded = true
+            } catch let error as NetworkError {
+                print("[ProfileStore] 회원탈퇴 에러: \(error)")
+                state.isWithdrawing = false
+                state.withdrawErrorMessage = error.localizedDescription
+            } catch {
+                print("[ProfileStore] 회원탈퇴 에러: \(error)")
+                state.isWithdrawing = false
+                state.withdrawErrorMessage = "회원탈퇴에 실패했어요"
+            }
         }
     }
 }

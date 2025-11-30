@@ -18,6 +18,10 @@ protocol AuthServicing {
     func refreshAccessToken() async throws -> RefreshTokenDTO
 
     func kakaoLogin(accessToken: String) async throws -> AuthDTO
+
+    func appleLogin(idToken: String) async throws -> AuthDTO
+
+    func withdraw() async throws -> UserDTO
 }
 
 struct AuthService: AuthServicing {
@@ -65,6 +69,20 @@ struct AuthService: AuthServicing {
         try await networkService.request(
             AuthRouter.loginKakao(oauthToken: accessToken),
             responseType: AuthDTO.self
+        )
+    }
+
+    func appleLogin(idToken: String) async throws -> AuthDTO {
+        try await networkService.request(
+            AuthRouter.loginApple(idToken: idToken),
+            responseType: AuthDTO.self
+        )
+    }
+
+    func withdraw() async throws -> UserDTO {
+        try await networkService.request(
+            AuthRouter.withdraw,
+            responseType: UserDTO.self
         )
     }
 }
