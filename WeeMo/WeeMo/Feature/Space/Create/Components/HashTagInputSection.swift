@@ -41,7 +41,7 @@ struct HashTagInputSection: View {
             if !hashTags.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: Spacing.small) {
-                        ForEach(hashTags, id: \.self) { tag in
+                        ForEach(Array(hashTags.enumerated()), id: \.offset) { index, tag in
                             HStack(spacing: Spacing.xSmall) {
                                 Text("#\(tag)")
                                     .font(.app(.content2))

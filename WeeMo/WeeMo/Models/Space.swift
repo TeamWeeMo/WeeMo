@@ -24,6 +24,7 @@ struct Space: Identifiable, Hashable {
     let latitude: Double
     let longitude: Double
     let hashTags: [String]  // 서버에서 받은 해시태그
+    let creatorId: String  // 작성자 ID
 
     // Hashable 구현
     func hash(into hasher: inout Hasher) {

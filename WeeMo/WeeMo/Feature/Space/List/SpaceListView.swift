@@ -79,7 +79,7 @@ struct SpaceListView: View {
             .navigationBarTitleDisplayMode(.inline)
             .alert("오류", isPresented: Binding(
                 get: { store.state.errorMessage != nil },
-                set: { if !$0 { store.send(.refresh) } }
+                set: { _ in }
             )) {
                 Button("확인", role: .cancel) { }
             } message: {
@@ -88,18 +88,11 @@ struct SpaceListView: View {
                 }
             }
             .onAppear {
-                // 화면 진입 시 데이터 로드
                 store.send(.viewAppeared)
             }
             .fullScreenCover(isPresented: $isShowingCreateView) {
                 NavigationStack {
                     SpaceCreateView()
-                }
-            }
-            .onChange(of: isShowingCreateView) { oldValue, newValue in
-                // 공간 등록 화면에서 돌아왔을 때 목록 새로고침
-                if !newValue {
-                    store.send(.refresh)
                 }
             }
     }
