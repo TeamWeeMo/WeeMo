@@ -412,7 +412,6 @@ final class MeetEditStore {
 
     private func buildAdditionalFields() -> [String: String] {
         var fields: [String: String] = [:]
-        let formatter = ISO8601DateFormatter()
 
         // value1: 모집인원
         fields["value1"] = String(state.capacity)
@@ -437,11 +436,11 @@ final class MeetEditStore {
             fields["value4"] = "\(space.id)|\(space.title)|\(space.address)|\(imageURL)"
         }
 
-        // value5: 모집 시작일
-        fields["value5"] = formatter.string(from: state.recruitmentStartDate)
+        // value5: 모집 시작일 (ISO8601 with fractional seconds)
+        fields["value5"] = DateFormatterManager.iso8601.string(from: state.recruitmentStartDate)
 
-        // value6: 모집 종료일
-        fields["value6"] = formatter.string(from: state.recruitmentEndDate)
+        // value6: 모집 종료일 (ISO8601 with fractional seconds)
+        fields["value6"] = DateFormatterManager.iso8601.string(from: state.recruitmentEndDate)
 
         return fields
     }

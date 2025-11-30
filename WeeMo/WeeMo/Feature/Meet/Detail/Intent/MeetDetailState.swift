@@ -15,6 +15,10 @@ struct MeetDetailState {
     var isLoading: Bool = false
     var errorMessage: String? = nil
 
+    // MARK: - Like States
+    var isLiked: Bool = false
+    var likeCount: Int = 0
+
     // MARK: - Join States
     var isJoining: Bool = false
     var joinErrorMessage: String? = nil

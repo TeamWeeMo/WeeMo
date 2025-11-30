@@ -346,7 +346,7 @@ final class ProfileStore: ObservableObject {
             state.reservedSpacesNextCursor = nil
             loadReservedSpaces()
 
-        case .groups:
+        case .likeMeets:
             // 찜한 모임 새로고침
             state.likedPosts = []
             state.likedPostsNextCursor = nil

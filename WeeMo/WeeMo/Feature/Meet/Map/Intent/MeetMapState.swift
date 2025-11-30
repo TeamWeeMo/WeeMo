@@ -40,6 +40,7 @@ struct MeetMapState {
     var userLocation: CLLocationCoordinate2D? = nil
     var visibleMeets: [Meet] = [] // 현재 지도 범위 내 모임들 (API로부터)
     var lastAPICallLocation: CLLocationCoordinate2D? = nil // 마지막 API 호출 위치
+    var lastAPICallZoom: Double? = nil // 마지막 API 호출 시 줌 레벨
     var mapVisibleBounds: (minLat: Double, maxLat: Double, minLng: Double, maxLng: Double)? = nil // 현재 지도 영역
 
     // 네비게이션

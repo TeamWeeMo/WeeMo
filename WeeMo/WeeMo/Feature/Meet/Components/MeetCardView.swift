@@ -109,40 +109,48 @@ struct MeetCardView: View {
     // MARK: - Image Section
 
     private var imageSection: some View {
-        Group {
-            // 이미지만 필터링 (동영상 제외)
-            let imageFiles = meet.fileURLs.filter { isImageFile($0) }
-
-            if let firstImageURL = imageFiles.first, !firstImageURL.isEmpty {
-                KFImage(URL(string: FileRouter.fileURL(from: firstImageURL)))
-                    .withAuthHeaders()
-                    .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 200, height: 200)))
-                    .placeholder {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.gray.opacity(0.2))
-                            .overlay(
-                                ProgressView()
-                                    .progressViewStyle(CircularProgressViewStyle(tint: .gray))
-                            )
-                    }
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 100, height: 100)
-                    .clipped()
-                    .cornerRadius(8)
-            } else {
-                imagePlaceholder
+        ZStack(alignment: .bottomLeading) {
+            Group {
+                if let firstImageURL = meet.firstImageURL, !firstImageURL.isEmpty {
+                    KFImage(URL(string: FileRouter.fileURL(from: firstImageURL)))
+                        .withAuthHeaders()
+                        .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 200, height: 200)))
+                        .placeholder {
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.gray.opacity(0.2))
+                                .overlay(
+                                    ProgressView()
+                                        .progressViewStyle(CircularProgressViewStyle(tint: .gray))
+                                )
+                        }
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 100, height: 100)
+                        .clipped()
+                        .cornerRadius(8)
+                } else {
+                    imagePlaceholder
+                }
             }
+
+            // 좋아요 버튼 (왼쪽 아래)
+            likeButton
+                .padding(6)
         }
+        .frame(width: 100, height: 100)
     }
 
-    // MARK: - Helpers
+    private var likeButton: some View {
+        let isLiked = LikeManager.shared.isLiked(postId: meet.id)
 
-    /// URL이 이미지 파일인지 확인
-    private func isImageFile(_ urlString: String) -> Bool {
-        let imageExtensions = ["jpg", "jpeg", "png", "heic", "heif", "webp", "gif"]
-        let lowercased = urlString.lowercased()
-        return imageExtensions.contains { lowercased.hasSuffix(".\($0)") }
+        return Button {
+            LikeManager.shared.toggleLike(postId: meet.id)
+        } label: {
+            Image(systemName: isLiked ? "heart.fill" : "heart")
+                .font(.system(size: 18))
+                .foregroundColor(isLiked ? .red : .white)
+                .shadow(color: .black.opacity(0.3), radius: 2, x: 0, y: 1)
+        }
     }
 
     // MARK: - Placeholders

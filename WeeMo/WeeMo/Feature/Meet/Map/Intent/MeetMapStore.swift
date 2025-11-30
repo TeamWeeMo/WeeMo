@@ -230,6 +230,7 @@ final class MeetMapStore {
                 state.visibleMeets = meets
                 state.meets = meets // 전체 목록도 업데이트 (검색용)
                 state.lastAPICallLocation = center // 마지막 API 호출 위치 저장
+                state.lastAPICallZoom = zoom // 마지막 API 호출 시 줌 레벨 저장
             }
 
         } catch {
@@ -239,20 +240,30 @@ final class MeetMapStore {
         }
     }
 
-    /// API 호출 여부 판단 (최소 이동 거리 체크)
+    /// API 호출 여부 판단 (최소 이동 거리 및 줌 레벨 변경 체크)
     private func shouldCallAPI(newCenter: CLLocationCoordinate2D, newZoom: Double) -> Bool {
-        guard let lastLocation = state.lastAPICallLocation else {
+        guard let lastLocation = state.lastAPICallLocation,
+               let lastZoom = state.lastAPICallZoom else {
             return true // 첫 호출은 무조건 실행
         }
 
-        // 두 좌표 간 거리 계산 (미터 단위)
+        // 1. 줌 레벨 변경 체크 (줌 레벨이 다른 범위로 바뀌었는지)
+        let lastRadius = calculateSearchRadius(zoom: lastZoom)
+        let currentRadius = calculateSearchRadius(zoom: newZoom)
+        
+        // 줌 레벨이 변경되어 검색 반경이 달라진 경우 API 호출
+        if lastRadius != currentRadius {
+            return true
+        }
+
+        // 2. 위치 이동 거리 체크
         let distance = calculateDistance(
             from: lastLocation,
             to: newCenter
         )
 
         // 줌 레벨에 따른 최소 이동 거리 (검색 반경의 30%)
-        let searchRadius = Double(calculateSearchRadius(zoom: newZoom))
+        let searchRadius = Double(currentRadius)
         let minDistance = searchRadius * 0.3
 
         // 최소 거리 이상 이동했으면 API 호출

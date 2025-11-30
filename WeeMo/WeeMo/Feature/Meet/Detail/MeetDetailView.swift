@@ -29,16 +29,9 @@ struct MeetDetailView: View {
     var body: some View {
         content
             .toolbar {
-                if let meet = store.state.meet,
-                   let currentUserId = TokenManager.shared.userId,
-                   currentUserId == meet.creator.userId {
+                if let meet = store.state.meet {
                     ToolbarItem(placement: .navigationBarTrailing) {
-                        Button {
-                            store.send(.showActionSheet)
-                        } label: {
-                            Image(systemName: "ellipsis")
-                                .foregroundColor(Color.wmMain)
-                        }
+                        likeButton(for: meet)
                     }
                 }
             }
@@ -213,13 +206,26 @@ struct MeetDetailView: View {
 
                 VStack(alignment: .leading, spacing: 0) {
                     // 제목과 D-day
-                    HStack {
+                    HStack(alignment: .top, spacing: 8) {
                         Text(meet.title)
                             .font(.app(.subHeadline1))
                             .fontWeight(.semibold)
                             .foregroundColor(.textMain)
                             .lineLimit(2)
 
+                        // 편집 버튼 (본인 글일 때만)
+                        if let currentUserId = TokenManager.shared.userId,
+                           currentUserId == meet.creator.userId {
+                      
+                            Image(systemName: "square.and.pencil")
+                                .buttonWrapper {
+                                    store.send(.showActionSheet)
+                                }
+                                .font(.system(size: 16))
+                                .foregroundColor(.wmMain)
+                                .offset(y: -2)
+                        }
+                        
                         Spacer()
 
                         Text(meet.dDayText)
@@ -453,6 +459,18 @@ struct MeetDetailView: View {
         message += "예약시간: \(meet.spaceReservationScheduleText)\n\n"
         message += "참가비용: \(meet.priceText)"
         return message
+    }
+
+    /// 좋아요 버튼
+    private func likeButton(for meet: Meet) -> some View {
+        let isLiked = LikeManager.shared.isLiked(postId: meet.id)
+        
+        return Image(systemName: isLiked ? "heart.fill" : "heart")
+            .buttonWrapper {
+                LikeManager.shared.toggleLike(postId: meet.id)
+            }
+            .font(.system(size: 16))
+            .foregroundColor(isLiked ? .red : .gray)
     }
 }
 

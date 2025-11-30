@@ -68,10 +68,21 @@ struct Meet: Identifiable, Equatable, Hashable {
 
     // MARK: - 기타
 
-    let likeCount: Int // 좋아요 카운트
+    let likes: [String] // 좋아요한 사용자 ID 배열
     let distance: Double? // 거리 (위치 기반 검색 시)
 
     // MARK: - Computed Properties
+
+    /// 현재 사용자가 좋아요했는지 여부
+    var isLiked: Bool {
+        let currentUserId = TokenManager.shared.userId ?? ""
+        return likes.contains(currentUserId)
+    }
+
+    /// 좋아요 개수
+    var likeCount: Int {
+        likes.count
+    }
 
     /// 모집 완료 여부 (인원이 다 찬 경우)
     var isFullyBooked: Bool {
@@ -168,18 +179,31 @@ struct Meet: Identifiable, Equatable, Hashable {
         if isSameDay {
             // 같은 날: "11월 21일 오후 12시 ~ 오후 2시"
             let dateStr = DateFormatterManager.meetDate.string(from: recruitmentStartDate)
-            let timeFormatter = DateFormatter()
-            timeFormatter.locale = Locale(identifier: "ko_KR")
-            timeFormatter.dateFormat = "a h시"
-
-            let startTime = timeFormatter.string(from: recruitmentStartDate)
-            let endTime = timeFormatter.string(from: recruitmentEndDate)
+            let startTime = DateFormatterManager.koreanTime.string(from: recruitmentStartDate)
+            let endTime = DateFormatterManager.koreanTime.string(from: recruitmentEndDate)
             return "\(dateStr) \(startTime) ~ \(endTime)"
         } else {
-            // 다른 날: "11월 20일 오후 1시 ~ 11월 21일 오후 2시"
-            let startStr = DateFormatterManager.koreanDateTime.string(from: recruitmentStartDate)
-            let endStr = DateFormatterManager.koreanDateTime.string(from: recruitmentEndDate)
-            return "\(startStr) ~ \(endStr)"
+            // 다른 날: "11월 28일 오후 6시 ~ 12월 5일 오후 6시"
+            let startDate = DateFormatterManager.koreanDateOnly.string(from: recruitmentStartDate)
+            let startTime = DateFormatterManager.koreanTime.string(from: recruitmentStartDate)
+            let endDate = DateFormatterManager.koreanDateOnly.string(from: recruitmentEndDate)
+            let endTime = DateFormatterManager.koreanTime.string(from: recruitmentEndDate)
+
+            return "\(startDate) \(startTime) ~ \(endDate) \(endTime)"
         }
+    }
+
+    /// 이미지 파일만 필터링 (동영상 제외)
+    var imageFileURLs: [String] {
+        fileURLs.filter { urlString in
+            let imageExtensions = ["jpg", "jpeg", "png", "heic", "heif", "webp", "gif"]
+            let lowercased = urlString.lowercased()
+            return imageExtensions.contains { lowercased.hasSuffix(".\($0)") }
+        }
+    }
+
+    /// 첫 번째 이미지 파일 URL (동영상 제외)
+    var firstImageURL: String? {
+        imageFileURLs.first
     }
 }
