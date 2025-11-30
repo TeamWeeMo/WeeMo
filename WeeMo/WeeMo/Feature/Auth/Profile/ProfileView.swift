@@ -295,7 +295,13 @@ struct ProfileView: View {
                                     .frame(maxWidth: .infinity)
                             } else {
                                 ProfileGridSection(columnCount: 3, items: profileStore.state.reservedSpaces.map { post in
-                                    let imageURL = post.files.first.map { FileRouter.fileURL(from: $0) }
+                                    // 이미지 파일만 필터링 (동영상 제외)
+                                    let imageExtensions = ["jpg", "jpeg", "png", "heic", "heif", "webp", "gif"]
+                                    let firstImageFile = post.files.first { urlString in
+                                        let lowercased = urlString.lowercased()
+                                        return imageExtensions.contains { lowercased.hasSuffix(".\($0)") }
+                                    }
+                                    let imageURL = firstImageFile.map { FileRouter.fileURL(from: $0) }
                                     return (title: post.title, imageURL: imageURL)
                                 })
                             }

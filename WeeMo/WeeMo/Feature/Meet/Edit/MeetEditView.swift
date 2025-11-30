@@ -342,6 +342,8 @@ struct MeetEditView: View {
             title: "모임 미디어 (최대 5개)",
             maxCount: 5,
             selectedMediaItems: store.state.selectedMediaItems,
+            existingMediaURLs: store.state.existingMediaURLs,
+            shouldKeepExistingMedia: store.state.shouldKeepExistingMedia,
             onAddTapped: {
                 showCustomMediaPicker = true
             },
@@ -349,6 +351,9 @@ struct MeetEditView: View {
                 var items = store.state.selectedMediaItems
                 items.remove(at: index)
                 store.send(.selectMediaItems(items))
+            },
+            onRemoveExistingMedia: { index in
+                store.send(.removeExistingMedia(at: index))
             }
         )
     }

@@ -252,6 +252,13 @@ final class MeetEditStore {
         state.pricePerPerson = meet.pricePerPerson
         state.existingMediaURLs = meet.fileURLs
         state.shouldKeepExistingMedia = true
+
+        // 예약 정보 파싱 (reservationInfo: "yyyyMMddHHmm,totalHours")
+        if let parsed = ReservationFormatter.parseReservationISO("#\(meet.reservationInfo)") {
+            state.reservationDate = parsed.date
+            state.reservationStartHour = parsed.startHour
+            state.reservationTotalHours = parsed.totalHours
+        }
     }
 
     /// 수정 모드에서 공간 정보 불러오기
