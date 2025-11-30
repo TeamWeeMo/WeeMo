@@ -88,9 +88,11 @@ final class LoginStore: ObservableObject {
                     print(error.localizedDescription)
                 }
 
+                // 서버 메시지를 우선적으로 표시
                 switch error {
-                case .invalidInput, .badRequest:
-                    state.loginErrorMessage = "이메일 또는 비밀번호가 올바르지 않습니다"
+                case .invalidInput(let message), .badRequest(let message):
+                    // 서버 메시지가 있으면 그대로, 없으면 기본 메시지
+                    state.loginErrorMessage = message.isEmpty ? "이메일 또는 비밀번호가 올바르지 않습니다" : message
                 default:
                     state.loginErrorMessage = error.localizedDescription
                 }
