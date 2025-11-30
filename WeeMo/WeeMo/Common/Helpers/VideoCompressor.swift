@@ -31,7 +31,7 @@ enum VideoCompressor {
             let cgImage = try imageGenerator.copyCGImage(at: time, actualTime: nil)
             return UIImage(cgImage: cgImage)
         } catch {
-            print("⚠️ [VideoCompressor] 썸네일 추출 실패: \(error.localizedDescription)")
+            print("[VideoCompressor] 썸네일 추출 실패: \(error.localizedDescription)")
             return nil
         }
     }
@@ -48,7 +48,7 @@ enum VideoCompressor {
 
         // 1. 원본 파일 크기 확인
         guard let originalSize = fileSize(of: url) else {
-            print("⚠️ [VideoCompressor] 파일 크기 확인 실패")
+            print("[VideoCompressor] 파일 크기 확인 실패")
             return nil
         }
 
@@ -72,7 +72,7 @@ enum VideoCompressor {
                     print("✅ [VideoCompressor] 압축 성공: \(compressedData.count / 1024 / 1024)MB (프리셋: \(preset))")
                     return compressedData
                 } else {
-                    print("⚠️ [VideoCompressor] 압축 후에도 용량 초과: \(compressedData.count / 1024 / 1024)MB")
+                    print("[VideoCompressor] 압축 후에도 용량 초과: \(compressedData.count / 1024 / 1024)MB")
                 }
             }
         }
@@ -103,7 +103,7 @@ enum VideoCompressor {
 
         // Export Session 생성
         guard let exportSession = AVAssetExportSession(asset: asset, presetName: preset) else {
-            print("⚠️ [VideoCompressor] Export Session 생성 실패")
+            print("[VideoCompressor] Export Session 생성 실패")
             return nil
         }
 
@@ -127,7 +127,7 @@ enum VideoCompressor {
         switch exportSession.status {
         case .completed:
             guard let data = try? Data(contentsOf: outputURL) else {
-                print("⚠️ [VideoCompressor] 압축된 파일 읽기 실패")
+                print("[VideoCompressor] 압축된 파일 읽기 실패")
                 return nil
             }
 
@@ -137,11 +137,11 @@ enum VideoCompressor {
             return data
 
         case .failed:
-            print("⚠️ [VideoCompressor] 압축 실패: \(exportSession.error?.localizedDescription ?? "Unknown")")
+            print("[VideoCompressor] 압축 실패: \(exportSession.error?.localizedDescription ?? "Unknown")")
             return nil
 
         case .cancelled:
-            print("⚠️ [VideoCompressor] 압축 취소됨")
+            print("[VideoCompressor] 압축 취소됨")
             return nil
 
         default:

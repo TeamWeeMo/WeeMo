@@ -391,7 +391,7 @@ struct VideoEditorView: View {
             }
 
             if !isValidFileSize {
-                Text("⚠️ 파일 크기가 10MB를 초과합니다. 영상 길이를 줄이거나 화질을 낮춰주세요.")
+                Text("파일 크기가 10MB를 초과합니다. 영상 길이를 줄이거나 화질을 낮춰주세요.")
                     .font(.app(.subContent2))
                     .foregroundStyle(.red)
             }
@@ -448,7 +448,7 @@ struct VideoEditorView: View {
                     estimateFileSize()
                 }
             } catch {
-                print("⚠️ [VideoEditor] 메타데이터 로드 실패: \(error)")
+                print("[VideoEditor] 메타데이터 로드 실패: \(error)")
             }
         }
     }

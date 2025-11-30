@@ -88,18 +88,32 @@ final class ChatDetailStore: ObservableObject {
             return
         }
 
-        // 새 메시지 추가
-        state.messages.append(newMessage)
-        state.messages.sort { $0.createdAt < $1.createdAt }
+        // 중복 체크 후 새 메시지 추가
+        if !state.messages.contains(where: { $0.id == newMessage.id }) {
+            state.messages.append(newMessage)
+            state.messages.sort { $0.createdAt < $1.createdAt }
+            print("새 메시지 추가 완료: \(newMessage.content)")
+        } else {
+            print("중복 메시지 무시: \(newMessage.id)")
+            return
+        }
         state.shouldScrollToBottom = true
 
         // 강제 UI 업데이트
         objectWillChange.send()
 
-        print("새 메시지 추가됨: \(newMessage.content) | 총 메시지 수: \(state.messages.count)")
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MM-dd HH:mm"
+        print("새 메시지 추가됨: \(newMessage.content) | 시간: \(formatter.string(from: newMessage.createdAt)) | 총 메시지 수: \(state.messages.count)")
+
+        // 마지막 몇 개 메시지 확인
+        let lastFew = state.messages.suffix(3)
+        for (index, message) in lastFew.enumerated() {
+            print("  마지막[\(index)]: \(formatter.string(from: message.createdAt)) - \(message.content)")
+        }
 
 
-        // 30일 정책에 따른 로컬 DB 저장 (백그라운드)
+        // 소켓 메시지를 로컬에 즉시 저장 (백그라운드)
         Task.detached {
             await self.saveMessageToLocal(newMessage)
         }
@@ -110,44 +124,78 @@ final class ChatDetailStore: ObservableObject {
     private func loadMessages(roomId: String) {
         state.isLoading = true
         state.errorMessage = nil
+        print("ChatDetailStore.loadMessages 시작 - roomId: \(roomId)")
 
         Task {
             do {
-                let calendar = Calendar.current
-                let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-
-                // 1. 30일 이전 메시지는 Realm에서 로드
-                let localOldMessages = chatService.getLocalMessages(roomId: roomId).filter {
-                    $0.createdAt <= thirtyDaysAgo
-                }
+                print("ChatService.fetchMessages 호출 전")
+                let fetchedMessages = try await chatService.fetchMessages(roomId: roomId)
+                print("ChatService.fetchMessages 응답: \(fetchedMessages.count)개 메시지")
 
                 await MainActor.run {
-                    state.messages = localOldMessages
-                    print("Realm에서 30일 이전 메시지 \(localOldMessages.count)개 로드")
-                }
+                    print("MainActor에서 UI 업데이트 시작")
 
-                // 2. 30일 이후(최근) 메시지는 서버에서 조회
-                let recentServerMessages = try await chatService.fetchMessages(
-                    roomId: roomId,
-                    cursorDate: nil // 모든 메시지 조회 후 필터링
-                )
+                    // 강력한 중복 제거: ID와 내용 기준으로 유니크하게 만들기
+                    var seenIds = Set<String>()
+                    let uniqueMessages = fetchedMessages.filter { message in
+                        if seenIds.contains(message.id) {
+                            print("중복 ID 제거: \(message.id) - \(message.content)")
+                            return false
+                        } else {
+                            seenIds.insert(message.id)
+                            return true
+                        }
+                    }
 
-                await MainActor.run {
-                    // 30일 이후(최근) 메시지만 필터링
-                    let recentMessages = recentServerMessages.filter { $0.createdAt > thirtyDaysAgo }
+                    let sortedMessages = uniqueMessages.sorted { $0.createdAt < $1.createdAt }
+                    print("강력한 중복 제거 완료: \(fetchedMessages.count) -> \(sortedMessages.count)개")
 
-                    // Realm(30일 이전) + 서버(30일 이후) 메시지 병합
-                    var finalMessages = localOldMessages
-                    finalMessages.append(contentsOf: recentMessages)
+                    // state 업데이트
+                    print("state.messages 업데이트 전: \(state.messages.count)개")
+                    state.messages = sortedMessages
+                    print("state.messages 업데이트 후: \(state.messages.count)개")
 
-                    // 시간순 정렬 (오래된 것부터)
-                    finalMessages.sort { $0.createdAt < $1.createdAt }
-
-                    state.messages = finalMessages
-                    state.shouldScrollToBottom = true
                     state.isLoading = false
 
-                    print("메시지 로드 완료: Realm(30일 이전) \(localOldMessages.count)개 + 서버(30일 이후) \(recentMessages.count)개 = 총 \(finalMessages.count)개")
+                    // 강제 UI 업데이트 후 즉시 스크롤
+                    objectWillChange.send()
+                    print("objectWillChange.send() 호출 완료")
+
+                    // 메시지가 있으면 UI 업데이트 후 스크롤
+                    if !sortedMessages.isEmpty {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            self.state.shouldScrollToBottom = true
+                            print("shouldScrollToBottom 지연 설정 (0.3초)")
+                        }
+                    }
+
+                    // 디버그: 메시지 로드 및 state 확인
+                    print("=== 메시지 로드 디버그 ===")
+                    print("서버에서 받은 메시지: \(fetchedMessages.count)개")
+                    print("중복제거 후: \(sortedMessages.count)개")
+                    print("state.messages 설정: \(state.messages.count)개")
+                    print("shouldScrollToBottom: \(state.shouldScrollToBottom)")
+                    print("isLoading: \(state.isLoading)")
+
+                    if !state.messages.isEmpty {
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = "MM-dd HH:mm:ss"
+                        formatter.timeZone = TimeZone.current
+
+                        print("=== 처음 3개 메시지 ===")
+                        for (index, message) in state.messages.prefix(3).enumerated() {
+                            print("[\(index)] \(formatter.string(from: message.createdAt)): \(message.content)")
+                        }
+
+                        print("=== 마지막 3개 메시지 ===")
+                        for (index, message) in state.messages.suffix(3).enumerated() {
+                            let actualIndex = state.messages.count - 3 + index
+                            print("[\(actualIndex)] \(formatter.string(from: message.createdAt)): \(message.content)")
+                        }
+                    } else {
+                        print("state.messages가 비어있음!")
+                    }
+                    print("========================")
                 }
 
             } catch {
@@ -160,18 +208,6 @@ final class ChatDetailStore: ObservableObject {
         }
     }
 
-    // 로컬과 서버의 오래된 메시지 병합 (중복 제거)
-    private func mergeOldMessages(local: [ChatMessage], server: [ChatMessage]) -> [ChatMessage] {
-        var merged = local
-
-        for serverMessage in server {
-            if !merged.contains(where: { $0.id == serverMessage.id }) {
-                merged.append(serverMessage)
-            }
-        }
-
-        return merged.sorted { $0.createdAt < $1.createdAt }
-    }
 
     private func loadMoreMessages(beforeMessageId: String) {
         guard !state.isLoadingMore && state.hasMoreMessages else { return }
@@ -225,7 +261,7 @@ final class ChatDetailStore: ObservableObject {
         state.inputText = "" // 입력창 즉시 클리어
         state.isSendingMessage = true
 
-        // 소켓에서만 메시지 추가
+        // 전송 후 즉시 UI 업데이트
         Task {
             do {
                 let sentMessage = try await chatService.sendMessage(
@@ -235,9 +271,16 @@ final class ChatDetailStore: ObservableObject {
                 )
 
                 await MainActor.run {
+                    // 중복 방지
+                    if !state.messages.contains(where: { $0.id == sentMessage.id }) {
+                        state.messages.append(sentMessage)
+                        state.messages.sort { $0.createdAt < $1.createdAt }
+                        state.shouldScrollToBottom = true
+                        print("전송한 메시지 UI에 추가: \(sentMessage.content)")
+                    }
+
                     state.isSendingMessage = false
                     print("메시지 전송 성공: \(sentMessage.content)")
-                    // 소켓에서 메시지를 받아서 화면에 표시됨
                 }
 
             } catch {
@@ -296,22 +339,6 @@ final class ChatDetailStore: ObservableObject {
 
     // MARK: - Cleanup Methods
 
-    /// 30일 이후(최근) 메시지를 Realm에서 정리 (앱 시작 시 호출)
-    /// 30일 정책: 30일 이전 메시지는 Realm 저장, 30일 이후(최근) 메시지는 서버에서만 관리
-    func cleanupRecentMessages() {
-        Task {
-            let calendar = Calendar.current
-            let thirtyDaysAgo = calendar.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-
-            do {
-                // 30일 이후(최근) 메시지들을 Realm에서 삭제 (서버에서 관리하므로)
-                try ChatRealmService.shared.deleteMessagesAfter(date: thirtyDaysAgo, roomId: state.room.id)
-                print("30일 이후(최근) 메시지 Realm에서 정리 완료 (서버에서 관리)")
-            } catch {
-                print("30일 이후 메시지 정리 실패: \(error)")
-            }
-        }
-    }
 
     // MARK: - Camera Methods
 
