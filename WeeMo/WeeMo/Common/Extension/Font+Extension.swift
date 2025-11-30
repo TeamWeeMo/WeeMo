@@ -31,6 +31,7 @@ enum AppTextStyle {
     case headline1 // Bold, 24
     case headline2  // Bold, 20
     case headline3  // Medium, 20
+    case headline4  // Bold 18
     case subHeadline1 // Medium, 18
     case subHeadline2 // Medium, 16
     case content1 // Regular, 16
@@ -88,6 +89,9 @@ struct AppTypography {
         case .subContent4:
             return .init(name: WeeMoFont.light,
                          size: AppFontSize.s10.rawValue)
+        case .headline4:
+            return .init(name: WeeMoFont.bold,
+                         size: AppFontSize.s18.rawValue)
         }
     }
 }

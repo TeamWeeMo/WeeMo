@@ -1,0 +1,314 @@
+//
+//  NetworkService.swift
+//  WeeMo
+//
+//  Created by Watson22_YJ on 11/13/25.
+//
+
+import Foundation
+import Alamofire
+import Combine
+
+// MARK: - Network Service Implementation
+
+/// 네트워크 요청을 처리하는 서비스 (기본 구현)
+final class NetworkService: NetworkServiceProtocol {
+    // MARK: - Properties
+
+    private let session: Session
+    private let maxRetryCount = 3
+
+    // MARK: - Initializer
+
+    init(session: Session? = nil) {
+        if let session = session {
+            self.session = session
+        } else {
+            let interceptor = AuthInterceptor()
+            self.session = Session(interceptor: interceptor)
+        }
+    }
+
+    // MARK: - Request Methods
+
+    /// 기본 요청 (Decodable 응답)
+    func request<T: Decodable>(
+        _ router: APIRouter,
+        responseType: T.Type
+    ) async throws -> T {
+        return try await requestWithRetry(router: router, responseType: responseType, retryCount: 0)
+    }
+
+    /// 재시도 로직이 포함된 내부 요청 메서드
+    private func requestWithRetry<T: Decodable>(
+        router: APIRouter,
+        responseType: T.Type,
+        retryCount: Int
+    ) async throws -> T {
+        do {
+            return try await withCheckedThrowingContinuation { continuation in
+                session.request(router)
+                    .validate()
+                    .responseDecodable(of: T.self) { response in
+                        switch response.result {
+                        case .success(let data):
+                            continuation.resume(returning: data)
+
+                        case .failure(let error):
+                            let networkError = self.handleError(response: response.response, error: error, data: response.data)
+                            continuation.resume(throwing: networkError)
+                        }
+                    }
+            }
+        } catch let error as NetworkError {
+            // 재시도 가능 여부 확인
+            if error.shouldRetry && retryCount < maxRetryCount {
+                let delay = error.retryDelay
+                print("[NetworkService] \(error) - \(delay)초 후 재시도 (\(retryCount + 1)/\(maxRetryCount))")
+
+                try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                return try await requestWithRetry(router: router, responseType: responseType, retryCount: retryCount + 1)
+            }
+
+            // 재시도 불가능하거나 최대 재시도 횟수 초과
+            throw error
+        } catch {
+            // NetworkError가 아닌 에러는 그대로 throw
+            throw error
+        }
+    }
+
+    /// Void 응답 (응답 바디 없음)
+    func request(_ router: APIRouter) async throws {
+        return try await withCheckedThrowingContinuation { continuation in
+            session.request(router)
+                .validate()
+                .response { response in
+                    if let error = response.error {
+                        let networkError = self.handleError(response: response.response, error: error, data: response.data)
+                        continuation.resume(throwing: networkError)
+                    } else {
+                        continuation.resume()
+                    }
+                }
+        }
+    }
+
+    /// 파일 업로드 (Multipart) - 파일 메타데이터 포함
+    func multipartUpload<T: Decodable>(
+        _ router: APIRouter,
+        files: [(data: Data, fileName: String, mimeType: String)],
+        responseType: T.Type
+    ) async throws -> T {
+        return try await withCheckedThrowingContinuation { continuation in
+            session.upload(
+                multipartFormData: { multipartFormData in
+                    for file in files {
+                        multipartFormData.append(
+                            file.data,
+                            withName: "files",
+                            fileName: file.fileName,
+                            mimeType: file.mimeType
+                        )
+                    }
+                },
+                with: router
+            )
+            .validate()
+            .responseDecodable(of: T.self) { response in
+                switch response.result {
+                case .success(let data):
+                    continuation.resume(returning: data)
+
+                case .failure(let error):
+                    let networkError = self.handleError(response: response.response, error: error, data: response.data)
+                    continuation.resume(throwing: networkError)
+                }
+            }
+        }
+    }
+
+    /// 파일 업로드 (Multipart) - 레거시: Data 배열만 받는 경우
+    func upload<T: Decodable>(
+        _ router: APIRouter,
+        images: [Data],
+        responseType: T.Type
+    ) async throws -> T {
+        return try await withCheckedThrowingContinuation { continuation in
+            session.upload(
+                multipartFormData: { multipartFormData in
+                    for (index, fileData) in images.enumerated() {
+                        let fileInfo = self.detectFileType(from: fileData)
+
+                        multipartFormData.append(
+                            fileData,
+                            withName: "files",
+                            fileName: "file_\(index)\(fileInfo.extension)",
+                            mimeType: fileInfo.mimeType
+                        )
+                    }
+                },
+                with: router
+            )
+            .validate()
+            .responseDecodable(of: T.self) { response in
+                switch response.result {
+                case .success(let data):
+                    continuation.resume(returning: data)
+
+                case .failure(let error):
+                    let networkError = self.handleError(response: response.response, error: error, data: response.data)
+                    continuation.resume(throwing: networkError)
+                }
+            }
+        }
+    }
+
+    /// 미디어 파일 업로드 (이미지/영상 구분)
+    func uploadMedia<T: Decodable>(
+        _ router: APIRouter,
+        mediaFiles: [Data],
+        responseType: T.Type
+    ) async throws -> T {
+        return try await withCheckedThrowingContinuation { continuation in
+            session.upload(
+                multipartFormData: { multipartFormData in
+                    for (index, mediaData) in mediaFiles.enumerated() {
+                        let (fileName, mimeType) = self.detectMediaType(data: mediaData, index: index)
+                        multipartFormData.append(
+                            mediaData,
+                            withName: "files",
+                            fileName: fileName,
+                            mimeType: mimeType
+                        )
+                    }
+                },
+                with: router
+            )
+            .validate()
+            .responseDecodable(of: T.self) { response in
+                switch response.result {
+                case .success(let data):
+                    continuation.resume(returning: data)
+
+                case .failure(let error):
+                    let networkError = self.handleError(response: response.response, error: error, data: response.data)
+                    continuation.resume(throwing: networkError)
+                }
+            }
+        }
+    }
+
+    /// 미디어 데이터 타입 감지
+    private func detectMediaType(data: Data, index: Int) -> (fileName: String, mimeType: String) {
+        guard data.count > 12 else {
+            return ("file_\(index)", "application/octet-stream")
+        }
+
+        let bytes = data.prefix(12)
+        let signature = bytes.map { String(format: "%02x", $0) }.joined()
+        let sig = signature.lowercased()
+
+        // 이미지 포맷
+        if sig.hasPrefix("ffd8ff") {
+            return ("image_\(index).jpg", "image/jpeg")
+        }
+        if sig.hasPrefix("89504e47") {
+            return ("image_\(index).png", "image/png")
+        }
+        if sig.hasPrefix("47494638") {
+            return ("image_\(index).gif", "image/gif")
+        }
+        if sig.hasPrefix("52494646") {
+            return ("image_\(index).webp", "image/webp")
+        }
+
+        // 영상 파일은 MP4로 처리
+        return ("video_\(index).mp4", "video/mp4")
+    }
+
+    /// 파일 다운로드 (이미지, 비디오 등)
+    func downloadFile(_ router: APIRouter) async throws -> Data {
+        return try await withCheckedThrowingContinuation { continuation in
+            session.request(router)
+                .validate()
+                .responseData { response in
+                    switch response.result {
+                    case .success(let data):
+                        continuation.resume(returning: data)
+
+                    case .failure(let error):
+                        let networkError = self.handleError(response: response.response, error: error, data: response.data)
+                        continuation.resume(throwing: networkError)
+                    }
+                }
+        }
+    }
+
+    // MARK: - Helper(파일 타입 감지)
+    private func detectFileType(from data: Data) -> (extension: String, mimeType: String) {
+        guard data.count >= 12 else {
+            return ("jpg", "image/jpeg")
+        }
+
+        let bytes = [UInt8](data.prefix(12))
+
+        // MP4 체크
+        if bytes.count >= 12,
+           bytes[4] == 0x66, bytes[5] == 0x74, bytes[6] == 0x79, bytes[7] == 0x70 {
+            // "ftyp" signature (MP4/MOV)
+            return (".mp4", "video/mp4")
+        }
+
+        // JPEG 체크
+        if bytes.count >= 2,
+           bytes[0] == 0xFF, bytes[1] == 0xD8 {
+            return (".jpg", "image/jpeg")
+        }
+
+        // PNG 체크
+        if bytes.count >= 8,
+           bytes[0] == 0x89, bytes[1] == 0x50, bytes[2] == 0x4E, bytes[3] == 0x47 {
+            return (".png", "image/png")
+        }
+
+        // 기본값 (JPEG)
+        return (".jpg", "image/jpeg")
+    }
+
+    // MARK: - Error Handling
+
+    private func handleError(
+        response: HTTPURLResponse?,
+        error: AFError,
+        data: Data?
+    ) -> NetworkError {
+        guard let statusCode = response?.statusCode else {
+            return .unknown(error)
+        }
+
+        // NetworkErrorMapper를 통해 상태 코드와 서버 메시지를 NetworkError로 변환
+        return NetworkErrorMapper.map(
+            statusCode: statusCode,
+            data: data,
+            afError: error
+        )
+    }
+
+    // MARK: - Combine Support
+
+    /// Combine Publisher 방식 요청
+    func requestPublisher<T: Decodable>(
+        _ router: APIRouter,
+        responseType: T.Type
+    ) -> AnyPublisher<T, NetworkError> {
+        return session.request(router)
+            .validate()
+            .publishDecodable(type: T.self)
+            .value()
+            .mapError { error in
+                return .unknown(error)
+            }
+            .eraseToAnyPublisher()
+    }
+}

@@ -1,0 +1,327 @@
+//
+//  ChatBubbleView.swift
+//  WeeMo
+//
+//  Created by 차지용 on 11/25/25.
+//
+
+import SwiftUI
+import Kingfisher
+import AVKit
+
+// MARK: - Chat Bubble Component
+
+/// 채팅 말풍선 컴포넌트
+struct ChatBubble: View {
+    let message: ChatMessage
+    let isMine: Bool
+    let showTime: Bool
+    let onImageGalleryTap: (([String], Int) -> Void)?
+    let onProfileTap: ((User) -> Void)?
+
+    var body: some View {
+        HStack(alignment: .bottom, spacing: Spacing.small) {
+            if isMine {
+                // 내 메시지: 오른쪽 정렬
+                Spacer(minLength: 60)
+                timeLabel
+                bubbleContent
+            } else {
+                // 상대방 메시지: 왼쪽 정렬
+                profileImageView
+                VStack(alignment: .leading, spacing: 2) {
+                    // 상대방 이름
+                    Text(message.sender.nickname)
+                        .font(.app(.subContent2))
+                        .foregroundStyle(.textSub)
+                        .padding(.leading, 4)
+
+                    HStack(alignment: .bottom, spacing: Spacing.small) {
+                        bubbleContent
+                        timeLabel
+                    }
+                }
+                Spacer(minLength: 60)
+            }
+        }
+        .padding(.horizontal, Spacing.base)
+    }
+
+    // MARK: - Subviews
+
+    private var profileImageView: some View {
+        Button(action: {
+            onProfileTap?(message.sender)
+        }) {
+            Group {
+                if let profileURL = message.sender.profileImageURL,
+                   let url = URL(string: FileRouter.fileURL(from: profileURL)) {
+                    KFImage(url)
+                        .withAuthHeaders()
+                        .placeholder {
+                            Circle()
+                                .fill(Color.gray.opacity(0.3))
+                        }
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 38, height: 38)
+                        .clipShape(Circle())
+                } else {
+                    Circle()
+                        .fill(Color.gray.opacity(0.3))
+                        .frame(width: 38, height: 38)
+                        .overlay {
+                            Image(systemName: "person.fill")
+                                .foregroundStyle(.gray)
+                                .font(.system(size: 20))
+                        }
+                }
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private var bubbleContent: some View {
+        VStack(alignment: isMine ? .trailing : .leading, spacing: Spacing.xSmall) {
+            if message.hasMedia {
+                // 이미지/영상 메시지
+                imageContentView
+            }
+
+            if !message.content.isEmpty {
+                // 텍스트 메시지
+                textContentView
+            }
+        }
+    }
+
+    private var timeLabel: some View {
+        Group {
+            if showTime {
+                Text(message.createdAt.chatTimeString())
+                    .font(.app(.subContent2))
+                    .foregroundStyle(.textSub)
+            }
+        }
+    }
+
+    private var textContentView: some View {
+        Text(message.content)
+            .font(.app(.content2))
+            .foregroundStyle(isMine ? .white : .textMain)
+            .padding(.horizontal, Spacing.medium)
+            .padding(.vertical, Spacing.small)
+            .background(isMine ? Color("wmMain") : Color("wmGray"))
+            .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusMedium))
+    }
+
+    private var imageContentView: some View {
+        ChatMediaGrid(
+            mediaFiles: message.files,
+            onImageTap: { images, index in
+                onImageGalleryTap?(images, index)
+            }
+        )
+    }
+}
+
+// MARK: - Chat Media Grid
+
+struct ChatMediaGrid: View {
+    let mediaFiles: [String]
+    let onImageTap: (([String], Int) -> Void)?
+
+    var body: some View {
+        Group {
+            switch mediaFiles.count {
+            case 1:
+                singleImageView
+            case 2:
+                twoImagesView
+            case 3:
+                threeImagesView
+            case 4...:
+                fourOrMoreImagesView
+            default:
+                EmptyView()
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: Spacing.radiusMedium))
+    }
+
+    // MARK: - Image Layouts
+
+    private var singleImageView: some View {
+        ChatMediaItem(
+            mediaURL: mediaFiles[0],
+            onTap: { onImageTap?(mediaFiles, 0) }
+        )
+        .frame(width: 150, height: 150)
+        .aspectRatio(1, contentMode: .fill)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private var twoImagesView: some View {
+        HStack(spacing: 2) {
+            ForEach(Array(mediaFiles.prefix(2).enumerated()), id: \.offset) { index, mediaFile in
+                ChatMediaItem(
+                    mediaURL: mediaFile,
+                    onTap: { onImageTap?(mediaFiles, index) }
+                )
+                .frame(width: 100, height: 100)
+                .aspectRatio(1, contentMode: .fill)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
+        }
+    }
+
+    private var threeImagesView: some View {
+        HStack(spacing: 2) {
+            ChatMediaItem(
+                mediaURL: mediaFiles[0],
+                onTap: { onImageTap?(mediaFiles, 0) }
+            )
+            .frame(width: 100, height: 100)
+            .aspectRatio(1, contentMode: .fill)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+
+            VStack(spacing: 2) {
+                ChatMediaItem(
+                    mediaURL: mediaFiles[1],
+                    onTap: { onImageTap?(mediaFiles, 1) }
+                )
+                .frame(width: 49, height: 49)
+                .aspectRatio(1, contentMode: .fill)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                ChatMediaItem(
+                    mediaURL: mediaFiles[2],
+                    onTap: { onImageTap?(mediaFiles, 2) }
+                )
+                .frame(width: 49, height: 49)
+                .aspectRatio(1, contentMode: .fill)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
+        }
+    }
+
+    private var fourOrMoreImagesView: some View {
+        VStack(spacing: 2) {
+            HStack(spacing: 2) {
+                ChatMediaItem(
+                    mediaURL: mediaFiles[0],
+                    onTap: { onImageTap?(mediaFiles, 0) }
+                )
+                .frame(width: 75, height: 75)
+                .aspectRatio(1, contentMode: .fill)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                ChatMediaItem(
+                    mediaURL: mediaFiles[1],
+                    onTap: { onImageTap?(mediaFiles, 1) }
+                )
+                .frame(width: 75, height: 75)
+                .aspectRatio(1, contentMode: .fill)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+            }
+
+            HStack(spacing: 2) {
+                ChatMediaItem(
+                    mediaURL: mediaFiles[2],
+                    onTap: { onImageTap?(mediaFiles, 2) }
+                )
+                .frame(width: 75, height: 75)
+                .aspectRatio(1, contentMode: .fill)
+                .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                ZStack {
+                    ChatMediaItem(
+                        mediaURL: mediaFiles[3],
+                        onTap: { onImageTap?(mediaFiles, 3) }
+                    )
+                    .frame(width: 75, height: 75)
+                    .aspectRatio(1, contentMode: .fill)
+                    .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                    if mediaFiles.count > 4 {
+                        Rectangle()
+                            .fill(Color.black.opacity(0.6))
+                            .frame(width: 75, height: 75)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+
+                        Text("+\(mediaFiles.count - 4)")
+                            .font(.app(.subContent1))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .onTapGesture {
+                    onImageTap?(mediaFiles, 3)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Chat Image Item
+
+struct ChatMediaItem: View {
+    let mediaURL: String
+    let onTap: () -> Void
+
+    private var isVideo: Bool {
+        mediaURL.lowercased().contains(".mp4") ||
+        mediaURL.lowercased().contains(".mov") ||
+        mediaURL.lowercased().contains("video_")
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            if isVideo {
+                videoView
+            } else {
+                imageView
+            }
+        }
+        .buttonStyle(PlainButtonStyle())
+    }
+
+    private var imageView: some View {
+        KFImage(URL(string: FileRouter.fileURL(from: mediaURL)))
+            .withAuthHeaders()
+            .placeholder {
+                RoundedRectangle(cornerRadius: Spacing.radiusMedium)
+                    .fill(Color.gray.opacity(0.3))
+                    .overlay {
+                        ProgressView()
+                            .tint(.gray)
+                    }
+            }
+            .onSuccess { result in
+                print("이미지 로딩 성공: \(FileRouter.fileURL(from: mediaURL))")
+            }
+            .onFailure { error in
+                print("이미지 로딩 실패: \(FileRouter.fileURL(from: mediaURL)), 에러: \(error)")
+            }
+            .retry(maxCount: 3, interval: .seconds(1))
+            .resizable()
+            .aspectRatio(contentMode: .fill)
+            .clipped()
+    }
+
+    private var videoView: some View {
+        VideoThumbnailView(videoURL: mediaURL)
+            .aspectRatio(1, contentMode: .fill)
+            .overlay {
+                // 원형 재생 버튼 오버레이
+                Circle()
+                    .fill(.black.opacity(0.7))
+                    .frame(width: 50, height: 50)
+                    .overlay {
+                        Image(systemName: "play.fill")
+                            .font(.system(size: 20))
+                            .foregroundStyle(.white)
+                            .offset(x: 2) // 플레이 아이콘을 약간 오른쪽으로 이동
+                    }
+            }
+    }
+}

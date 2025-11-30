@@ -1,0 +1,114 @@
+//
+//  ChatMessageRealm.swift
+//  WeeMo
+//
+//  Created by 차지용 on 11/20/25.
+//
+
+import Foundation
+import RealmSwift
+
+// MARK: - Realm Chat Message Model
+
+/// Realm용 채팅 메시지 모델
+class ChatMessageRealm: Object {
+    @Persisted var chatId: String = ""
+    @Persisted var roomId: String = ""
+    @Persisted var content: String = ""
+    @Persisted var createdAt: Date = Date()
+    @Persisted var senderId: String = ""
+    @Persisted var senderName: String = ""
+    @Persisted var senderProfileImage: String = ""
+    @Persisted var files: List<String> = List<String>()
+    @Persisted var isTemporary: Bool = false // 임시 메시지 (전송 중)
+    @Persisted var isSent: Bool = false // 전송 완료 여부
+
+    override static func primaryKey() -> String? {
+        return "chatId"
+    }
+
+    /// ChatMessage 모델로 변환
+    func toChatMessage() -> ChatMessage {
+        let sender = User(
+            userId: senderId,
+            nickname: senderName,
+            profileImageURL: senderProfileImage
+        )
+
+        return ChatMessage(
+            id: chatId,
+            roomId: roomId,
+            content: content,
+            createdAt: createdAt,
+            sender: sender,
+            files: Array(files)
+        )
+    }
+
+    /// ChatMessageDTO로부터 생성
+    convenience init(from dto: ChatMessageDTO) {
+        self.init()
+        self.chatId = dto.chatId
+        self.roomId = dto.roomId
+        self.content = dto.content
+        self.createdAt = parseDate(from: dto.createdAt)
+        self.senderId = dto.sender.userId
+        self.senderName = dto.sender.nick
+        self.senderProfileImage = dto.sender.profileImage ?? ""
+
+        self.files.removeAll()
+        for file in dto.files {
+            self.files.append(file)
+        }
+
+        self.isTemporary = false
+        self.isSent = true
+    }
+
+    /// 다양한 날짜 형식을 지원하는 파싱 함수
+    private func parseDate(from dateString: String) -> Date {
+        // ISO8601 먼저 시도
+        if let date = ISO8601DateFormatter().date(from: dateString) {
+            return date
+        }
+
+        // 다른 가능한 포맷들
+        let formatters: [(String, TimeZone?)] = [
+            ("yyyy-MM-dd'T'HH:mm:ss.SSSSSS'Z'", TimeZone(secondsFromGMT: 0)),
+            ("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", TimeZone(secondsFromGMT: 0)),
+            ("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone(secondsFromGMT: 0)),
+            ("yyyy-MM-dd HH:mm:ss", nil),
+            ("yyyy-MM-dd'T'HH:mm:ss.SSSSSS", nil),
+            ("yyyy-MM-dd'T'HH:mm:ss.SSS", nil),
+            ("yyyy-MM-dd'T'HH:mm:ss", nil)
+        ]
+
+        for (format, timeZone) in formatters {
+            let formatter = DateFormatter()
+            formatter.dateFormat = format
+            if let tz = timeZone {
+                formatter.timeZone = tz
+            }
+            if let date = formatter.date(from: dateString) {
+                return date
+            }
+        }
+
+        print("ChatMessageRealm: 모든 날짜 포맷 파싱 실패: '\(dateString)' - 현재 시간 사용")
+        return Date()
+    }
+
+    /// 임시 메시지 생성 (전송 중)
+    convenience init(tempMessage content: String, roomId: String, sender: User) {
+        self.init()
+        self.chatId = UUID().uuidString
+        self.roomId = roomId
+        self.content = content
+        self.createdAt = Date()
+        self.senderId = sender.userId
+        self.senderName = sender.nickname
+        self.senderProfileImage = sender.profileImageURL ?? ""
+        self.isTemporary = true
+        self.isSent = false
+    }
+}
