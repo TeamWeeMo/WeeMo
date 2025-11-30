@@ -101,10 +101,36 @@ enum NetworkError: Error {
     /// 재시도 가능 여부
     var shouldRetry: Bool {
         switch self {
-        case .accessTokenExpired, .tooManyRequests:
+        // 토큰 만료 - AuthInterceptor가 처리하므로 재시도
+        case .accessTokenExpired:
             return true
+
+        // 일시적 에러 - 재시도 가능
+        case .tooManyRequests:
+            return true
+
+        // 서버 에러 - 일시적 문제일 수 있으므로 재시도
+        case .serverError:
+            return true
+
+        // 기타 네트워크 에러 - 연결 실패 등
+        case .unknown:
+            return true
+
         default:
             return false
+        }
+    }
+
+    /// 재시도 시 지연 시간 (초)
+    var retryDelay: TimeInterval {
+        switch self {
+        case .tooManyRequests:
+            return 2.0  // 429는 조금 더 길게 대기
+        case .serverError:
+            return 1.5  // 서버 에러는 중간
+        default:
+            return 1.0  // 기본 1초
         }
     }
 
