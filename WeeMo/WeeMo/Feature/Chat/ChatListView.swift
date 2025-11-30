@@ -104,16 +104,23 @@ struct ChatListView: View {
     private var chatRoomListView: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(store.state.filteredChatRooms) { room in
-                    NavigationLink(value: room) {
-                        ChatRoomRow(room: room)
-                    }
-                    .buttonStyle(PlainButtonStyle())
+                VStack(alignment: .leading) {
+                    Text("채팅")
+                        .font(.app(.headline3))
+                        .padding(.leading, 16)
+                        .padding(.bottom, 8)
 
-                    // 구분선
-                    if room.id != store.state.filteredChatRooms.last?.id {
-                        Divider()
-                            .padding(.leading, 68)
+                    ForEach(store.state.filteredChatRooms) { room in
+                        NavigationLink(value: room) {
+                            ChatRoomRow(room: room)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+
+                        // 구분선
+                        if room.id != store.state.filteredChatRooms.last?.id {
+                            Divider()
+                                .padding(.leading, 68)
+                        }
                     }
                 }
             }
