@@ -9,8 +9,9 @@ import SwiftUI
 
 struct TimelineBarView: View {
     let pricePerHour: Int
-    @State private var startHour: Int?
-    @State private var endHour: Int?
+    @Binding var startHour: Int?
+    @Binding var endHour: Int?
+    var blockedHours: Set<Int> = [] // 예약된(블락된) 시간
 
     private let hours = Array(0...24) // 0시부터 24시까지
 
@@ -31,6 +32,11 @@ struct TimelineBarView: View {
         return hour >= start && hour < end
     }
 
+    // 시간이 블락(예약됨)되었는지 확인
+    private func isBlocked(_ hour: Int) -> Bool {
+        blockedHours.contains(hour)
+    }
+
     var body: some View {
         VStack(spacing: Spacing.base) {
             // 타임라인 바 (스크롤 가능)
@@ -41,7 +47,7 @@ struct TimelineBarView: View {
                         ForEach(0...24, id: \.self) { hour in
                             Text("\(hour)")
                                 .font(.app(.subContent1))
-                                .foregroundColor(Color("textSub"))
+                                .foregroundColor(.textSub)
                                 .frame(width: 50, alignment: .center)
                         }
                     }
@@ -68,6 +74,17 @@ struct TimelineBarView: View {
                             }
                         }
 
+                        // 블락된(예약된) 시간 표시 - 빨간색
+                        ForEach(Array(blockedHours).sorted(), id: \.self) { hour in
+                            let segmentWidth: CGFloat = 50
+                            let offsetX = CGFloat(hour) * segmentWidth
+
+                            Rectangle()
+                                .fill(Color.red.opacity(0.7))
+                                .frame(width: segmentWidth, height: 60)
+                                .offset(x: offsetX)
+                        }
+
                         // 선택된 범위 바
                         if let start = startHour, let end = endHour {
                             let segmentWidth: CGFloat = 50
@@ -84,12 +101,19 @@ struct TimelineBarView: View {
                         // 가격 표시
                         HStack(spacing: 0) {
                             ForEach(0..<24, id: \.self) { hour in
-                                Text("\(pricePerHour.formatted())")
-                                    .font(.app(.subContent2))
-                                    .foregroundColor(
-                                        isInSelectedRange(hour) ? .white.opacity(0.8) : Color("textSub").opacity(0.6)
-                                    )
-                                    .frame(width: 50, height: 60)
+                                if isBlocked(hour) {
+                                    Text("예약됨")
+                                        .font(.app(.subContent2))
+                                        .foregroundColor(.white.opacity(0.9))
+                                        .frame(width: 50, height: 60)
+                                } else {
+                                    Text("\(pricePerHour.formatted())")
+                                        .font(.app(.subContent2))
+                                        .foregroundColor(
+                                            isInSelectedRange(hour) ? .white.opacity(0.8) : Color("textSub").opacity(0.6)
+                                        )
+                                        .frame(width: 50, height: 60)
+                                }
                             }
                         }
 
@@ -123,12 +147,12 @@ struct TimelineBarView: View {
 
                     HStack(spacing: Spacing.xSmall) {
                         Image(systemName: "wonsign.circle")
-                            .font(.system(size: AppFontSize.s16.rawValue))
-                            .foregroundColor(Color("wmMain"))
+                            .font(.app(.headline3))
+                            .foregroundColor(.wmMain)
 
                         Text("\(totalPrice.formatted())원")
                             .font(.app(.headline3))
-                            .foregroundColor(Color("wmMain"))
+                            .foregroundColor(.wmMain)
                     }
                 }
                 .padding(Spacing.medium)
@@ -140,6 +164,11 @@ struct TimelineBarView: View {
 
     // 시간 선택 로직
     private func handleTimeSelection(_ hour: Int) {
+        // 블락된 시간은 선택 불가
+        if isBlocked(hour) {
+            return
+        }
+
         if startHour == nil {
             // 첫 번째 탭: 해당 시간대 선택 (hour ~ hour+1)
             startHour = hour
@@ -151,11 +180,27 @@ struct TimelineBarView: View {
         } else {
             // 다른 시간을 탭하면 범위 생성
             if hour > startHour! {
-                endHour = hour + 1
+                // 선택 범위 내에 블락된 시간이 있는지 확인
+                let rangeContainsBlocked = (startHour!..<(hour + 1)).contains { isBlocked($0) }
+                if rangeContainsBlocked {
+                    // 블락된 시간이 포함되면 새로운 시작점으로 설정
+                    startHour = hour
+                    endHour = hour + 1
+                } else {
+                    endHour = hour + 1
+                }
             } else {
                 // 시작보다 이전 시간을 선택하면 범위 재설정
-                endHour = startHour! + 1
-                startHour = hour
+                // 선택 범위 내에 블락된 시간이 있는지 확인
+                let rangeContainsBlocked = (hour..<(startHour! + 1)).contains { isBlocked($0) }
+                if rangeContainsBlocked {
+                    // 블락된 시간이 포함되면 새로운 시작점으로 설정
+                    startHour = hour
+                    endHour = hour + 1
+                } else {
+                    endHour = startHour! + 1
+                    startHour = hour
+                }
             }
         }
     }
@@ -167,6 +212,10 @@ struct TimelineBarView: View {
 }
 
 #Preview {
-    TimelineBarView(pricePerHour: 15000)
-        .padding()
+    TimelineBarView(
+        pricePerHour: 15000,
+        startHour: .constant(10),
+        endHour: .constant(12)
+    )
+    .padding()
 }

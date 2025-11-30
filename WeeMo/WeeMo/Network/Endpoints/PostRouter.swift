@@ -15,17 +15,20 @@ enum PostRouter: APIRouter {
     case uploadFiles(images: [Data])
 
     // 게시글 CRUD
-    case createPost(title: String, content: String, category: PostCategory, files: [String], additionalFields: [String: String]?)
+    case createPost(title: String, price: Int?, content: String, category: PostCategory, files: [String], additionalFields: [String: String]?, latitude: Double?, longitude: Double?)
     case fetchPosts(next: String?, limit: Int?, category: PostCategory?)
     case fetchPost(postId: String)
-    case updatePost(postId: String, title: String?, content: String?, files: [String]?)
+    case updatePost(postId: String, title: String?, content: String?, files: [String]?, additionalFields: [String: String]?)
     case deletePost(postId: String)
 
     // 좋아요
-    case likePost(postId: String)
-    case likePost2(postId: String)
+    case likePost(postId: String, likeStatus: Bool)
+    case likePost2(postId: String, likeStatus: Bool)
     case fetchMyLikedPosts(next: String?, limit: Int?, category: PostCategory?)
     case fetchMyLikedPosts2(next: String?, limit: Int?, category: PostCategory?)
+
+    // 구매/참가
+    case buyPost(postId: String)
 
     // 조회
     case fetchUserPosts(userId: String, next: String?, limit: Int?, category: PostCategory?)
@@ -38,7 +41,7 @@ enum PostRouter: APIRouter {
 
     var method: HTTPMethod {
         switch self {
-        case .uploadFiles, .createPost, .likePost, .likePost2:
+        case .uploadFiles, .createPost, .likePost, .likePost2, .buyPost:
             return .post
         case .fetchPosts, .fetchPost, .fetchMyLikedPosts, .fetchMyLikedPosts2, .fetchUserPosts, .searchByHashtag, .fetchFollowingFeed, .searchByLocation, .searchByTitle:
             return .get
@@ -60,14 +63,16 @@ enum PostRouter: APIRouter {
             return "\(version)/posts"
         case .fetchPost(let postId):
             return "\(version)/posts/\(postId)"
-        case .updatePost(let postId, _, _, _):
+        case .updatePost(let postId, _, _, _, _):
             return "\(version)/posts/\(postId)"
         case .deletePost(let postId):
             return "\(version)/posts/\(postId)"
-        case .likePost(let postId):
+        case .likePost(let postId, _):
             return "\(version)/posts/\(postId)/like"
-        case .likePost2(let postId):
+        case .likePost2(let postId, _):
             return "\(version)/posts/\(postId)/like-2"
+        case .buyPost(let postId):
+            return "\(version)/payments/validation"
         case .fetchMyLikedPosts:
             return "\(version)/posts/likes/me"
         case .fetchMyLikedPosts2:
@@ -90,16 +95,25 @@ enum PostRouter: APIRouter {
         case .uploadFiles:
             return nil
 
-        case .createPost(let title, let content, let category, let files, let additionalFields):
+        case .createPost(let title, let price, let content, let category, let files, let additionalFields, let latitude, let longitude):
             var params: Parameters = [
                 "title": title,
                 "content": content,
                 "category": category.rawValue,
                 "files": files
             ]
-            // 추가 필드 병합 (value1~10)
+            // price 추가 (nil이 아닐 경우만)
+            if let price = price {
+                params["price"] = price
+            }
+            // 추가 필드 병합 (value1~10, geolocation 등)
             if let additional = additionalFields {
                 params.merge(additional) { _, new in new }
+            }
+            // 위도/경도 정보 추가
+            if let latitude = latitude, let longitude = longitude {
+                params["latitude"] = latitude
+                params["longitude"] = longitude
             }
             return params
 
@@ -113,18 +127,31 @@ enum PostRouter: APIRouter {
         case .fetchPost:
             return nil
 
-        case .updatePost(_, let title, let content, let files):
+        case .updatePost(_, let title, let content, let files, let additionalFields):
             var params: Parameters = [:]
             if let title = title { params["title"] = title }
             if let content = content { params["content"] = content }
             if let files = files { params["files"] = files }
+            if let additionalFields = additionalFields {
+                for (key, value) in additionalFields {
+                    params[key] = value
+                }
+            }
             return params.isEmpty ? nil : params
 
-        case .deletePost, .likePost, .likePost2:
+        case .deletePost:
             return nil
 
+        case .buyPost(let postId):
+            return [
+                "imp_uid": "test_imp_uid_\(Int.random(in: 1000...9999))", // 임시 결제 고유 ID
+                "post_id": postId
+            ]
+        case .likePost(_, let likeStatus), .likePost2(_, let likeStatus):
+            return ["like_status": likeStatus]
+
         case .fetchMyLikedPosts(let next, let limit, let category),
-             .fetchMyLikedPosts2(let next, let limit, let category):
+            .fetchMyLikedPosts2(let next, let limit, let category):
             var params: Parameters = [:]
             if let next = next { params["next"] = next }
             if let limit = limit { params["limit"] = limit }

@@ -20,11 +20,25 @@ protocol NetworkServiceProtocol {
 
     /// Void 응답 (응답 바디 없음)
     func request(_ router: APIRouter) async throws
+    
+    /// 파일 업로드 + 원본 확장자명
+    func multipartUpload<T: Decodable>(
+        _ router: APIRouter,
+        files: [(data: Data, fileName: String, mimeType: String)],
+        responseType: T.Type
+    ) async throws -> T
 
     /// 파일 업로드 (Multipart)
     func upload<T: Decodable>(
         _ router: APIRouter,
         images: [Data],
+        responseType: T.Type
+    ) async throws -> T
+
+    /// 미디어 파일 업로드 (이미지/영상)
+    func uploadMedia<T: Decodable>(
+        _ router: APIRouter,
+        mediaFiles: [Data],
         responseType: T.Type
     ) async throws -> T
 

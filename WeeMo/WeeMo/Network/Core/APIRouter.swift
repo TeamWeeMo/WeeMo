@@ -46,6 +46,8 @@ extension APIRouter {
         // SeSACKey (항상 필수)
         if let sesacKey = Bundle.main.object(forInfoDictionaryKey: "SeSACKey") as? String {
             headers.add(name: HTTPHeaderKey.sesacKey, value: sesacKey)
+        } else {
+            print("APIRouter - SeSACKey를 찾을 수 없음")
         }
 
         // ProductId (항상 필수)
@@ -61,9 +63,8 @@ extension APIRouter {
     var authorizationHeader: HTTPHeaders? {
         guard needsAuthorization else { return nil }
 
-        // TODO: Keychain에서 AccessToken 가져오기
-        // 현재는 임시로 UserDefaults 사용 (추후 Keychain으로 변경)
-        guard let token = UserDefaults.standard.string(forKey: "accessToken") else {
+        // TokenManager(Keychain)에서 AccessToken 가져오기
+        guard let token = TokenManager.shared.accessToken else {
             return nil
         }
 

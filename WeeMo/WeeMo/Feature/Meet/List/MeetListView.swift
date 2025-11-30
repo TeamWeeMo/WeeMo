@@ -11,120 +11,110 @@ struct MeetListView: View {
     @State private var searchText = ""
     @State private var selectedSortOption: SortOption = .registrationDate
     @State private var showingSortOptions = false
-
-    @State private var meets = [
-        Meet(
-            title: "주말 독서 모임",
-            date: "📅 2025.11.15 (토) 14:00",
-            location: "📍 모던 카페 라운",
-            address: "서울 강남구 테헤란로 123",
-            price: "💰 15,000원/",
-            participants: "👤 4 / 8명",
-            imageName: "meeting1",
-            daysLeft: "D-3"
-        ),
-        Meet(
-            title: "요리 클래스",
-            date: "📅 2025.11.20 (수) 19:00",
-            location: "📍 쿠킹 스튜디오 키친",
-            address: "서울 마포구 홍대입구역 56",
-            price: "💰 35,000원/",
-            participants: "👤 6 / 10명",
-            imageName: "meeting2",
-            daysLeft: "D-8"
-        ),
-        Meet(
-            title: "등산 동호회",
-            date: "📅 2025.11.17 (일) 08:00",
-            location: "📍 북한산 입구",
-            address: "서울 은평구 진관동 산1",
-            price: "💰 무료",
-            participants: "👤 12 / 15명",
-            imageName: "meeting3",
-            daysLeft: "D-5"
-        ),
-        Meet(
-            title: "보드게임 카페",
-            date: "📅 2025.11.22 (금) 20:00",
-            location: "📍 게임톡톡 강남점",
-            address: "서울 강남구 역삼동 678",
-            price: "💰 8,000원/",
-            participants: "👤 3 / 6명",
-            imageName: "meeting4",
-            daysLeft: "D-10"
-        ),
-        Meet(
-            title: "사진 촬영 워크숍",
-            date: "📅 2025.11.25 (월) 15:00",
-            location: "📍 한강공원 반포지구",
-            address: "서울 서초구 반포동 한강공원",
-            price: "💰 25,000원/",
-            participants: "👤 8 / 12명",
-            imageName: "meeting5",
-            daysLeft: "D-13"
-        ),
-        Meet(
-            title: "영화 토론 모임",
-            date: "📅 2025.11.18 (월) 18:30",
-            location: "📍 씨네큐브 광화문",
-            address: "서울 종로구 세종대로 175",
-            price: "💰 12,000원/",
-            participants: "👤 7 / 10명",
-            imageName: "meeting6",
-            daysLeft: "D-6"
-        )
-    ]
+    @State private var store = MeetListStore()
+    @State private var isFirstAppear = true
 
     var body: some View {
-        NavigationView {
+        ZStack(alignment: .bottomTrailing) {
             ScrollView {
                 VStack {
-                    HStack {
-                        Text("모임")
-                            .font(.app(.headline2))
-                            .foregroundColor(Color("textMain"))
-                            .padding(.leading, 16)
-                        Spacer()
+                    VStack {
+                        SearchBarTextField(text: $searchText)
+                        
+                        MeetFilterButton(
+                            selectedOption: $selectedSortOption,
+                            showingOptions: $showingSortOptions
+                        )
                     }
-                    .padding(.top)
+                    .padding(.horizontal, Spacing.base)
 
-                    SearchBar(text: $searchText)
-
-                    FilterButton(
-                        selectedOption: $selectedSortOption,
-                        showingOptions: $showingSortOptions
-                    )
-
-                    LazyVStack(spacing: 16) {
-                        ForEach(meets) { meet in
-                            NavigationLink(destination: MeetDetailView(meet: meet)) {
-                                MeetCardView(meet: meet)
-                            }
-                            .buttonStyle(PlainButtonStyle())
+                    if store.state.isLoading {
+                        LoadingView(message: "모임을 불러오는 중...")
+                    } else if let errorMessage = store.state.errorMessage {
+                        EmptyStateView(
+                            icon: "exclamationmark.triangle",
+                            title: "오류가 발생했습니다",
+                            message: errorMessage,
+                            actionTitle: "다시 시도"
+                        ) {
+                            store.send(.retryLoadMeets)
                         }
+                    } else {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(store.state.meets.enumerated()), id: \.element.id) { index, meet in
+                                NavigationLink(value: meet.id) {
+                                    MeetCardView(meet: meet)
+                                }
+                                .onAppear {
+                                    // 마지막에서 3번째 아이템이 나타날 때 더 로드
+                                    if index >= store.state.meets.count - 3 && store.state.hasMoreData && !store.state.isLoadingMore {
+                                        store.send(.loadMoreMeets)
+                                    }
+                                }
+                            }
+
+                            // 로딩 인디케이터 (더 불러올 데이터가 있을 때만)
+                            if store.state.isLoadingMore && store.state.hasMoreData {
+                                HStack {
+                                    Spacer()
+                                    ProgressView("더 불러오는 중...")
+                                        .padding()
+                                    Spacer()
+                                }
+                            }
+                        }
+                        .padding(.top, Spacing.base)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 16)
+                }
+                .background(.wmBg)
+                .onAppear {
+                    if isFirstAppear {
+                        // 첫 번째 appear에서만 로드
+                        isFirstAppear = false
+                        store.send(.loadMeets)
+                    } else {
+                        // 두 번째 이후 appear에서는 새로고침 (네비게이션 돌아올 때)
+                        store.send(.refreshMeets)
+                    }
+                }
+                .onChange(of: selectedSortOption) { _, sortOption in
+                    store.send(.sortMeets(option: sortOption))
+                }
+                .onChange(of: searchText) { _, searchQuery in
+                    store.send(.searchMeets(query: searchQuery))
                 }
             }
-            .navigationBarHidden(true)
-            .background(Color("wmBg"))
-            .overlay(
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        VStack(spacing: 12) {
-                            MapViewButton()
-                            FloatingActionButton()
-                        }
-                    }
-                    .padding(.trailing, 20)
-                    .padding(.bottom, 20)
-                }
-            )
+            .refreshable {
+                await store.refreshMeets()
+            }
 
+            // Floating Buttons
+            VStack(spacing: Spacing.medium) {
+                NavigationLink(value: HomeRoute.meetMap) {
+                    Image(systemName: "map")
+                        .font(.system(size: 24))
+                        .foregroundColor(.black)
+                        .frame(width: 56, height: 56)
+                        .background(.white)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                }
+
+                NavigationLink(value: HomeRoute.meetEdit) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 24))
+                        .foregroundColor(.white)
+                        .frame(width: 56, height: 56)
+                        .background(.wmMain)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: 2)
+                }
+            }
+            .padding(.trailing, 20)
+            .padding(.bottom, 20)
         }
+        .toolbarRole(.editor)
+        .tint(.wmMain)
     }
 }
 

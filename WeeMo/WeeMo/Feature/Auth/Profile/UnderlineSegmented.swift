@@ -9,8 +9,9 @@ import SwiftUI
 
 enum ProfileTab: String, CaseIterable, Identifiable {
     case posts = "내 모임"
-    case groups = "찜한 모임"
-    case likes = "결제한 모임"
+    case reservedSpaces = "예약 현황"
+    case groups = "찜한 공간"
+    case likes = "결제 현황"
     var id: String { rawValue }
 }
 
@@ -29,11 +30,12 @@ struct UnderlineSegmented: View {
                 } label: {
                     VStack(spacing: 4) {
                         Text(tab.rawValue)
-                            .font(.app(.content2))
+                            .font(.app(.subContent1))
                             .foregroundStyle(selection == tab ? .wmMain : .textSub)
                             .padding(.horizontal, 12)
-                            .padding(.vertical, 10)
-                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, minHeight: 40)
+                            .multilineTextAlignment(.center)
 
                         ZStack {
                             Rectangle().fill(.clear).frame(height: 2)
