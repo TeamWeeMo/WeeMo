@@ -88,15 +88,25 @@ final class ChatDetailStore: ObservableObject {
             return
         }
 
-        // 중복 체크 후 새 메시지 추가
-        if !state.messages.contains(where: { $0.id == newMessage.id }) {
-            state.messages.append(newMessage)
-            state.messages.sort { $0.createdAt < $1.createdAt }
-            print("새 메시지 추가 완료: \(newMessage.content)")
-        } else {
-            print("중복 메시지 무시: \(newMessage.id)")
-            return
+        // 자신이 방금 보낸 메시지인 경우 추가 확인 (시간 기반)
+        let currentUserId = state.currentUserId
+        if newMessage.sender.userId == currentUserId {
+            // 최근 5초 이내에 보낸 동일한 내용의 메시지가 있는지 확인
+            let recentMessages = state.messages.filter {
+                $0.sender.userId == currentUserId &&
+                abs($0.createdAt.timeIntervalSince(newMessage.createdAt)) < 5 &&
+                $0.content == newMessage.content
+            }
+            if !recentMessages.isEmpty {
+                print("최근 보낸 동일 메시지 무시: \(newMessage.content)")
+                return
+            }
         }
+
+        // 새 메시지 추가
+        state.messages.append(newMessage)
+        state.messages.sort { $0.createdAt < $1.createdAt }
+        print("새 메시지 추가 완료: \(newMessage.content)")
         state.shouldScrollToBottom = true
 
         // 강제 UI 업데이트
@@ -137,12 +147,19 @@ final class ChatDetailStore: ObservableObject {
 
                     // 강력한 중복 제거: ID와 내용 기준으로 유니크하게 만들기
                     var seenIds = Set<String>()
+                    var seenContentKeys = Set<String>()
                     let uniqueMessages = fetchedMessages.filter { message in
+                        let contentKey = "\(message.sender.userId)_\(message.content)_\(Int(message.createdAt.timeIntervalSince1970))"
+
                         if seenIds.contains(message.id) {
                             print("중복 ID 제거: \(message.id) - \(message.content)")
                             return false
+                        } else if seenContentKeys.contains(contentKey) {
+                            print("중복 내용 제거: \(contentKey)")
+                            return false
                         } else {
                             seenIds.insert(message.id)
+                            seenContentKeys.insert(contentKey)
                             return true
                         }
                     }
@@ -230,13 +247,20 @@ final class ChatDetailStore: ObservableObject {
                         // 스크롤 위치 유지를 위해 현재 첫 번째 메시지 ID 저장
                         let currentFirstMessageId = state.messages.first?.id
 
-                        // 기존 메시지 앞에 추가
-                        state.messages.insert(contentsOf: moreMessages, at: 0)
+                        // 중복 제거: 이미 존재하는 메시지는 제외
+                        let existingIds = Set(state.messages.map { $0.id })
+                        let uniqueNewMessages = moreMessages.filter { !existingIds.contains($0.id) }
+
+                        if !uniqueNewMessages.isEmpty {
+                            // 기존 메시지 앞에 중복되지 않는 메시지만 추가
+                            state.messages.insert(contentsOf: uniqueNewMessages, at: 0)
+                            print("이전 메시지 \(uniqueNewMessages.count)개 로드 (중복 \(moreMessages.count - uniqueNewMessages.count)개 제외)")
+                        } else {
+                            print("모든 이전 메시지가 중복됨")
+                        }
 
                         // 스크롤 위치 유지를 위해 shouldScrollToBottom을 false로 설정
                         state.shouldScrollToBottom = false
-
-                        print("이전 메시지 \(moreMessages.count)개 로드 (스크롤 위치 유지)")
                     }
                     state.isLoadingMore = false
                 }
@@ -271,12 +295,21 @@ final class ChatDetailStore: ObservableObject {
                 )
 
                 await MainActor.run {
-                    // 중복 방지
-                    if !state.messages.contains(where: { $0.id == sentMessage.id }) {
+                    // 중복 방지 - ID와 내용으로 이중 체크
+                    let isDuplicate = state.messages.contains { existingMessage in
+                        existingMessage.id == sentMessage.id ||
+                        (existingMessage.content == sentMessage.content &&
+                         existingMessage.sender.userId == sentMessage.sender.userId &&
+                         abs(existingMessage.createdAt.timeIntervalSince(sentMessage.createdAt)) < 2)
+                    }
+
+                    if !isDuplicate {
                         state.messages.append(sentMessage)
                         state.messages.sort { $0.createdAt < $1.createdAt }
                         state.shouldScrollToBottom = true
                         print("전송한 메시지 UI에 추가: \(sentMessage.content)")
+                    } else {
+                        print("전송한 메시지 중복 무시: \(sentMessage.content)")
                     }
 
                     state.isSendingMessage = false

@@ -55,8 +55,9 @@ struct ChatBubble: View {
         }) {
             Group {
                 if let profileURL = message.sender.profileImageURL,
-                   let url = URL(string: profileURL) {
+                   let url = URL(string: FileRouter.fileURL(from: profileURL)) {
                     KFImage(url)
+                        .withAuthHeaders()
                         .placeholder {
                             Circle()
                                 .fill(Color.gray.opacity(0.3))
