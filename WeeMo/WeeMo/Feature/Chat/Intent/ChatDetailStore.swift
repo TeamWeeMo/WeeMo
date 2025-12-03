@@ -136,6 +136,27 @@ final class ChatDetailStore: ObservableObject {
         state.errorMessage = nil
         print("ChatDetailStore.loadMessages 시작 - roomId: \(roomId)")
 
+        // 1. 먼저 로컬 DB에서 메시지 로드
+        let localMessages = chatService.getLocalMessages(roomId: roomId)
+
+        // 2. 로컬 메시지가 있으면 즉시 UI 업데이트
+        if !localMessages.isEmpty {
+            Task { @MainActor in
+                let sortedMessages = localMessages.sorted { $0.createdAt < $1.createdAt }
+                state.messages = sortedMessages
+                state.isLoading = false
+                state.shouldScrollToBottom = true
+                objectWillChange.send()
+                print("로컬 메시지 \(localMessages.count)개 즉시 표시")
+            }
+        } else {
+            print("로컬 메시지 없음 - 서버 응답 대기 중")
+        }
+
+        // 3. 즉시 Socket 연결 (메시지 유실 방지)
+        setupSocketConnection(roomId: roomId)
+
+        // 4. 백그라운드에서 서버 동기화
         Task {
             do {
                 print("ChatService.fetchMessages 호출 전")
@@ -143,76 +164,35 @@ final class ChatDetailStore: ObservableObject {
                 print("ChatService.fetchMessages 응답: \(fetchedMessages.count)개 메시지")
 
                 await MainActor.run {
-                    print("MainActor에서 UI 업데이트 시작")
+                    print("서버 동기화 완료 - UI 업데이트 시작")
 
-                    // 강력한 중복 제거: ID와 내용 기준으로 유니크하게 만들기
-                    var seenIds = Set<String>()
-                    var seenContentKeys = Set<String>()
-                    let uniqueMessages = fetchedMessages.filter { message in
-                        let contentKey = "\(message.sender.userId)_\(message.content)_\(Int(message.createdAt.timeIntervalSince1970))"
-
-                        if seenIds.contains(message.id) {
-                            print("중복 ID 제거: \(message.id) - \(message.content)")
-                            return false
-                        } else if seenContentKeys.contains(contentKey) {
-                            print("중복 내용 제거: \(contentKey)")
-                            return false
-                        } else {
-                            seenIds.insert(message.id)
-                            seenContentKeys.insert(contentKey)
-                            return true
-                        }
-                    }
-
-                    let sortedMessages = uniqueMessages.sorted { $0.createdAt < $1.createdAt }
-                    print("강력한 중복 제거 완료: \(fetchedMessages.count) -> \(sortedMessages.count)개")
-
-                    // state 업데이트
-                    print("state.messages 업데이트 전: \(state.messages.count)개")
-                    state.messages = sortedMessages
-                    print("state.messages 업데이트 후: \(state.messages.count)개")
-
-                    state.isLoading = false
-
-                    // 강제 UI 업데이트 후 즉시 스크롤
-                    objectWillChange.send()
-                    print("objectWillChange.send() 호출 완료")
-
-                    // 메시지가 있으면 UI 업데이트 후 스크롤
-                    if !sortedMessages.isEmpty {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                            self.state.shouldScrollToBottom = true
-                            print("shouldScrollToBottom 지연 설정 (0.3초)")
-                        }
-                    }
-
-                    // 디버그: 메시지 로드 및 state 확인
-                    print("=== 메시지 로드 디버그 ===")
-                    print("서버에서 받은 메시지: \(fetchedMessages.count)개")
-                    print("중복제거 후: \(sortedMessages.count)개")
-                    print("state.messages 설정: \(state.messages.count)개")
-                    print("shouldScrollToBottom: \(state.shouldScrollToBottom)")
-                    print("isLoading: \(state.isLoading)")
-
+                    // 현재 state에 메시지가 있다면 (로컬에서 이미 로드함) 새로운 메시지만 추가
                     if !state.messages.isEmpty {
-                        let formatter = DateFormatter()
-                        formatter.dateFormat = "MM-dd HH:mm:ss"
-                        formatter.timeZone = TimeZone.current
+                        let existingIds = Set(state.messages.map { $0.id })
+                        let newMessages = fetchedMessages.filter { !existingIds.contains($0.id) }
 
-                        print("=== 처음 3개 메시지 ===")
-                        for (index, message) in state.messages.prefix(3).enumerated() {
-                            print("[\(index)] \(formatter.string(from: message.createdAt)): \(message.content)")
-                        }
-
-                        print("=== 마지막 3개 메시지 ===")
-                        for (index, message) in state.messages.suffix(3).enumerated() {
-                            let actualIndex = state.messages.count - 3 + index
-                            print("[\(actualIndex)] \(formatter.string(from: message.createdAt)): \(message.content)")
+                        if !newMessages.isEmpty {
+                            state.messages.append(contentsOf: newMessages)
+                            state.messages.sort { $0.createdAt < $1.createdAt }
+                            print("서버에서 새로운 메시지 \(newMessages.count)개 추가")
+                            state.shouldScrollToBottom = true
+                        } else {
+                            print("서버 동기화: 새로운 메시지 없음")
                         }
                     } else {
-                        print("state.messages가 비어있음!")
+                        // 로컬이 비어있던 경우에만 전체 교체
+                        let sortedMessages = fetchedMessages.sorted { $0.createdAt < $1.createdAt }
+                        state.messages = sortedMessages
+                        print("로컬이 비어있어서 서버 메시지 \(sortedMessages.count)개로 전체 교체")
+
+                        if !sortedMessages.isEmpty {
+                            state.shouldScrollToBottom = true
+                        }
                     }
-                    print("========================")
+
+                    state.isLoading = false
+                    objectWillChange.send()
+                    print("서버 동기화 UI 업데이트 완료")
                 }
 
             } catch {
