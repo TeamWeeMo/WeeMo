@@ -82,32 +82,8 @@ final class ChatDetailStore: ObservableObject {
             return
         }
 
-        // 중복 메시지 체크 (ID만 확인)
-        guard !state.messages.contains(where: { $0.id == newMessage.id }) else {
-            print("중복 메시지 무시: \(newMessage.id)")
-            return
-        }
-
-        // 자신이 방금 보낸 메시지인 경우 추가 확인 (시간 기반)
-        let currentUserId = state.currentUserId
-        if newMessage.sender.userId == currentUserId {
-            // 최근 5초 이내에 보낸 동일한 내용의 메시지가 있는지 확인
-            let recentMessages = state.messages.filter {
-                $0.sender.userId == currentUserId &&
-                abs($0.createdAt.timeIntervalSince(newMessage.createdAt)) < 5 &&
-                $0.content == newMessage.content
-            }
-            if !recentMessages.isEmpty {
-                print("최근 보낸 동일 메시지 무시: \(newMessage.content)")
-                return
-            }
-        }
-
-        // 새 메시지 추가
-        state.messages.append(newMessage)
-        state.messages.sort { $0.createdAt < $1.createdAt }
-        print("새 메시지 추가 완료: \(newMessage.content)")
-        state.shouldScrollToBottom = true
+        // 통합된 중복 처리 함수 사용
+        addMessageWithDeduplication(newMessage)
 
         // 강제 UI 업데이트
         objectWillChange.send()
@@ -168,26 +144,16 @@ final class ChatDetailStore: ObservableObject {
 
                     // 현재 state에 메시지가 있다면 (로컬에서 이미 로드함) 새로운 메시지만 추가
                     if !state.messages.isEmpty {
-                        let existingIds = Set(state.messages.map { $0.id })
-                        let newMessages = fetchedMessages.filter { !existingIds.contains($0.id) }
-
-                        if !newMessages.isEmpty {
-                            state.messages.append(contentsOf: newMessages)
-                            state.messages.sort { $0.createdAt < $1.createdAt }
-                            print("서버에서 새로운 메시지 \(newMessages.count)개 추가")
-                            state.shouldScrollToBottom = true
-                        } else {
-                            print("서버 동기화: 새로운 메시지 없음")
+                        for message in fetchedMessages {
+                            addMessageWithDeduplication(message)
                         }
+                        print("서버 동기화: 중복 체크 후 메시지 처리 완료")
                     } else {
                         // 로컬이 비어있던 경우에만 전체 교체
-                        let sortedMessages = fetchedMessages.sorted { $0.createdAt < $1.createdAt }
-                        state.messages = sortedMessages
-                        print("로컬이 비어있어서 서버 메시지 \(sortedMessages.count)개로 전체 교체")
-
-                        if !sortedMessages.isEmpty {
-                            state.shouldScrollToBottom = true
+                        for message in fetchedMessages {
+                            addMessageWithDeduplication(message)
                         }
+                        print("로컬이 비어있어서 서버 메시지로 초기화")
                     }
 
                     state.isLoading = false
@@ -275,22 +241,8 @@ final class ChatDetailStore: ObservableObject {
                 )
 
                 await MainActor.run {
-                    // 중복 방지 - ID와 내용으로 이중 체크
-                    let isDuplicate = state.messages.contains { existingMessage in
-                        existingMessage.id == sentMessage.id ||
-                        (existingMessage.content == sentMessage.content &&
-                         existingMessage.sender.userId == sentMessage.sender.userId &&
-                         abs(existingMessage.createdAt.timeIntervalSince(sentMessage.createdAt)) < 2)
-                    }
-
-                    if !isDuplicate {
-                        state.messages.append(sentMessage)
-                        state.messages.sort { $0.createdAt < $1.createdAt }
-                        state.shouldScrollToBottom = true
-                        print("전송한 메시지 UI에 추가: \(sentMessage.content)")
-                    } else {
-                        print("전송한 메시지 중복 무시: \(sentMessage.content)")
-                    }
+                    // 통합된 중복 처리 함수 사용
+                    addMessageWithDeduplication(sentMessage)
 
                     state.isSendingMessage = false
                     print("메시지 전송 성공: \(sentMessage.content)")
@@ -317,6 +269,23 @@ final class ChatDetailStore: ObservableObject {
     }
 
     // MARK: - Helper Methods
+
+    // 중복 처리가 필요한 케이스:
+    // 1. Socket으로 먼저 수신 → API 응답에도 동일 메시지 포함
+    // 2. API 응답 처리 중 → Socket으로 새 메시지 수신
+    // 해결: chat_id 기반 중복 체크
+    private func addMessageWithDeduplication(_ newMessage: ChatMessage) {
+        // 이미 존재하는 메시지인지 확인
+        guard !state.messages.contains(where: { $0.id == newMessage.id }) else {
+            print("중복 메시지 무시: \(newMessage.id)")
+            return
+        }
+
+        state.messages.append(newMessage)
+        state.messages.sort { $0.createdAt < $1.createdAt }
+        state.shouldScrollToBottom = true
+        print("새 메시지 추가 완료: \(newMessage.content)")
+    }
 
     private func getLastMessageDate() -> String? {
         guard let lastMessage = state.messages.last else { return nil }
