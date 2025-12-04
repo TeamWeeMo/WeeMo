@@ -35,6 +35,10 @@ enum SpaceCreateIntent {
     case addHashTag
     case removeHashTag(String)
 
+    // AI 해시태그 추천 (Vision Framework)
+    case analyzeImagesForHashTags
+    case addSuggestedHashTag(String)
+
     // 미디어 (이미지 + 동영상)
     case mediaItemsSelected([MediaItem])  // 팀원의 struct MediaItem
     case mediaItemRemoved(at: Int)

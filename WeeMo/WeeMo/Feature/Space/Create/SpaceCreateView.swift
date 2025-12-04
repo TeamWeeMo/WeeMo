@@ -144,6 +144,84 @@ struct SpaceCreateView: View {
                 )
                 .padding(.horizontal, Spacing.base)
 
+                // AI 해시태그 추천 버튼
+                if (!store.state.selectedMediaItems.isEmpty || !store.state.existingFileURLs.isEmpty) &&
+                   !store.state.isAnalyzingImage &&
+                   store.state.suggestedHashTags.isEmpty {
+                    Button(action: {
+                        store.send(.analyzeImagesForHashTags)
+                    }) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "sparkles")
+                            Text("AI 해시태그 추천")
+                        }
+                        .font(.app(.content2))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(Color("wmMain"))
+                        .cornerRadius(Spacing.radiusMedium)
+                    }
+                    .padding(.horizontal, Spacing.base)
+                }
+
+                // AI 분석 중 로딩
+                if store.state.isAnalyzingImage {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle(tint: Color("wmMain")))
+                        Text("AI가 이미지를 분석중...")
+                            .font(.app(.content2))
+                            .foregroundColor(.textSub)
+                    }
+                    .padding(.horizontal, Spacing.base)
+                }
+
+                // AI 추천 해시태그 (탭하면 추가)
+                if !store.state.suggestedHashTags.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack {
+                            Text("추천 태그 (탭하여 추가)")
+                                .font(.app(.subContent1))
+                                .foregroundColor(.textSub)
+
+                            Spacer()
+
+                            // 새로 추천받기 버튼
+                            Button("새로 추천") {
+                                store.send(.analyzeImagesForHashTags)
+                            }
+                            .font(.app(.subContent1))
+                            .foregroundColor(Color("wmMain"))
+                        }
+
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(store.state.suggestedHashTags, id: \.self) { tag in
+                                    Button {
+                                        store.send(.addSuggestedHashTag(tag))
+                                    } label: {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "sparkle")
+                                                .font(.system(size: 12))
+                                            Text("#\(tag)")
+                                        }
+                                        .font(.app(.content2))
+                                        .foregroundColor(Color("wmMain"))
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color("wmMain").opacity(0.1))
+                                        .cornerRadius(Spacing.radiusLarge)
+                                    }
+                                    .disabled(store.state.hashTags.contains(tag))
+                                    .opacity(store.state.hashTags.contains(tag) ? 0.5 : 1.0)
+                                }
+                            }
+                        }
+                    }
+                    .padding(.horizontal, Spacing.base)
+                }
+
                 // 해시태그 입력
                 HashTagInputSection(
                     hashTagInput: Binding(
