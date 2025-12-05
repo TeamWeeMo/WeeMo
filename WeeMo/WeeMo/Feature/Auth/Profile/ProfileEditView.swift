@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import FSCalendar
 import PhotosUI
 import Kingfisher
 
