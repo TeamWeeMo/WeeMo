@@ -120,13 +120,14 @@ final class ChatDetailStore: ObservableObject {
             Task { @MainActor in
                 let sortedMessages = localMessages.sorted { $0.createdAt < $1.createdAt }
                 state.messages = sortedMessages
+                // 로컬 메시지가 있으면 즉시 로딩 완료 처리
                 state.isLoading = false
                 state.shouldScrollToBottom = true
                 objectWillChange.send()
-                print("로컬 메시지 \(localMessages.count)개 즉시 표시")
+                print("로컬 메시지 \(localMessages.count)개 즉시 표시 - 전체 로딩 완료")
             }
         } else {
-            print("로컬 메시지 없음 - 서버 응답 대기 중")
+            print("로컬 메시지 없음 - 서버 응답 대기 중 (전체 화면 로딩 유지)")
         }
 
         // 3. 즉시 Socket 연결 (메시지 유실 방지)
@@ -144,19 +145,24 @@ final class ChatDetailStore: ObservableObject {
 
                     // 현재 state에 메시지가 있다면 (로컬에서 이미 로드함) 새로운 메시지만 추가
                     if !state.messages.isEmpty {
+                        // 새 메시지 동기화: 스크롤을 하단으로 이동
                         for message in fetchedMessages {
-                            addMessageWithDeduplication(message)
+                            addMessageWithDeduplication(message, shouldAutoScroll: true)
                         }
-                        print("서버 동기화: 중복 체크 후 메시지 처리 완료")
+                        print("서버 동기화: 새 메시지 처리 완료")
                     } else {
-                        // 로컬이 비어있던 경우에만 전체 교체
+                        // 초기 로드: 자동 스크롤을 활성화하여 최신 메시지로 이동
                         for message in fetchedMessages {
-                            addMessageWithDeduplication(message)
+                            addMessageWithDeduplication(message, shouldAutoScroll: true)
                         }
-                        print("로컬이 비어있어서 서버 메시지로 초기화")
+                        print("초기 로드: 서버 메시지로 초기화")
                     }
 
-                    state.isLoading = false
+                    // 로컬이 비어있던 경우에만 로딩 완료 처리 (로컬이 있으면 이미 완료됨)
+                    if state.isLoading {
+                        state.isLoading = false
+                        print("초기 로드 완료 - 전체 화면 로딩 인디케이터 제거")
+                    }
                     objectWillChange.send()
                     print("서버 동기화 UI 업데이트 완료")
                 }
@@ -164,8 +170,9 @@ final class ChatDetailStore: ObservableObject {
             } catch {
                 await MainActor.run {
                     state.errorMessage = "메시지를 불러오는데 실패했습니다: \(error.localizedDescription)"
+                    // 에러 발생 시 로딩 상태 정리
                     state.isLoading = false
-                    print("메시지 로드 실패: \(error)")
+                    print("서버 동기화 실패: \(error) - 로딩 상태 정리")
                 }
             }
         }
@@ -176,6 +183,7 @@ final class ChatDetailStore: ObservableObject {
         guard !state.isLoadingMore && state.hasMoreMessages else { return }
 
         state.isLoadingMore = true
+        print("이전 메시지 로드 시작 - 현재 위치 유지")
 
         Task {
             do {
@@ -190,23 +198,11 @@ final class ChatDetailStore: ObservableObject {
                         state.hasMoreMessages = false
                         print("더 이상 불러올 메시지가 없음")
                     } else {
-                        // 스크롤 위치 유지를 위해 현재 첫 번째 메시지 ID 저장
-                        let currentFirstMessageId = state.messages.first?.id
-
-                        // 중복 제거: 이미 존재하는 메시지는 제외
-                        let existingIds = Set(state.messages.map { $0.id })
-                        let uniqueNewMessages = moreMessages.filter { !existingIds.contains($0.id) }
-
-                        if !uniqueNewMessages.isEmpty {
-                            // 기존 메시지 앞에 중복되지 않는 메시지만 추가
-                            state.messages.insert(contentsOf: uniqueNewMessages, at: 0)
-                            print("이전 메시지 \(uniqueNewMessages.count)개 로드 (중복 \(moreMessages.count - uniqueNewMessages.count)개 제외)")
-                        } else {
-                            print("모든 이전 메시지가 중복됨")
+                        // 이전 메시지 로드: 현재 위치 유지 (shouldAutoScroll = false)
+                        for message in moreMessages {
+                            addMessageWithDeduplication(message, shouldAutoScroll: false)
                         }
-
-                        // 스크롤 위치 유지를 위해 shouldScrollToBottom을 false로 설정
-                        state.shouldScrollToBottom = false
+                        print("이전 메시지 \(moreMessages.count)개 로드 완료 - 스크롤 위치 유지")
                     }
                     state.isLoadingMore = false
                 }
@@ -274,7 +270,7 @@ final class ChatDetailStore: ObservableObject {
     // 1. Socket으로 먼저 수신 → API 응답에도 동일 메시지 포함
     // 2. API 응답 처리 중 → Socket으로 새 메시지 수신
     // 해결: chat_id 기반 중복 체크
-    private func addMessageWithDeduplication(_ newMessage: ChatMessage) {
+    private func addMessageWithDeduplication(_ newMessage: ChatMessage, shouldAutoScroll: Bool = true) {
         // 이미 존재하는 메시지인지 확인
         guard !state.messages.contains(where: { $0.id == newMessage.id }) else {
             print("중복 메시지 무시: \(newMessage.id)")
@@ -282,9 +278,18 @@ final class ChatDetailStore: ObservableObject {
         }
 
         state.messages.append(newMessage)
+        // 메시지 순서 보장: 항상 createdAt 기준 정렬
         state.messages.sort { $0.createdAt < $1.createdAt }
-        state.shouldScrollToBottom = true
+
+        // 스크롤 UX: 새 메시지만 자동 스크롤, 이전 메시지는 위치 유지
+        if shouldAutoScroll {
+            state.shouldScrollToBottom = true
+        }
+
         print("새 메시지 추가 완료: \(newMessage.content)")
+
+        // UI 업데이트 보장
+        objectWillChange.send()
     }
 
     private func getLastMessageDate() -> String? {
