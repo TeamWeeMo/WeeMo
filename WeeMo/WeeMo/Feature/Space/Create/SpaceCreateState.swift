@@ -37,6 +37,10 @@ struct SpaceCreateState {
     var hashTagInput: String = ""
     var hashTags: [String] = []
 
+    // AI 해시태그 추천 (Vision Framework)
+    var isAnalyzingImage: Bool = false
+    var suggestedHashTags: [String] = []
+
     // 미디어 (이미지 + 동영상, 최대 5개)
     var selectedMediaItems: [MediaItem] = []  // 팀원의 struct MediaItem 사용
     var existingFileURLs: [String] = []  // 수정 모드: 기존 파일 URL

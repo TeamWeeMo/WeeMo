@@ -159,6 +159,12 @@ final class SpaceCreateStore: ObservableObject {
         case .removeHashTag(let tag):
             handleRemoveHashTag(tag)
 
+        case .analyzeImagesForHashTags:
+            handleAnalyzeImages()
+
+        case .addSuggestedHashTag(let tag):
+            handleAddSuggestedHashTag(tag)
+
         case .mediaItemsSelected(let mediaItems):
             handleMediaItemsSelected(mediaItems)
 
@@ -195,6 +201,87 @@ final class SpaceCreateStore: ObservableObject {
 
     private func handleRemoveHashTag(_ tag: String) {
         state.hashTags.removeAll { $0 == tag }
+    }
+
+    // MARK: - AI Hash Tag Handlers
+
+    /// AI 이미지 분석 (Vision Framework)
+    private func handleAnalyzeImages() {
+        // 이미 분석 중이면 무시
+        guard !state.isAnalyzingImage else { return }
+
+        state.isAnalyzingImage = true
+        state.errorMessage = nil
+
+        Task {
+            var imageToAnalyze: UIImage?
+
+            // 1. 새로 선택한 미디어 아이템이 있으면 우선 사용
+            if let firstMediaItem = state.selectedMediaItems.first {
+                imageToAnalyze = firstMediaItem.thumbnail
+            }
+            // 2. 수정 모드: 기존 파일 URL에서 이미지 다운로드
+            else if let firstFileURL = state.existingFileURLs.first {
+                imageToAnalyze = await downloadImage(from: firstFileURL)
+            }
+
+            // 이미지가 없으면 에러
+            guard let finalImage = imageToAnalyze else {
+                await MainActor.run {
+                    state.isAnalyzingImage = false
+                    state.errorMessage = "분석할 이미지를 불러올 수 없습니다."
+                }
+                return
+            }
+
+            print("[SpaceCreateStore] AI 해시태그 분석 시작")
+
+            // VisionService로 이미지 분석
+            let tags = await VisionService.shared.analyzeImageForHashTags(
+                finalImage,
+                maxResults: 10,
+                minConfidence: 0.3
+            )
+
+            await MainActor.run {
+                // 중복 제거: 이미 추가된 해시태그 제외
+                let newTags = tags.filter { !state.hashTags.contains($0) }
+
+                state.suggestedHashTags = newTags
+                state.isAnalyzingImage = false
+
+                print("[SpaceCreateStore] AI 해시태그 분석 완료: \(newTags)")
+
+                if newTags.isEmpty {
+                    state.errorMessage = "이미지에서 해시태그를 추출할 수 없습니다."
+                }
+            }
+        }
+    }
+
+    /// URL에서 이미지 다운로드 (수정 모드용)
+    private func downloadImage(from urlString: String) async -> UIImage? {
+        guard let url = URL(string: urlString) else { return nil }
+
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            return UIImage(data: data)
+        } catch {
+            print("[SpaceCreateStore] 이미지 다운로드 실패: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    /// AI 제안 해시태그 추가
+    private func handleAddSuggestedHashTag(_ tag: String) {
+        // 이미 추가된 태그는 무시
+        guard !state.hashTags.contains(tag) else {
+            print("[SpaceCreateStore] 이미 추가된 해시태그: \(tag)")
+            return
+        }
+
+        state.hashTags.append(tag)
+        print("[SpaceCreateStore] AI 제안 해시태그 추가: \(tag)")
     }
 
     private func handleImageSelected(_ image: UIImage) {

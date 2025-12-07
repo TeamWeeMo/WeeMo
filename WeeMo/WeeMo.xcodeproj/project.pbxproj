@@ -14,7 +14,6 @@
 		17BE83682ED6DC2900C7D841 /* iamport-ios in Frameworks */ = {isa = PBXBuildFile; productRef = 17BE83672ED6DC2900C7D841 /* iamport-ios */; };
 		17C580F22EBDE1440055A18E /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F12EBDE1440055A18E /* Alamofire */; };
 		17C580F52EBDE16D0055A18E /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F42EBDE16D0055A18E /* Kingfisher */; };
-		17C580F82EBDE1B60055A18E /* FSCalendar in Frameworks */ = {isa = PBXBuildFile; productRef = 17C580F72EBDE1B60055A18E /* FSCalendar */; };
 		3B5C4AAB2ECEE7AD00BA6325 /* RealmSwift in Frameworks */ = {isa = PBXBuildFile; productRef = 3B5C4AAA2ECEE7AD00BA6325 /* RealmSwift */; };
 		3B5C4E6A2ED3560000BA6325 /* SocketIO in Frameworks */ = {isa = PBXBuildFile; productRef = 3B5C4E692ED3560000BA6325 /* SocketIO */; };
 		3BC143AD2ED852C3001F63E3 /* RealmSwift in Embed Frameworks */ = {isa = PBXBuildFile; productRef = 3B5C4AAA2ECEE7AD00BA6325 /* RealmSwift */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
@@ -79,7 +78,6 @@
 				179C3FF82ECDD98300EDAE31 /* NMapsMap in Frameworks */,
 				171078BE2EDC288D00A22C2B /* FirebaseCore in Frameworks */,
 				9B8882022ECAE43400211811 /* KakaoSDKUser in Frameworks */,
-				17C580F82EBDE1B60055A18E /* FSCalendar in Frameworks */,
 				17C580F22EBDE1440055A18E /* Alamofire in Frameworks */,
 				9B8881FE2ECAE43400211811 /* KakaoSDKAuth in Frameworks */,
 			);
@@ -127,7 +125,6 @@
 			packageProductDependencies = (
 				17C580F12EBDE1440055A18E /* Alamofire */,
 				17C580F42EBDE16D0055A18E /* Kingfisher */,
-				17C580F72EBDE1B60055A18E /* FSCalendar */,
 				178DEDE02EC5E0CA0014C227 /* KeychainAccess */,
 				9B8881FB2ECAE43400211811 /* KakaoSDK */,
 				9B8881FD2ECAE43400211811 /* KakaoSDKAuth */,
@@ -171,7 +168,6 @@
 			packageReferences = (
 				17C580F02EBDE1440055A18E /* XCRemoteSwiftPackageReference "Alamofire" */,
 				17C580F32EBDE16D0055A18E /* XCRemoteSwiftPackageReference "Kingfisher" */,
-				17C580F62EBDE1B60055A18E /* XCRemoteSwiftPackageReference "FSCalendar" */,
 				178DEDDF2EC5E0CA0014C227 /* XCRemoteSwiftPackageReference "KeychainAccess" */,
 				9B8881FA2ECAE43400211811 /* XCRemoteSwiftPackageReference "kakao-ios-sdk" */,
 				179C3FF62ECDD98300EDAE31 /* XCRemoteSwiftPackageReference "SPM-NMapsMap" */,
@@ -494,14 +490,6 @@
 				minimumVersion = 8.6.1;
 			};
 		};
-		17C580F62EBDE1B60055A18E /* XCRemoteSwiftPackageReference "FSCalendar" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/WenchaoD/FSCalendar.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 2.8.4;
-			};
-		};
 		3B5C4AA92ECEE7AD00BA6325 /* XCRemoteSwiftPackageReference "realm-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/realm/realm-swift.git";
@@ -563,11 +551,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 17C580F32EBDE16D0055A18E /* XCRemoteSwiftPackageReference "Kingfisher" */;
 			productName = Kingfisher;
-		};
-		17C580F72EBDE1B60055A18E /* FSCalendar */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 17C580F62EBDE1B60055A18E /* XCRemoteSwiftPackageReference "FSCalendar" */;
-			productName = FSCalendar;
 		};
 		3B5C4AAA2ECEE7AD00BA6325 /* RealmSwift */ = {
 			isa = XCSwiftPackageProductDependency;
